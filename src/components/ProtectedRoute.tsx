@@ -1,35 +1,60 @@
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { supabase } from '../auth/supabaseConfig';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 interface ProtectedRouteProps {
-  adminOnly?: boolean;
+  children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ adminOnly = false }) => {
-  const { user, loading, isAdmin } = useAuth();
-  
-  // If auth is still loading, show a loading indicator
-  if (loading) {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // 检查当前用户会话
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setIsAuthenticated(!!data.session);
+      } catch (error) {
+        console.error('Session check error:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // 订阅认证状态变化
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        setIsAuthenticated(!!session);
+      }
+    );
+
+    // 清理函数
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // 显示加载状态
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-12 h-12 border-4 border-t-purple-700 border-purple-200 rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // If user is not authenticated, redirect to login
-  if (!user) {
+  // 未认证则重定向到登录页
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
-  // If route requires admin access and user is not an admin, redirect to dashboard
-  if (adminOnly && !isAdmin()) {
-    return <Navigate to="/" replace />;
-  }
 
-  // If user is authenticated (and is admin if required), render the outlet
-  return <Outlet />;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
