@@ -19,19 +19,4 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    
-  github_webhook:
-    image: python:3.9
-    working_dir: /app
-    volumes:
-      - ./:/app
-    ports:
-      - "6666:6666"
-    environment:
-      - PYTHONUNBUFFERED=1
-    command: sh -c "pip install flask && python webhook_server.py"
-    restart: always
-    
-networks:
-  default:
-    driver: bridge
+  
