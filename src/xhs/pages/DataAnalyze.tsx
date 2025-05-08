@@ -1,0 +1,517 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+interface Comment {
+  id: number;
+  note_id: number;
+  content: string;
+  author: string;
+  likes: number;
+  keyword: string;
+}
+
+interface CustomerIntent {
+  id: number;
+  comment_id: number;
+  author: string;
+  content: string;
+  intent: string;
+  score: number;
+  keyword: string;
+  analysis: string;
+  created_at: string;
+}
+
+interface AnalysisTask {
+  dag_run_id: string;
+  state: string;
+  start_date: string;
+  end_date: string;
+  conf: string;
+}
+
+const DataAnalyze: React.FC = () => {
+  // State for filtered comments from previous page
+  const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
+  
+  // State for user profile description
+  const [profileSentence, setProfileSentence] = useState('');
+  
+  // State for analysis task
+  const [analysisTask, setAnalysisTask] = useState<AnalysisTask | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
+  
+  // State for customer intent data
+  const [customerIntents, setCustomerIntents] = useState<CustomerIntent[]>([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [intents, setIntents] = useState<string[]>([]);
+  const [selectedKeyword, setSelectedKeyword] = useState<string>('全部');
+  const [selectedIntent, setSelectedIntent] = useState<string>('全部');
+  const [filteredIntents, setFilteredIntents] = useState<CustomerIntent[]>([]);
+  
+  // State for loading and errors
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Load filtered comments from session storage on component mount
+  useEffect(() => {
+    const storedComments = sessionStorage.getItem('filtered_comments');
+    if (storedComments) {
+      try {
+        const parsedComments = JSON.parse(storedComments);
+        setFilteredComments(parsedComments);
+      } catch (err) {
+        setError('解析评论数据失败');
+      }
+    }
+    
+    // Fetch customer intent data
+    fetchCustomerIntents();
+  }, []);
+
+  // Fetch customer intent data
+  const fetchCustomerIntents = async () => {
+    try {
+      setLoading(true);
+      // In a real application, this would be an API call
+      // const response = await axios.get('/api/customer-intents');
+      // setCustomerIntents(response.data);
+      
+      // Mock data for demonstration
+      setTimeout(() => {
+        const mockIntents = Array.from({ length: 20 }, (_, i) => ({
+          id: i + 1,
+          comment_id: i + 100,
+          author: `用户${i + 1}`,
+          content: `这是一条评论内容，表达了对产品的${i % 3 === 0 ? '强烈兴趣' : i % 3 === 1 ? '一般兴趣' : '疑问'}`,
+          intent: i % 3 === 0 ? '高意向' : i % 3 === 1 ? '中意向' : '低意向',
+          score: i % 3 === 0 ? 0.85 + Math.random() * 0.15 : i % 3 === 1 ? 0.5 + Math.random() * 0.3 : Math.random() * 0.5,
+          keyword: i % 2 === 0 ? '美妆' : '护肤',
+          analysis: `用户表现出${i % 3 === 0 ? '强烈购买意愿' : i % 3 === 1 ? '一定的兴趣' : '对产品的疑问'}，可能是${i % 3 === 0 ? '潜在客户' : i % 3 === 1 ? '需要更多信息' : '需要解答疑问'}`,
+          created_at: new Date().toISOString()
+        }));
+        
+        setCustomerIntents(mockIntents);
+        setFilteredIntents(mockIntents);
+        
+        // Extract unique keywords and intents
+        const uniqueKeywords = ['全部', ...new Set(mockIntents.map(item => item.keyword))];
+        const uniqueIntents = ['全部', ...new Set(mockIntents.map(item => item.intent))];
+        
+        setKeywords(uniqueKeywords);
+        setIntents(uniqueIntents);
+        
+        setLoading(false);
+      }, 500);
+    } catch (err) {
+      setError('获取客户意向数据失败');
+      setLoading(false);
+    }
+  };
+
+  // Start analysis task
+  const handleStartAnalysis = async () => {
+    if (filteredComments.length === 0) {
+      setError('没有可分析的评论数据');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // In a real application, this would be an API call
+      // const response = await axios.post('/api/analysis-tasks', {
+      //   profile_sentence: profileSentence,
+      //   comment_ids: filteredComments.map(c => c.id).slice(0, 20) // Limit to 20 comments
+      // });
+      
+      // Mock successful response
+      setTimeout(() => {
+        const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+        const newTask = {
+          dag_run_id: `xhs_comments_openrouter_${timestamp}`,
+          state: 'running',
+          start_date: new Date().toISOString(),
+          end_date: '',
+          conf: JSON.stringify({
+            profile_sentence: profileSentence,
+            comment_ids: filteredComments.map(c => c.id).slice(0, 20)
+          })
+        };
+        
+        setAnalysisTask(newTask);
+        setAnalysisStatus('running');
+        setSuccess('已提交分析任务，任务ID: ' + newTask.dag_run_id);
+        setLoading(false);
+      }, 1000);
+    } catch (err) {
+      setError('提交分析任务失败');
+      setLoading(false);
+    }
+  };
+
+  // Check analysis task status
+  const checkAnalysisStatus = async () => {
+    if (!analysisTask) return;
+
+    try {
+      setLoading(true);
+      
+      // In a real application, this would be an API call
+      // const response = await axios.get(`/api/analysis-tasks/${analysisTask.dag_run_id}`);
+      // const status = response.data.state;
+      
+      // Mock status check
+      setTimeout(() => {
+        // Randomly determine if the task is complete
+        const isComplete = Math.random() > 0.5;
+        
+        if (isComplete) {
+          setAnalysisStatus('success');
+          setAnalysisTask({
+            ...analysisTask,
+            state: 'success',
+            end_date: new Date().toISOString()
+          });
+          setSuccess('分析任务已完成！');
+          
+          // Simulate fetching new results
+          fetchCustomerIntents();
+        } else {
+          setSuccess('分析任务仍在执行中，请稍后再次检查');
+        }
+        
+        setLoading(false);
+      }, 1000);
+    } catch (err) {
+      setError('检查分析任务状态失败');
+      setLoading(false);
+    }
+  };
+
+  // Filter customer intents based on selected keyword and intent
+  useEffect(() => {
+    if (customerIntents.length === 0) return;
+
+    let filtered = [...customerIntents];
+    
+    if (selectedKeyword !== '全部') {
+      filtered = filtered.filter(item => item.keyword === selectedKeyword);
+    }
+    
+    if (selectedIntent !== '全部') {
+      filtered = filtered.filter(item => item.intent === selectedIntent);
+    }
+    
+    setFilteredIntents(filtered);
+  }, [selectedKeyword, selectedIntent, customerIntents]);
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('zh-CN');
+  };
+
+  // Generate content button handler
+  const handleGenerateContent = () => {
+    // In a real application, this would navigate to the generate message page
+    // or trigger content generation
+    setSuccess('正在跳转到生成文案页面...');
+    setTimeout(() => {
+      // Store selected intents in session storage for the next page
+      sessionStorage.setItem('selected_intents', JSON.stringify(filteredIntents));
+      // In a real application, this would navigate to the next page
+      // history.push('/generate-msg');
+    }, 1000);
+  };
+
+  // Export data as CSV
+  const handleExportData = () => {
+    if (filteredIntents.length === 0) {
+      setError('没有可导出的数据');
+      return;
+    }
+
+    try {
+      // Convert data to CSV format
+      const headers = ['ID', '评论ID', '作者', '内容', '意向', '分数', '关键词', '分析', '创建时间'];
+      const csvRows = [
+        headers.join(','),
+        ...filteredIntents.map(item => [
+          item.id,
+          item.comment_id,
+          item.author,
+          `"${item.content.replace(/"/g, '""')}"`, // Escape quotes in content
+          item.intent,
+          item.score,
+          item.keyword,
+          `"${item.analysis.replace(/"/g, '""')}"`, // Escape quotes in analysis
+          item.created_at
+        ].join(','))
+      ];
+      
+      const csvContent = csvRows.join('\n');
+      
+      // Create a blob and download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `意向客户数据_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setSuccess('数据导出成功');
+    } catch (err) {
+      setError('导出数据失败');
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <div className="bg-blue-50 p-4 rounded-lg mb-6">
+        <p className="text-blue-700">本页面用于分析和分类小红书评论数据。</p>
+      </div>
+
+      {/* Filtered Comments Section */}
+      {filteredComments.length > 0 ? (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">已加载过滤后的评论数据</h2>
+          <p className="mb-4">共 {filteredComments.length} 条评论</p>
+          
+          <div className="overflow-x-auto mb-4">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredComments.slice(0, 10).map((comment) => (
+                  <tr key={comment.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                      <div className="truncate max-w-xs md:max-w-md">{comment.content}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                  </tr>
+                ))}
+                {filteredComments.length > 10 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-sm text-gray-500 text-center">
+                      显示前10条评论，共 {filteredComments.length} 条
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">用户画像描述（可选）</label>
+            <textarea
+              value={profileSentence}
+              onChange={(e) => setProfileSentence(e.target.value)}
+              placeholder="例如：这是一个对美妆产品感兴趣的年轻女性用户群体..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500 mt-1">添加用户画像描述可以帮助AI更好地理解评论背景</p>
+          </div>
+          
+          <button
+            onClick={handleStartAnalysis}
+            disabled={loading || analysisStatus === 'running'}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            {loading ? '处理中...' : '分析内容'}
+          </button>
+        </div>
+      ) : (
+        <div className="bg-yellow-50 p-4 rounded-lg mb-6">
+          <p className="text-yellow-700">没有找到过滤后的评论数据，请先在数据预处理页面进行过滤</p>
+        </div>
+      )}
+
+      {/* Analysis Task Status */}
+      {analysisTask && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">分析任务状态</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <p className="text-sm text-gray-600">任务ID:</p>
+              <p className="font-medium">{analysisTask.dag_run_id}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">状态:</p>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                analysisTask.state === 'success' ? 'bg-green-100 text-green-800' :
+                analysisTask.state === 'running' ? 'bg-blue-100 text-blue-800' :
+                analysisTask.state === 'failed' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {analysisTask.state === 'success' ? '成功' :
+                 analysisTask.state === 'running' ? '运行中' :
+                 analysisTask.state === 'failed' ? '失败' : analysisTask.state}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">开始时间:</p>
+              <p>{formatDate(analysisTask.start_date)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">结束时间:</p>
+              <p>{analysisTask.end_date ? formatDate(analysisTask.end_date) : '-'}</p>
+            </div>
+          </div>
+          
+          {analysisStatus === 'running' && (
+            <button
+              onClick={checkAnalysisStatus}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              {loading ? '检查中...' : '检查分析状态'}
+            </button>
+          )}
+          
+          {analysisStatus === 'success' && (
+            <button
+              onClick={handleGenerateContent}
+              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              生成文案
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Customer Intent Data */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4">意向客户数据</h2>
+        <p className="mb-4 text-gray-600">本部分展示已分析的意向客户数据，可通过关键词和意向类型进行筛选</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">按关键词筛选</label>
+            <select
+              value={selectedKeyword}
+              onChange={(e) => setSelectedKeyword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            >
+              {keywords.map((keyword) => (
+                <option key={keyword} value={keyword}>{keyword}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">按意向类型筛选</label>
+            <select
+              value={selectedIntent}
+              onChange={(e) => setSelectedIntent(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            >
+              {intents.map((intent) => (
+                <option key={intent} value={intent}>{intent}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        {filteredIntents.length > 0 ? (
+          <>
+            <p className="mb-2">找到 {filteredIntents.length} 条意向客户数据</p>
+            <div className="overflow-x-auto mb-4">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">意向</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分数</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredIntents.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                        <div className="truncate max-w-xs md:max-w-md">{item.content}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          item.intent === '高意向' ? 'bg-green-100 text-green-800' :
+                          item.intent === '中意向' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item.intent}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.score.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.keyword}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <button
+              onClick={handleExportData}
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-2"
+            >
+              导出筛选后的意向客户数据
+            </button>
+            
+            <button
+              onClick={handleGenerateContent}
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              生成文案
+            </button>
+          </>
+        ) : (
+          <p className="text-yellow-600">未找到符合条件的意向客户数据</p>
+        )}
+      </div>
+
+      {/* Success and Error Messages */}
+      {success && (
+        <div className="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-md">
+          <span className="block sm:inline">{success}</span>
+          <button
+            onClick={() => setSuccess('')}
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <span className="text-green-500">×</span>
+          </button>
+        </div>
+      )}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md">
+          <span className="block sm:inline">{error}</span>
+          <button
+            onClick={() => setError('')}
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <span className="text-red-500">×</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DataAnalyze;
