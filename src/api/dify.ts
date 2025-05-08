@@ -1,23 +1,34 @@
 import axios from 'axios';
-import { ConfigKey } from './airflow';
 
 const BASE_URL = process.env.REACT_APP_DIFY_BASE_URL;
 const DATASET_API_KEY = process.env.REACT_APP_DIFY_DATASET_API_KEY;
 
+// 定义配置类型常量，替代原来从airflow.ts导入的ConfigKey枚举
+export const CONFIG_TYPE = {
+  SALES: 'sales',
+  HEALTH: 'health',
+  BEAUTY: 'beauty',
+  FINANCE: 'finance',
+  LUCY: 'lucy',
+  LUCY_GROUP: 'lucy_group',
+  DEFAULT: 'beauty'
+};
+
 export const getApiKey = (config?: string) => {
   switch(config) {
-    case ConfigKey.SALES:
+    case CONFIG_TYPE.SALES:
       return process.env.REACT_APP_DIFY_API_SALES;
-    case ConfigKey.HEALTH:
+    case CONFIG_TYPE.HEALTH:
       return process.env.REACT_APP_DIFY_API_HEALTH;
-    case ConfigKey.BEAUTY:
+    case CONFIG_TYPE.BEAUTY:
       return process.env.REACT_APP_DIFY_API_BEAUTY;
-    case ConfigKey.FINANCE:
+    case CONFIG_TYPE.FINANCE:
       return process.env.REACT_APP_DIFY_API_FINANCE;
     default:
       return process.env.REACT_APP_DIFY_API_BEAUTY;
   }
 };
+
 
 const createDifyAxios = (config?: string) => axios.create({
   baseURL: BASE_URL,

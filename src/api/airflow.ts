@@ -1,28 +1,16 @@
 import axios from 'axios';
 
-export interface WxAccount {
-  wxid: string;
-  name: string;
-  mobile: string;
-  home: string;
-  small_head_url: string;
-  big_head_url: string;
-  source_ip: string;
-  is_online: boolean;
-  contact_num: number;
-  update_time: string;
-  create_time: string;
-}
+/**
+ * Airflow API客户端接口，用于与Airflow REST API交互
+ * 参考了x_agent_web项目中的airflow.py实现
+ */
 
-export interface WxMpAccount {
-  gh_user_id: string;
-  name: string;
-}
-
+// 从环境变量中获取Airflow配置
 const BASE_URL = process.env.REACT_APP_AIRFLOW_BASE_URL
 const USERNAME = process.env.REACT_APP_AIRFLOW_USERNAME
 const PASSWORD = process.env.REACT_APP_AIRFLOW_PASSWORD
 
+// 创建Axios实例，配置基础URL和认证信息
 const airflowAxios = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -31,6 +19,11 @@ const airflowAxios = axios.create({
   },
 });
 
+/**
+ * 处理API请求的通用函数
+ * @param request Axios请求Promise
+ * @returns 请求结果数据
+ */
 const handleRequest = async <T>(request: Promise<any>): Promise<T> => {
   try {
     const response = await request;
@@ -43,16 +36,6 @@ const handleRequest = async <T>(request: Promise<any>): Promise<T> => {
   }
 };
 
-export const getWxAccountListApi = async (): Promise<WxAccount[]> => {
-  const response = await handleRequest<{key: string; value: string}>(airflowAxios.get('/variables/WX_ACCOUNT_LIST'));
-  return JSON.parse(response.value);
-};
-
-export const getWxMpAccountListApi = async (): Promise<WxMpAccount[]> => {
-  const response = await handleRequest<{key: string; value: string}>(airflowAxios.get('/variables/WX_MP_ACCOUNT_LIST'));
-  return JSON.parse(response.value);
-};
-
 interface DagRunRequest<T = any> {
   conf: T;
   dag_run_id: string;
@@ -62,147 +45,179 @@ interface DagRunRequest<T = any> {
   note: string;
 }
 
-interface ChatMessageConf {
-  room_id: string;
-  content: string;
-  source_ip: string;
-  sender: string;
-  msg_type: number;
-  is_self: boolean;
-  is_group: boolean;
-}
-
-interface WxChatHistorySummaryConf {
-  wx_user_id: string;
-  room_id: string;
-}
-
-export const sendChatMessageApi = async (request: DagRunRequest<ChatMessageConf>) => {
-  return handleRequest(airflowAxios.post('/dags/wx_msg_sender/dagRuns', request));
-};
-
 interface VariableResponse {
   description: string | null;
   key: string;
   value: string;
 }
 
-export const getUserMsgCountApi = async (username: string ): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${username}_msg_count?`));
-} 
+/**
+ * 通用DAG运行相关接口
+ * 参考了x_agent_web项目中的airflow.py实现
+ */
 
-export const generateWxChatHistorySummaryApi = async (request: DagRunRequest<WxChatHistorySummaryConf>) => {
-  return handleRequest(airflowAxios.post('/dags/wx_chat_history_summary/dagRuns', request));
+/**
+ * 获取指定DAG的运行记录
+ * @param dagId DAG的ID
+ * @param limit 返回结果的最大数量
+ * @param orderBy 排序字段，默认按开始时间降序排序
+ * @returns 包含DAG运行记录的响应
+ */
+export const getDagRuns = async (dagId: string, limit: number = 100, orderBy: string = '-start_date'): Promise<any> => {
+  const params = { limit, order_by: orderBy };
+  return handleRequest(airflowAxios.get(`/dags/${dagId}/dagRuns`, { params }));
 };
 
-export const getWxAccountPromptApi = async (wxid: string, name: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${name}_${wxid}_ui_input_prompt`));
-}
+/**
+ * 触发一个DAG运行
+ * @param dagId DAG的ID
+ * @param dagRunId 可选的DAG运行ID，如果不提供，Airflow会自动生成
+ * @param conf 可选的配置参数
+ * @param logicalDate 可选的逻辑执行日期，格式为ISO8601
+ * @param note 可选的备注
+ * @returns 包含新创建的DAG运行信息的响应
+ */
+export const triggerDagRun = async (
+  dagId: string,
+  dagRunId?: string,
+  conf?: any,
+  logicalDate?: string,
+  note?: string
+): Promise<any> => {
+  // 构建请求体
+  const payload: any = {};
+  if (dagRunId) payload.dag_run_id = dagRunId;
+  if (conf) payload.conf = conf;
+  if (logicalDate) payload.logical_date = logicalDate;
+  if (note) payload.note = note;
+  
+  return handleRequest(airflowAxios.post(`/dags/${dagId}/dagRuns`, payload));
+};
 
+/**
+ * Airflow变量操作相关接口
+ * 参考了x_agent_web项目中的airflow.py实现
+ */
 
-export const updateWxAccountPromptApi = async (wxid: string, name: string, prompt: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: JSON.stringify(prompt),
-    key: `${name}_${wxid}_ui_input_prompt`,
-    description: `${name}-自定义提示词`
+/**
+ * 获取Airflow变量
+ * @param key 变量的键名
+ * @returns 变量的响应，包含键名、值和描述
+ */
+export const getVariable = async (key: string): Promise<VariableResponse> => {
+  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${key}`));
+};
+
+/**
+ * 设置Airflow变量
+ * @param key 变量的键名
+ * @param value 变量的值
+ * @param description 变量的描述（可选）
+ * @returns 变量的响应
+ */
+export const setVariable = async (key: string, value: string, description?: string): Promise<VariableResponse> => {
+  return handleRequest<VariableResponse>(airflowAxios.post('/variables', {
+    key,
+    value,
+    description
   }));
-}
+};
 
-export const getWxHumanListApi = async (name: string, wxid: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${name}_${wxid}_human_room_ids`));
-}
+/**
+ * 获取所有Airflow变量
+ * @param limit 返回结果的最大数量
+ * @param offset 结果的偏移量
+ * @returns 包含变量列表的响应
+ */
+export const getAllVariables = async (limit: number = 100, offset: number = 0): Promise<any> => {
+  const params = { limit, offset };
+  return handleRequest(airflowAxios.get('/variables', { params }));
+};
 
-export const updateWxHumanListApi = async (wxid: string, name: string, room_ids: Array<string>): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: JSON.stringify(room_ids),
-    key: `${name}_${wxid}_human_room_ids`,
-    description: `${name}-转人工列表`
-  }));
-}
+/**
+ * 删除Airflow变量
+ * @param key 要删除的变量的键名
+ * @returns 删除操作的响应
+ */
+export const deleteVariable = async (key: string): Promise<any> => {
+  return handleRequest(airflowAxios.delete(`/variables/${key}`));
+};
 
-export const getWxCountactHeadListApi = async (name: string, wxid: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${name}_${wxid}_CONTACT_LIST`));
-}
+/**
+ * 获取DAG详情
+ * @param dagId DAG的ID
+ * @returns 包含DAG详情的响应
+ */
+export const getDagDetail = async (dagId: string): Promise<any> => {
+  return handleRequest(airflowAxios.get(`/dags/${dagId}`));
+};
 
-export enum ConfigKey {
-  SALES = 'sales',
-  HEALTH = 'health',
-  BEAUTY = 'beauty',
-  FINANCE = 'finance',
-  DEFAULT = 'beauty', // 默认使用beauty
-  LUCY = 'lucy',
-  LUCY_GROUP = 'lucy_group'
-}
+/**
+ * 获取DAG任务列表
+ * @param dagId DAG的ID
+ * @returns 包含DAG任务列表的响应
+ */
+export const getDagTasks = async (dagId: string): Promise<any> => {
+  return handleRequest(airflowAxios.get(`/dags/${dagId}/tasks`));
+};
 
-const keyMap: Record<string, string | undefined> = {
-  [ConfigKey.SALES]: process.env.REACT_APP_DIFY_API_SALES,
-  [ConfigKey.HEALTH]: process.env.REACT_APP_DIFY_API_HEALTH,
-  [ConfigKey.BEAUTY]: process.env.REACT_APP_DIFY_API_BEAUTY,
-  [ConfigKey.FINANCE]: process.env.REACT_APP_DIFY_API_FINANCE,
-  [ConfigKey.LUCY]: process.env.REACT_APP_DIFY_API_LUCY,
-  [ConfigKey.LUCY_GROUP]: process.env.REACT_APP_DIFY_API_LUCY_GROUP
-}
-export const updateWxDifyReplyApi = async (wxid: string, name: string, config?: string): Promise<VariableResponse> => {
-  console.log(wxid, name, config, config ? keyMap[config] : keyMap[ConfigKey.BEAUTY]);
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: config ? keyMap[config] : keyMap[ConfigKey.BEAUTY],
-    key: `${name}_${wxid}_dify_api_key`,
-    description: `${name}-自定义回复`
-  }));
-}
+/**
+ * 获取特定DAG运行的详情
+ * @param dagId DAG的ID
+ * @param dagRunId DAG运行的ID
+ * @returns 包含DAG运行详情的响应
+ */
+export const getDagRunDetail = async (dagId: string, dagRunId: string): Promise<any> => {
+  return handleRequest(airflowAxios.get(`/dags/${dagId}/dagRuns/${dagRunId}`));
+};
 
-export const updateWxDifyGroupReplyApi = async (wxid: string, name: string, config?: string): Promise<VariableResponse> => {
-  console.log(wxid, name, config, config ? keyMap[config] : keyMap[ConfigKey.BEAUTY]);
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: config ? keyMap[config] : keyMap[ConfigKey.BEAUTY],
-    key: `${name}_${wxid}_group_dify_api_key`,
-    description: `${name}-群回复`
-  }));
-}
+/**
+ * 获取特定DAG运行的任务实例
+ * @param dagId DAG的ID
+ * @param dagRunId DAG运行的ID
+ * @returns 包含任务实例列表的响应
+ */
+export const getDagRunTaskInstances = async (dagId: string, dagRunId: string): Promise<any> => {
+  return handleRequest(airflowAxios.get(`/dags/${dagId}/dagRuns/${dagRunId}/taskInstances`));
+};
 
-export const getAIReplyListApi=async(username:string,wxid:string):Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${username}_${wxid}_enable_ai_room_ids`));
-}
+/**
+ * 获取特定任务实例的日志
+ * @param dagId DAG的ID
+ * @param dagRunId DAG运行的ID
+ * @param taskId 任务的ID
+ * @param taskTryNumber 任务尝试次数
+ * @returns 包含任务日志的响应
+ */
+export const getTaskInstanceLog = async (dagId: string, dagRunId: string, taskId: string, taskTryNumber: number = 1): Promise<any> => {
+  return handleRequest(airflowAxios.get(`/dags/${dagId}/dagRuns/${dagRunId}/taskInstances/${taskId}/logs/${taskTryNumber}`));
+};
 
-export const postAIReplyListApi=async(username:string,wxid:string,room_ids:Array<string>):Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: JSON.stringify(room_ids),
-    key: `${username}_${wxid}_enable_ai_room_ids`,
-    description: `${username}-允许ai会话列表`
-  }));
-}
-export const getDisableAIReplyListApi=async(username:string,wxid:string):Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${username}_${wxid}_disable_ai_room_ids`));
-}
+/**
+ * 暂停DAG
+ * @param dagId DAG的ID
+ * @returns 操作响应
+ */
+export const pauseDag = async (dagId: string): Promise<any> => {
+  return handleRequest(airflowAxios.patch(`/dags/${dagId}`, { is_paused: true }));
+};
 
-export const postDisableAIReplyListApi=async(username:string,wxid:string,room_ids:Array<string>):Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: JSON.stringify(room_ids),
-    key: `${username}_${wxid}_disable_ai_room_ids`,
-    description: `${username}-禁止ai会话列表`
-  }));
-}
+/**
+ * 恢复DAG
+ * @param dagId DAG的ID
+ * @returns 操作响应
+ */
+export const unpauseDag = async (dagId: string): Promise<any> => {
+  return handleRequest(airflowAxios.patch(`/dags/${dagId}`, { is_paused: false }));
+};
 
-export const getWxAccountSingleChatApi = async (name: string, wxid: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${name}_${wxid}_single_chat_ai_global`));
-}
-
-export const getWxAccountGroupChatApi = async (name: string, wxid: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.get(`/variables/${name}_${wxid}_group_chat_ai_global`));
-}
-
-export const updateWxAccountSingleChatApi = async (name: string, wxid: string, switchVal:string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: switchVal,
-    key: `${name}_${wxid}_single_chat_ai_global`,
-    description: `${name}-单聊AI配置`
-  }));
-}
-
-export const updateWxAccountGroupChatApi = async (name: string, wxid: string, switchVal:string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post(`/variables`,{
-    value: switchVal,
-    key: `${name}_${wxid}_group_chat_ai_global`,
-    description: `${name}-群聊AI配置`
-  }));
-}
+/**
+ * 获取所有DAG列表
+ * @param limit 返回结果的最大数量
+ * @param offset 结果的偏移量
+ * @returns 包含DAG列表的响应
+ */
+export const getAllDags = async (limit: number = 100, offset: number = 0): Promise<any> => {
+  const params = { limit, offset };
+  return handleRequest(airflowAxios.get('/dags', { params }));
+};
