@@ -115,9 +115,11 @@ const DeviceManagement: React.FC = () => {
       const response = await getVariable(VARIABLE_NAME);
       const currentDevices = JSON.parse(response.value) as Device[];
       
-      // 检查是否已存在相同IP的设备
-      if (currentDevices.some(device => device.device_ip === formData.device_ip)) {
-        message.error('该IP地址的设备已存在，请检查后重试');
+      // 检查是否已存在相同IP和端口的设备
+      if (currentDevices.some(device => 
+        device.device_ip === formData.device_ip && device.port === formData.port
+      )) {
+        message.error('该IP地址和端口的设备已存在，请检查后重试');
         return;
       }
       
