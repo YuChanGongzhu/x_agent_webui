@@ -36,14 +36,30 @@ interface NavItemWithIcons extends NavItem {
   activeIcon: string;
 }
 
-// 仅保留系统管理菜单项
-const menuItems: NavItemWithIcons[] = [
+// 菜单项配置
+const initialMenuItems: NavItemWithIcons[] = [
   { name: '系统管理', icon: systemSVG, activeIcon: systemActiveSVG, url: '/manage', adminOnly: true },
-  { name: '智能获客', icon: xhsSVG, activeIcon: xhsActiveSVG, url: '/xhs', adminOnly: false },
+  { 
+    name: '智能获客', 
+    icon: xhsSVG, 
+    activeIcon: xhsActiveSVG, 
+    url: '/xhs', 
+    adminOnly: false,
+    subItems: [
+      { name: '自动化任务', url: '/xhs' },
+      { name: '数据采集', url: '/xhs/collect' },
+      { name: '数据筛选', url: '/xhs/filter' },
+      { name: '数据分析', url: '/xhs/analyze' },
+      { name: '内容生成', url: '/xhs/generate' }
+    ],
+    expanded: false
+  },
   { name: '设备管理', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/devices', adminOnly: false },
 ];
 
 const NavBar: React.FC = () => {
+  const [menuItems, setMenuItems] = useState<NavItemWithIcons[]>(initialMenuItems);
+  
   // Combine all navigation items for route matching
   const allNavItems: NavItemWithIcons[] = [
     ...menuItems
@@ -55,7 +71,8 @@ const NavBar: React.FC = () => {
     // Find a matching item in all navigation categories
     const matchingItem = allNavItems.find(item => 
       currentPath === item.url || 
-      (currentPath.startsWith(item.url) && item.url !== '/dashboard')
+      (currentPath.startsWith(item.url) && item.url !== '/dashboard') ||
+      (item.subItems?.some(subItem => currentPath === subItem.url))
     );
     return matchingItem ? matchingItem.name : '系统管理';
   };
@@ -75,6 +92,16 @@ const NavBar: React.FC = () => {
 
   useEffect(() => {
     setSelected(findSelectedNavItem(location.pathname));
+    
+    // Update expanded state based on current path
+    setMenuItems(prevItems => 
+      prevItems.map((item: NavItemWithIcons) => {
+        const shouldExpand = item.subItems?.some((subItem: SubNavItem) => 
+          location.pathname === subItem.url || location.pathname.startsWith(subItem.url + '/')
+        );
+        return shouldExpand ? { ...item, expanded: true } : item;
+      })
+    );
   }, [location.pathname]);
 
   // 不再需要嗅探用户是否为管理员，现在从上下文中获取
@@ -129,7 +156,23 @@ const NavBar: React.FC = () => {
 
   const handleClick = (item: NavItem) => {
     setSelected(item.name);
-    navigate(item.url);
+    
+    // Toggle expanded state if item has subitems
+    if (item.subItems && item.subItems.length > 0) {
+      setMenuItems(prevItems => 
+        prevItems.map((menuItem: NavItemWithIcons) => 
+          menuItem.name === item.name 
+            ? { ...menuItem, expanded: !menuItem.expanded } 
+            : menuItem
+        )
+      );
+      // Only navigate if clicking on an already expanded item or an item with no subitems
+      if (!(item as NavItemWithIcons).expanded) {
+        navigate(item.url);
+      }
+    } else {
+      navigate(item.url);
+    }
   };
   
   // 处理用户退出登录
@@ -316,15 +359,48 @@ const NavBar: React.FC = () => {
               .map((item) => (
                 <div key={item.name} className="w-full px-2">
                   <div
-                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} cursor-pointer p-2 rounded-lg w-full
+                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} cursor-pointer p-2 rounded-lg w-full
                       ${selected === item.name ? 'bg-white text-[rgba(108,93,211,1)]' : 'text-white hover:bg-[rgba(255,255,255,0.1)]'}`}
                     onClick={() => handleClick(item)}
                   >
-                    <img src={selected === item.name ? item.activeIcon : item.icon} alt={item.name} className="w-5 h-5" />
-                    {!isCollapsed && (
-                      <span className="text-sm font-medium">{item.name}</span>
+                    <div className="flex items-center space-x-3">
+                      <img src={selected === item.name ? item.activeIcon : item.icon} alt={item.name} className="w-5 h-5" />
+                      {!isCollapsed && (
+                        <span className="text-sm font-medium">{item.name}</span>
+                      )}
+                    </div>
+                    {!isCollapsed && item.subItems && item.subItems.length > 0 && (
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        strokeWidth="1.5" 
+                        stroke="currentColor" 
+                        className={`w-4 h-4 transition-transform ${item.expanded ? 'rotate-90' : ''}`}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
                     )}
                   </div>
+                  
+                  {/* Sub-navigation items */}
+                  {!isCollapsed && item.expanded && item.subItems && (
+                    <div className="ml-8 mt-1 space-y-1">
+                      {item.subItems.map((subItem: SubNavItem) => (
+                        <div 
+                          key={subItem.name}
+                          className={`flex items-center space-x-3 cursor-pointer p-2 rounded-lg w-full
+                            ${location.pathname === subItem.url ? 'bg-white/20 text-white font-medium' : 'text-white/80 hover:bg-white/10'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(subItem.url);
+                          }}
+                        >
+                          <span className="text-sm">{subItem.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
           </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getDagRuns, triggerDagRun, getAllVariables } from '../../api/airflow';
 
 interface Keyword {
   keyword: string;
@@ -47,6 +48,10 @@ const DataCollect: React.FC = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tasksPerPage] = useState(10);
+  
   // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -55,24 +60,41 @@ const DataCollect: React.FC = () => {
   // Fetch keywords on component mount
   useEffect(() => {
     fetchKeywords();
+    fetchRecentTasks();
   }, []);
 
   // Fetch keywords from API
   const fetchKeywords = async () => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get('/api/keywords');
-      // setKeywords(response.data);
+      // Get keywords from Airflow variables
+      const response = await getAllVariables();
       
-      // Mock data for demonstration
-      setTimeout(() => {
+      // Filter variables that start with "xhs_keyword_"
+      const keywordVars = response.variables.filter((variable: any) => 
+        variable.key.startsWith('xhs_keyword_')
+      );
+      
+      // Extract keyword values
+      const extractedKeywords = keywordVars.map((variable: any) => 
+        variable.value
+      );
+      
+      if (extractedKeywords.length > 0) {
+        setKeywords(extractedKeywords);
+        setSelectedKeyword(extractedKeywords[0]);
+      } else {
+        // Fallback to default keywords if none found
         setKeywords(['美妆', '护肤', '时尚', '旅行', '美食']);
         setSelectedKeyword('美妆');
-        setLoading(false);
-      }, 500);
+      }
+      setLoading(false);
     } catch (err) {
+      console.error('Error fetching keywords:', err);
       setError('获取关键词失败');
+      // Fallback to default keywords
+      setKeywords(['美妆', '护肤', '时尚', '旅行', '美食']);
+      setSelectedKeyword('美妆');
       setLoading(false);
     }
   };
@@ -87,30 +109,42 @@ const DataCollect: React.FC = () => {
 
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.post('/api/tasks/notes', {
-      //   keyword,
-      //   max_notes: maxNotes
-      // });
+      // Create timestamp for unique dag_run_id
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+      const dag_run_id = `xhs_notes_${timestamp}`;
       
-      // Mock successful response
-      setTimeout(() => {
-        const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
-        const newTask = {
-          dag_run_id: `xhs_notes_${timestamp}`,
-          state: 'running',
-          start_date: new Date().toISOString(),
-          end_date: '',
-          note: '',
-          conf: JSON.stringify({ keyword, max_notes: maxNotes })
-        };
-        
-        setTasks([newTask, ...tasks]);
-        setSuccess(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`);
-        setLoading(false);
-        setKeyword('');
-      }, 1000);
+      // Prepare configuration
+      const conf = {
+        keyword,
+        max_notes: maxNotes
+      };
+      
+      // Trigger DAG run using Airflow API
+      const response = await triggerDagRun(
+        "xhs_notes_collector", 
+        dag_run_id,
+        conf
+      );
+      
+      // Add new task to the list
+      const newTask = {
+        dag_run_id: response.dag_run_id,
+        state: response.state,
+        start_date: response.start_date || new Date().toISOString(),
+        end_date: response.end_date || '',
+        note: response.note || '',
+        conf: JSON.stringify(conf)
+      };
+      
+      setTasks([newTask, ...tasks]);
+      setSuccess(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`);
+      setLoading(false);
+      setKeyword('');
+      
+      // Refresh task list
+      fetchRecentTasks();
     } catch (err) {
+      console.error('Error creating notes task:', err);
       setError('创建笔记采集任务失败');
       setLoading(false);
     }
@@ -125,71 +159,111 @@ const DataCollect: React.FC = () => {
 
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.post('/api/tasks/comments', {
-      //   keyword: selectedKeyword,
-      //   max_comments: maxComments
-      // });
+      // Create timestamp for unique dag_run_id
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+      const dag_run_id = `xhs_comments_${timestamp}`;
       
-      // Mock successful response
-      setTimeout(() => {
-        const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
-        const newTask = {
-          dag_run_id: `xhs_comments_${timestamp}`,
-          state: 'running',
-          start_date: new Date().toISOString(),
-          end_date: '',
-          note: '',
-          conf: JSON.stringify({ keyword: selectedKeyword, max_comments: maxComments })
-        };
-        
-        setTasks([newTask, ...tasks]);
-        setSuccess(`成功创建笔记评论收集任务，任务ID: ${newTask.dag_run_id}`);
-        setLoading(false);
-      }, 1000);
+      // Prepare configuration
+      const conf = {
+        keyword: selectedKeyword,
+        max_comments: maxComments
+      };
+      
+      // Trigger DAG run using Airflow API
+      const response = await triggerDagRun(
+        "xhs_comments_collector", 
+        dag_run_id,
+        conf
+      );
+      
+      // Add new task to the list
+      const newTask = {
+        dag_run_id: response.dag_run_id,
+        state: response.state,
+        start_date: response.start_date || new Date().toISOString(),
+        end_date: response.end_date || '',
+        note: response.note || '',
+        conf: JSON.stringify(conf)
+      };
+      
+      setTasks([newTask, ...tasks]);
+      setSuccess(`成功创建笔记评论收集任务，任务ID: ${newTask.dag_run_id}`);
+      setLoading(false);
+      
+      // Refresh task list
+      fetchRecentTasks();
     } catch (err) {
+      console.error('Error creating comments task:', err);
       setError('创建笔记评论收集任务失败');
       setLoading(false);
     }
   };
 
   // Fetch recent tasks
+
+  // Fetch notes and comments when selectedKeyword changes
   useEffect(() => {
-    fetchRecentTasks();
-  }, []);
+    if (selectedKeyword) {
+      fetchNotes(selectedKeyword);
+      fetchComments(selectedKeyword);
+    }
+  }, [selectedKeyword]);
 
   const fetchRecentTasks = async () => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get('/api/tasks/recent');
-      // setTasks(response.data);
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockTasks = [
-          {
-            dag_run_id: 'xhs_notes_20230715_123045',
-            state: 'success',
-            start_date: '2023-07-15T12:30:45Z',
-            end_date: '2023-07-15T12:45:30Z',
-            note: '',
-            conf: JSON.stringify({ keyword: '美妆', max_notes: 100 })
-          },
-          {
-            dag_run_id: 'xhs_comments_20230714_093012',
-            state: 'running',
-            start_date: '2023-07-14T09:30:12Z',
-            end_date: '',
-            note: '',
-            conf: JSON.stringify({ keyword: '护肤', max_comments: 50 })
-          }
-        ];
-        setTasks(mockTasks);
-        setLoading(false);
-      }, 500);
+      // Get more tasks than needed to ensure we have the most recent ones
+      // We'll sort and limit them later
+      const notesResponse = await getDagRuns("xhs_notes_collector", 50, "-start_date");
+      const commentsResponse = await getDagRuns("xhs_comments_collector", 50, "-start_date");
+      
+      console.log('Notes response:', notesResponse);
+      console.log('Comments response:', commentsResponse);
+      
+      // Combine all tasks
+      let allTasks: Task[] = [];
+      
+      if (notesResponse && notesResponse.dag_runs) {
+        const notesTasks = notesResponse.dag_runs.map((run: any) => ({
+          dag_run_id: run.dag_run_id,
+          state: run.state,
+          start_date: run.start_date,
+          end_date: run.end_date || '',
+          note: run.note || '',
+          conf: JSON.stringify(run.conf)
+        }));
+        allTasks = [...allTasks, ...notesTasks];
+      }
+      
+      if (commentsResponse && commentsResponse.dag_runs) {
+        const commentsTasks = commentsResponse.dag_runs.map((run: any) => ({
+          dag_run_id: run.dag_run_id,
+          state: run.state,
+          start_date: run.start_date,
+          end_date: run.end_date || '',
+          note: run.note || '',
+          conf: JSON.stringify(run.conf)
+        }));
+        allTasks = [...allTasks, ...commentsTasks];
+      }
+      
+      // Sort by start_date (newest first) - ensure we're using proper date comparison
+      allTasks.sort((a, b) => {
+        const dateA = new Date(a.start_date).getTime();
+        const dateB = new Date(b.start_date).getTime();
+        return dateB - dateA; // Newest first
+      });
+      
+      console.log('All tasks (sorted):', allTasks);
+      console.log('Total tasks count:', allTasks.length);
+      
+      // Display all tasks without limiting
+      setTasks(allTasks);
+      setLoading(false);
     } catch (err) {
-      setError('获取最近任务失败');
+      console.error('Error fetching recent tasks:', err);
+      setError('获取任务列表失败');
       setLoading(false);
     }
   };
@@ -205,28 +279,27 @@ const DataCollect: React.FC = () => {
   const fetchNotes = async (keyword: string) => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get(`/api/notes?keyword=${keyword}`);
-      // setNotes(response.data);
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockNotes = Array.from({ length: 10 }, (_, i) => ({
-          id: i + 1,
-          title: `${keyword}相关笔记 ${i + 1}`,
-          content: `这是一篇关于${keyword}的笔记内容，包含了很多有用的信息...`,
-          author: `用户${i + 1}`,
-          likes: Math.floor(Math.random() * 1000),
-          comments: Math.floor(Math.random() * 100),
-          keyword: keyword,
-          note_url: `https://example.com/note/${i + 1}`,
-          collected_at: new Date().toISOString()
-        }));
-        setNotes(mockNotes);
-        setLoading(false);
-      }, 500);
+      // Create API endpoint URL for notes data
+      const apiUrl = `/api/xhs/notes?keyword=${encodeURIComponent(keyword)}`;
+      
+      // Make the API call
+      const response = await axios.get(apiUrl);
+      
+      // Set notes data from response
+      if (response.data && Array.isArray(response.data)) {
+        setNotes(response.data);
+      } else {
+        // Handle empty or invalid response
+        setNotes([]);
+        console.warn('Notes API returned invalid data format:', response.data);
+      }
+      
+      setLoading(false);
     } catch (err) {
+      console.error('Error fetching notes data:', err);
       setError('获取笔记数据失败');
+      setNotes([]);
       setLoading(false);
     }
   };
@@ -234,24 +307,27 @@ const DataCollect: React.FC = () => {
   const fetchComments = async (keyword: string) => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get(`/api/comments?keyword=${keyword}`);
-      // setComments(response.data);
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockComments = Array.from({ length: 20 }, (_, i) => ({
-          id: i + 1,
-          note_id: Math.floor(i / 2) + 1,
-          content: `这是对${keyword}笔记的评论，我觉得很有用...`,
-          author: `评论用户${i + 1}`,
-          likes: Math.floor(Math.random() * 100)
-        }));
-        setComments(mockComments);
-        setLoading(false);
-      }, 500);
+      // Create API endpoint URL for comments data
+      const apiUrl = `/api/xhs/comments?keyword=${encodeURIComponent(keyword)}`;
+      
+      // Make the API call
+      const response = await axios.get(apiUrl);
+      
+      // Set comments data from response
+      if (response.data && Array.isArray(response.data)) {
+        setComments(response.data);
+      } else {
+        // Handle empty or invalid response
+        setComments([]);
+        console.warn('Comments API returned invalid data format:', response.data);
+      }
+      
+      setLoading(false);
     } catch (err) {
+      console.error('Error fetching comments data:', err);
       setError('获取评论数据失败');
+      setComments([]);
       setLoading(false);
     }
   };
@@ -261,6 +337,78 @@ const DataCollect: React.FC = () => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('zh-CN');
+  };
+  
+  // Get current tasks for pagination
+  const indexOfLastTask = currentPage * tasksPerPage;
+  const indexOfFirstTask = indexOfLastTask - tasksPerPage;
+  const currentTasks = tasks.slice(indexOfFirstTask, indexOfLastTask);
+  
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  
+  // Generate pagination buttons
+  const renderPaginationButtons = () => {
+    const pageNumbers = [];
+    const totalPages = Math.ceil(tasks.length / tasksPerPage);
+    
+    // First page / Previous button
+    pageNumbers.push(
+      <button 
+        key="first" 
+        onClick={() => paginate(1)}
+        disabled={currentPage === 1}
+        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+      >
+        上—页
+      </button>
+    );
+    
+    // Page numbers - simplified version
+    for (let i = 1; i <= totalPages; i++) {
+      // Show only a few pages with ellipsis for brevity
+      if (
+        i === 1 || 
+        i === totalPages || 
+        i === currentPage - 1 || 
+        i === currentPage || 
+        i === currentPage + 1
+      ) {
+        pageNumbers.push(
+          <button
+            key={i}
+            onClick={() => paginate(i)}
+            className={`px-3 py-1 mx-1 rounded ${currentPage === i ? 'bg-indigo-600 text-white' : 'border border-gray-300'}`}
+          >
+            {i}
+          </button>
+        );
+      } else if (
+        (i === 2 && currentPage > 3) || 
+        (i === totalPages - 1 && currentPage < totalPages - 2)
+      ) {
+        // Add ellipsis
+        pageNumbers.push(
+          <span key={`ellipsis-${i}`} className="px-3 py-1 mx-1">
+            ...
+          </span>
+        );
+      }
+    }
+    
+    // Last page / Next button
+    pageNumbers.push(
+      <button 
+        key="last" 
+        onClick={() => paginate(totalPages)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+      >
+        下—页
+      </button>
+    );
+    
+    return pageNumbers;
   };
 
   return (
@@ -312,30 +460,40 @@ const DataCollect: React.FC = () => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">最近的笔记采集任务</h2>
         {tasks.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    任务ID
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    状态
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    开始时间
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    结束时间
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    配置
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tasks.map((task) => (
-                  <tr key={task.dag_run_id}>
+          <>
+            <div className="mb-4">
+              <div className="text-sm text-gray-500 mb-2">
+                显示 {indexOfFirstTask + 1} - {Math.min(indexOfLastTask, tasks.length)} 条，共 {tasks.length} 条记录
+              </div>
+              <div className="flex justify-center">
+                {renderPaginationButtons()}
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      任务ID
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      状态
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      开始时间
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      结束时间
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      配置
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {currentTasks.map((task) => (
+                    <tr key={task.dag_run_id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {task.dag_run_id}
                     </td>
@@ -365,6 +523,7 @@ const DataCollect: React.FC = () => {
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <p className="text-gray-500">没有找到笔记采集任务记录</p>
         )}
