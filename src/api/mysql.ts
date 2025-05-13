@@ -3,6 +3,8 @@ const roomListUrl = process.env.REACT_APP_GET_ROOM_LIST;
 const roomMpListUrl = process.env.REACT_APP_GET_MP_ROOM_LIST;
 const roomMpMsgListUrl = process.env.REACT_APP_GET_MP_ROOM_MSG_LIST;
 const tokenUsageUrl = process.env.REACT_APP_GET_CHAT_TOKEN;
+const getNoteUrl=process.env.REACT_APP_TECENT_GET_NOTES;
+const getKeywordUrl=process.env.REACT_APP_TECENT_GET_KEYWORDS;
 
 export interface ChatMessage {
     msg_id: string;
@@ -280,6 +282,99 @@ export interface TokenUsageResponse {
 /**
  * Retrieves token usage records with optional filtering
  */
+/**
+ * Interface for Xiaohongshu Note
+ */
+export interface XhsNote {
+  id: string;
+  note_id: string;
+  title: string;
+  desc: string;
+  keyword: string;
+  user_id: string;
+  nickname: string;
+  avatar: string;
+  images: string;
+  video_url?: string;
+  like_count: number;
+  collect_count: number;
+  comment_count: number;
+  share_count: number;
+  created_time: string;
+  updated_time: string;
+  [key: string]: any; // For any other fields that might be returned
+}
+
+/**
+ * Interface for Xiaohongshu Notes Response
+ */
+export interface XhsNotesResponse {
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    records: XhsNote[];
+  } | null;
+}
+
+/**
+ * Interface for Keywords Response
+ */
+export interface KeywordsResponse {
+  code: number;
+  message: string;
+  data: string[];
+}
+
+/**
+ * Retrieves all unique keywords from Xiaohongshu notes
+ * @returns Promise with the keywords response
+ */
+export const getKeywordsApi = async (): Promise<KeywordsResponse> => {
+  try {
+    const baseUrl = getKeywordUrl || '';
+    
+    const response = await fetch(baseUrl);
+    if (!response.ok) {
+      throw new Error('Failed to fetch keywords');
+    }
+    
+    return await response.json() as Promise<KeywordsResponse>;
+  } catch (error) {
+    console.error('Error fetching keywords:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves Xiaohongshu notes filtered by a specific keyword
+ * @param keyword The keyword to filter notes by
+ * @returns Promise with the notes response
+ */
+export const getXhsNotesByKeywordApi = async (keyword: string): Promise<XhsNotesResponse> => {
+  try {
+    if (!keyword) {
+      throw new Error('Missing required parameter: keyword');
+    }
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('keyword', keyword);
+    
+    const baseUrl = getNoteUrl || '';
+    const url = `${baseUrl}?${queryParams.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch Xiaohongshu notes');
+    }
+    
+    return await response.json() as Promise<XhsNotesResponse>;
+  } catch (error) {
+    console.error('Error fetching Xiaohongshu notes:', error);
+    throw error;
+  }
+};
+
 export const getTokenUsageApi = async (params: {
   token_source_platform: string;
   wx_user_id: string;

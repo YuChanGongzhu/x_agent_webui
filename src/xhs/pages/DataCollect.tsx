@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { getDagRuns, triggerDagRun, getAllVariables } from '../../api/airflow';
+import { getAllVariables, getDagRuns, triggerDagRun } from '../../api/airflow';
+import { getKeywordsApi, getXhsNotesByKeywordApi } from '../../api/mysql';
 
 interface Keyword {
   keyword: string;
@@ -67,34 +67,32 @@ const DataCollect: React.FC = () => {
   const fetchKeywords = async () => {
     try {
       setLoading(true);
-      // Get keywords from Airflow variables
-      const response = await getAllVariables();
+      // Get keywords from real API endpoint
+      const response = await getKeywordsApi();
       
-      // Filter variables that start with "xhs_keyword_"
-      const keywordVars = response.variables.filter((variable: any) => 
-        variable.key.startsWith('xhs_keyword_')
-      );
-      
-      // Extract keyword values
-      const extractedKeywords = keywordVars.map((variable: any) => 
-        variable.value
-      );
-      
-      if (extractedKeywords.length > 0) {
-        setKeywords(extractedKeywords);
-        setSelectedKeyword(extractedKeywords[0]);
+      // Check if response has data and data has keywords
+      if (response && response.data) {
+        // Extract keywords from the response
+        const extractedKeywords = response.data;
+        
+        if (extractedKeywords.length > 0) {
+          setKeywords(extractedKeywords);
+          setSelectedKeyword(extractedKeywords[0]);
+        } else {
+          // No keywords found in the response
+          setKeywords([]);
+          setError('未找到关键词');
+        }
       } else {
-        // Fallback to default keywords if none found
-        setKeywords(['美妆', '护肤', '时尚', '旅行', '美食']);
-        setSelectedKeyword('美妆');
+        // No data in the response
+        setKeywords([]);
+        setError('未找到关键词数据');
       }
       setLoading(false);
     } catch (err) {
       console.error('Error fetching keywords:', err);
       setError('获取关键词失败');
-      // Fallback to default keywords
-      setKeywords(['美妆', '护肤', '时尚', '旅行', '美食']);
-      setSelectedKeyword('美妆');
+      setKeywords([]);
       setLoading(false);
     }
   };
@@ -213,39 +211,62 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       
-      // Get more tasks than needed to ensure we have the most recent ones
-      // We'll sort and limit them later
-      const notesResponse = await getDagRuns("xhs_notes_collector", 50, "-start_date");
-      const commentsResponse = await getDagRuns("xhs_comments_collector", 50, "-start_date");
-      
-      console.log('Notes response:', notesResponse);
-      console.log('Comments response:', commentsResponse);
-      
-      // Combine all tasks
+      // Get tasks from both API endpoints
       let allTasks: Task[] = [];
       
-      if (notesResponse && notesResponse.dag_runs) {
-        const notesTasks = notesResponse.dag_runs.map((run: any) => ({
-          dag_run_id: run.dag_run_id,
-          state: run.state,
-          start_date: run.start_date,
-          end_date: run.end_date || '',
-          note: run.note || '',
-          conf: JSON.stringify(run.conf)
-        }));
-        allTasks = [...allTasks, ...notesTasks];
-      }
-      
-      if (commentsResponse && commentsResponse.dag_runs) {
-        const commentsTasks = commentsResponse.dag_runs.map((run: any) => ({
-          dag_run_id: run.dag_run_id,
-          state: run.state,
-          start_date: run.start_date,
-          end_date: run.end_date || '',
-          note: run.note || '',
-          conf: JSON.stringify(run.conf)
-        }));
-        allTasks = [...allTasks, ...commentsTasks];
+      // First try to get tasks using the real API
+      try {
+        // Use a default keyword to fetch some initial notes
+        const defaultKeyword = keywords.length > 0 ? keywords[0] : '美食';
+        const notesResponse = await getXhsNotesByKeywordApi(defaultKeyword);
+        
+        console.log('Notes API response:', notesResponse);
+        
+        if (notesResponse && notesResponse.code === 0 && notesResponse.data && notesResponse.data.records) {
+          // Transform the notes into task format
+          const notesTasks = notesResponse.data.records.map((note: any) => ({
+            dag_run_id: note.id || `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            state: 'success',
+            start_date: note.create_time || new Date().toISOString(),
+            end_date: note.update_time || '',
+            note: note.title || '',
+            conf: JSON.stringify({ keyword: note.keyword })
+          }));
+          allTasks = [...allTasks, ...notesTasks];
+        }
+      } catch (apiError) {
+        console.error('Error fetching from notes API, falling back to Airflow:', apiError);
+        
+        // Fallback to Airflow API if the real API fails
+        const notesResponse = await getDagRuns("xhs_notes_collector", 50, "-start_date");
+        const commentsResponse = await getDagRuns("xhs_comments_collector", 50, "-start_date");
+        
+        console.log('Fallback - Notes response:', notesResponse);
+        console.log('Fallback - Comments response:', commentsResponse);
+        
+        if (notesResponse && notesResponse.dag_runs) {
+          const notesTasks = notesResponse.dag_runs.map((run: any) => ({
+            dag_run_id: run.dag_run_id,
+            state: run.state,
+            start_date: run.start_date,
+            end_date: run.end_date || '',
+            note: run.note || '',
+            conf: JSON.stringify(run.conf)
+          }));
+          allTasks = [...allTasks, ...notesTasks];
+        }
+        
+        if (commentsResponse && commentsResponse.dag_runs) {
+          const commentsTasks = commentsResponse.dag_runs.map((run: any) => ({
+            dag_run_id: run.dag_run_id,
+            state: run.state,
+            start_date: run.start_date,
+            end_date: run.end_date || '',
+            note: run.note || '',
+            conf: JSON.stringify(run.conf)
+          }));
+          allTasks = [...allTasks, ...commentsTasks];
+        }
       }
       
       // Sort by start_date (newest first) - ensure we're using proper date comparison
@@ -280,19 +301,29 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       
-      // Create API endpoint URL for notes data
-      const apiUrl = `/api/xhs/notes?keyword=${encodeURIComponent(keyword)}`;
-      
-      // Make the API call
-      const response = await axios.get(apiUrl);
+      // Use the real API endpoint for notes data
+      const response = await getXhsNotesByKeywordApi(keyword);
       
       // Set notes data from response
-      if (response.data && Array.isArray(response.data)) {
-        setNotes(response.data);
+      if (response && response.code === 0 && response.data && response.data.records) {
+        // Transform the API response to match the expected Note format
+        const transformedNotes: Note[] = response.data.records.map((item: any) => ({
+          id: item.id || 0,
+          title: item.title || '',
+          content: item.content || '',
+          author: item.author || 'Unknown',
+          likes: item.likes || 0,
+          comments: item.comments || 0,
+          keyword: item.keyword || keyword,
+          note_url: item.note_url || '',
+          collected_at: item.create_time || new Date().toISOString()
+        }));
+        
+        setNotes(transformedNotes);
       } else {
         // Handle empty or invalid response
         setNotes([]);
-        console.warn('Notes API returned invalid data format:', response.data);
+        console.warn('Notes API returned invalid data format:', response);
       }
       
       setLoading(false);
@@ -308,19 +339,26 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       
-      // Create API endpoint URL for comments data
-      const apiUrl = `/api/xhs/comments?keyword=${encodeURIComponent(keyword)}`;
-      
-      // Make the API call
-      const response = await axios.get(apiUrl);
+      // Use the real API endpoint for comments data
+      // For now, we're using the same API as notes but would need to adapt the data format
+      const response = await getXhsNotesByKeywordApi(keyword);
       
       // Set comments data from response
-      if (response.data && Array.isArray(response.data)) {
-        setComments(response.data);
+      if (response && response.code === 0 && response.data && response.data.records) {
+        // Transform the API response to match the expected Comment format
+        const transformedComments: Comment[] = response.data.records.map((item: any) => ({
+          id: parseInt(item.id) || Math.floor(Math.random() * 10000),
+          note_id: parseInt(item.note_id) || Math.floor(Math.random() * 10000),
+          content: item.content || item.title || '',
+          author: item.author || 'Unknown',
+          likes: item.likes || 0
+        }));
+        
+        setComments(transformedComments);
       } else {
         // Handle empty or invalid response
         setComments([]);
-        console.warn('Comments API returned invalid data format:', response.data);
+        console.warn('Comments API returned invalid data format:', response);
       }
       
       setLoading(false);
@@ -583,6 +621,7 @@ const DataCollect: React.FC = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论数</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
@@ -598,6 +637,11 @@ const DataCollect: React.FC = () => {
                         </a>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                        <div className="line-clamp-3 hover:line-clamp-none">
+                          {note.content || '无内容'}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(note.collected_at)}</td>
