@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { getKeywordsApi, getXhsCommentsByKeywordApi, XhsComment } from '../../api/mysql';
 
-interface Comment {
-  id: number;
-  note_id: number;
-  content: string;
-  author: string;
-  likes: number;
-  keyword: string;
-}
+// Using the XhsComment interface from the API
+type Comment = XhsComment;
 
 const DataFilter: React.FC = () => {
   // State for keywords and selected keyword
@@ -38,19 +32,32 @@ const DataFilter: React.FC = () => {
   const fetchKeywords = async () => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get('/api/keywords');
-      // setKeywords(response.data);
+      // Get keywords from real API endpoint
+      const response = await getKeywordsApi();
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockKeywords = ['美妆', '护肤', '时尚', '旅行', '美食'];
-        setKeywords(mockKeywords);
-        setSelectedKeyword(mockKeywords[0]);
-        setLoading(false);
-      }, 500);
+      // Check if response has data and data has keywords
+      if (response && response.data) {
+        // Extract keywords from the response
+        const extractedKeywords = response.data;
+        
+        if (extractedKeywords.length > 0) {
+          setKeywords(extractedKeywords);
+          setSelectedKeyword(extractedKeywords[0]);
+        } else {
+          // No keywords found in the response
+          setKeywords([]);
+          setError('未找到关键词');
+        }
+      } else {
+        // No data in the response
+        setKeywords([]);
+        setError('未找到关键词数据');
+      }
+      setLoading(false);
     } catch (err) {
+      console.error('Error fetching keywords:', err);
       setError('获取关键词失败');
+      setKeywords([]);
       setLoading(false);
     }
   };
@@ -66,28 +73,35 @@ const DataFilter: React.FC = () => {
   const fetchComments = async (keyword: string) => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get(`/api/comments?keyword=${keyword}`);
-      // setOriginalComments(response.data);
+      // Get comments from real API endpoint
+      const response = await getXhsCommentsByKeywordApi(keyword);
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockComments = Array.from({ length: 50 }, (_, i) => ({
-          id: i + 1,
-          note_id: Math.floor(i / 5) + 1,
-          content: `这是对${keyword}的评论${i + 1}，内容可能很长也可能很短，${
-            i % 3 === 0 ? '这条评论比较长一些，包含了更多的文字内容和描述' : ''
-          }${i % 5 === 0 ? '这里可能包含一些关键词如优惠券、折扣、价格等' : ''}`,
-          author: `用户${i + 1}`,
-          likes: Math.floor(Math.random() * 100),
-          keyword: keyword
-        }));
-        setOriginalComments(mockComments);
-        setFilteredComments(mockComments);
-        setLoading(false);
-      }, 500);
+      // Check if response has data
+      if (response && response.data) {
+        // Extract comments from the response
+        const extractedComments = response.data.records;
+        
+        if (extractedComments && extractedComments.length > 0) {
+          setOriginalComments(extractedComments);
+          setFilteredComments(extractedComments);
+        } else {
+          // No comments found in the response
+          setOriginalComments([]);
+          setFilteredComments([]);
+          setError(`未找到关键词 "${keyword}" 的评论数据`);
+        }
+      } else {
+        // No data in the response
+        setOriginalComments([]);
+        setFilteredComments([]);
+        setError('未找到评论数据');
+      }
+      setLoading(false);
     } catch (err) {
+      console.error('Error fetching comments:', err);
       setError('获取评论数据失败');
+      setOriginalComments([]);
+      setFilteredComments([]);
       setLoading(false);
     }
   };
@@ -104,7 +118,7 @@ const DataFilter: React.FC = () => {
       
       // Filter by minimum likes
       if (minLikes > 0) {
-        filtered = filtered.filter(comment => comment.likes >= minLikes);
+        filtered = filtered.filter(comment => comment.like_count >= minLikes);
       }
       
       // Filter by minimum comment length
@@ -233,7 +247,7 @@ const DataFilter: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
@@ -243,12 +257,16 @@ const DataFilter: React.FC = () => {
                 {filteredComments.map((comment) => (
                   <tr key={comment.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                        {comment.note_url}
+                      </a>
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
                       <div className="truncate max-w-xs md:max-w-md">{comment.content}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
                   </tr>
                 ))}
               </tbody>
