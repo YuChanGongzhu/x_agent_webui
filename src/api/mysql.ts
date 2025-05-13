@@ -5,6 +5,7 @@ const roomMpMsgListUrl = process.env.REACT_APP_GET_MP_ROOM_MSG_LIST;
 const tokenUsageUrl = process.env.REACT_APP_GET_CHAT_TOKEN;
 const getNoteUrl=process.env.REACT_APP_TECENT_GET_NOTES;
 const getKeywordUrl=process.env.REACT_APP_TECENT_GET_KEYWORDS;
+const getCommentsUrl=process.env.REACT_APP_TECENT_GET_COMMENTS;
 
 export interface ChatMessage {
     msg_id: string;
@@ -318,6 +319,35 @@ export interface XhsNotesResponse {
 }
 
 /**
+ * Interface for Xiaohongshu Comment
+ */
+export interface XhsComment {
+  id: string;
+  note_id: string;
+  note_url: string;
+  user_id: string;
+  nickname: string;
+  avatar: string;
+  content: string;
+  like_count: number;
+  created_time: string;
+  keyword: string;
+  [key: string]: any; // For any other fields that might be returned
+}
+
+/**
+ * Interface for Xiaohongshu Comments Response
+ */
+export interface XhsCommentsResponse {
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    records: XhsComment[];
+  } | null;
+}
+
+/**
  * Interface for Keywords Response
  */
 export interface KeywordsResponse {
@@ -342,6 +372,89 @@ export const getKeywordsApi = async (): Promise<KeywordsResponse> => {
     return await response.json() as Promise<KeywordsResponse>;
   } catch (error) {
     console.error('Error fetching keywords:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves Xiaohongshu comments filtered by a specific keyword
+ * @param keyword The keyword to filter comments by
+ * @returns Promise with the comments response
+ */
+export const getXhsCommentsByKeywordApi = async (keyword: string): Promise<XhsCommentsResponse> => {
+  try {
+    if (!keyword) {
+      throw new Error('Missing required parameter: keyword');
+    }
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('keyword', keyword);
+    
+    const baseUrl = getCommentsUrl || '';
+    const url = `${baseUrl}?${queryParams.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch Xiaohongshu comments by keyword');
+    }
+    
+    return await response.json() as Promise<XhsCommentsResponse>;
+  } catch (error) {
+    console.error('Error fetching Xiaohongshu comments by keyword:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves Xiaohongshu comments for specific note URLs
+ * @param urls Array of note URLs to fetch comments for
+ * @returns Promise with the comments response
+ */
+export const getXhsCommentsByUrlsApi = async (urls: string[]): Promise<XhsCommentsResponse> => {
+  try {
+    if (!urls || urls.length === 0) {
+      throw new Error('Missing required parameter: urls');
+    }
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('urls', JSON.stringify(urls));
+    
+    const baseUrl = getCommentsUrl || '';
+    const url = `${baseUrl}?${queryParams.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch Xiaohongshu comments by URLs');
+    }
+    
+    return await response.json() as Promise<XhsCommentsResponse>;
+  } catch (error) {
+    console.error('Error fetching Xiaohongshu comments by URLs:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves a limited number of Xiaohongshu comments
+ * @param limit Maximum number of comments to retrieve (default: 100)
+ * @returns Promise with the comments response
+ */
+export const getXhsCommentsApi = async (limit: number = 100): Promise<XhsCommentsResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    
+    const baseUrl = getCommentsUrl || '';
+    const url = `${baseUrl}?${queryParams.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch Xiaohongshu comments');
+    }
+    
+    return await response.json() as Promise<XhsCommentsResponse>;
+  } catch (error) {
+    console.error('Error fetching Xiaohongshu comments:', error);
     throw error;
   }
 };

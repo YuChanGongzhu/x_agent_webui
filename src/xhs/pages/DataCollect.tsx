@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllVariables, getDagRuns, triggerDagRun } from '../../api/airflow';
-import { getKeywordsApi, getXhsNotesByKeywordApi } from '../../api/mysql';
+import { getKeywordsApi, getXhsNotesByKeywordApi, getXhsCommentsByKeywordApi } from '../../api/mysql';
 
 interface Keyword {
   keyword: string;
@@ -19,11 +19,14 @@ interface Note {
 }
 
 interface Comment {
-  id: number;
-  note_id: number;
+  id: string;
+  note_id: string;
+  note_url: string;
   content: string;
-  author: string;
-  likes: number;
+  nickname: string;
+  like_count: number;
+  created_time: string;
+  keyword: string;
 }
 
 interface Task {
@@ -339,22 +342,13 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       
-      // Use the real API endpoint for comments data
-      // For now, we're using the same API as notes but would need to adapt the data format
-      const response = await getXhsNotesByKeywordApi(keyword);
+      // Use the new comments API endpoint
+      const response = await getXhsCommentsByKeywordApi(keyword);
       
       // Set comments data from response
       if (response && response.code === 0 && response.data && response.data.records) {
-        // Transform the API response to match the expected Comment format
-        const transformedComments: Comment[] = response.data.records.map((item: any) => ({
-          id: parseInt(item.id) || Math.floor(Math.random() * 10000),
-          note_id: parseInt(item.note_id) || Math.floor(Math.random() * 10000),
-          content: item.content || item.title || '',
-          author: item.author || 'Unknown',
-          likes: item.likes || 0
-        }));
-        
-        setComments(transformedComments);
+        // The API now returns data in the correct format, no need for extensive transformation
+        setComments(response.data.records);
       } else {
         // Handle empty or invalid response
         setComments([]);
@@ -620,6 +614,7 @@ const DataCollect: React.FC = () => {
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
@@ -631,9 +626,10 @@ const DataCollect: React.FC = () => {
                   {notes.map((note) => (
                     <tr key={note.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {note.title}
+                        <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                          {note.note_url}
                         </a>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
@@ -670,6 +666,8 @@ const DataCollect: React.FC = () => {
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
@@ -680,9 +678,19 @@ const DataCollect: React.FC = () => {
                     <tr key={comment.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md truncate">{comment.content}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                          {comment.note_url}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                        <div className="line-clamp-3 hover:line-clamp-none">
+                          {comment.content || '无内容'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
                     </tr>
                   ))}
                 </tbody>
