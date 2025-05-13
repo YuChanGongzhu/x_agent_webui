@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getIntentCustomersApi, CustomerIntent, CustomerIntentResponse } from '../../api/mysql';
 
 interface Comment {
   id: number;
@@ -10,17 +11,7 @@ interface Comment {
   keyword: string;
 }
 
-interface CustomerIntent {
-  id: number;
-  comment_id: number;
-  author: string;
-  content: string;
-  intent: string;
-  score: number;
-  keyword: string;
-  analysis: string;
-  created_at: string;
-}
+// Using the CustomerIntent interface imported from mysql.ts
 
 interface AnalysisTask {
   dag_run_id: string;
@@ -74,37 +65,49 @@ const DataAnalyze: React.FC = () => {
   const fetchCustomerIntents = async () => {
     try {
       setLoading(true);
-      // In a real application, this would be an API call
-      // const response = await axios.get('/api/customer-intents');
-      // setCustomerIntents(response.data);
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockIntents = Array.from({ length: 20 }, (_, i) => ({
-          id: i + 1,
-          comment_id: i + 100,
-          author: `用户${i + 1}`,
-          content: `这是一条评论内容，表达了对产品的${i % 3 === 0 ? '强烈兴趣' : i % 3 === 1 ? '一般兴趣' : '疑问'}`,
-          intent: i % 3 === 0 ? '高意向' : i % 3 === 1 ? '中意向' : '低意向',
-          score: i % 3 === 0 ? 0.85 + Math.random() * 0.15 : i % 3 === 1 ? 0.5 + Math.random() * 0.3 : Math.random() * 0.5,
-          keyword: i % 2 === 0 ? '美妆' : '护肤',
-          analysis: `用户表现出${i % 3 === 0 ? '强烈购买意愿' : i % 3 === 1 ? '一定的兴趣' : '对产品的疑问'}，可能是${i % 3 === 0 ? '潜在客户' : i % 3 === 1 ? '需要更多信息' : '需要解答疑问'}`,
-          created_at: new Date().toISOString()
-        }));
-        
-        setCustomerIntents(mockIntents);
-        setFilteredIntents(mockIntents);
+      // Using the actual API to fetch customer intent data
+      const response = await getIntentCustomersApi();
+      
+      if (response && response.data) {
+        const intentData = response.data.records || [];
+        setCustomerIntents(intentData);
+        setFilteredIntents(intentData);
         
         // Extract unique keywords and intents
-        const uniqueKeywords = ['全部', ...new Set(mockIntents.map(item => item.keyword))];
-        const uniqueIntents = ['全部', ...new Set(mockIntents.map(item => item.intent))];
+        const uniqueKeywords = ['全部'];
+        const uniqueIntents = ['全部'];
+        
+        // Add keywords from the filters if available
+        if (response.data.filters && response.data.filters.keywords) {
+          uniqueKeywords.push(...response.data.filters.keywords);
+        } else {
+          // Fallback to extracting from records
+          const keywordsFromData = [...new Set(intentData.map(item => item.keyword).filter(Boolean))];
+          uniqueKeywords.push(...keywordsFromData);
+        }
+        
+        // Add intents from the filters if available
+        if (response.data.filters && response.data.filters.intents) {
+          uniqueIntents.push(...response.data.filters.intents);
+        } else {
+          // Fallback to extracting from records
+          const intentsFromData = [...new Set(intentData.map(item => item.intent).filter(Boolean))];
+          uniqueIntents.push(...intentsFromData);
+        }
         
         setKeywords(uniqueKeywords);
         setIntents(uniqueIntents);
-        
-        setLoading(false);
-      }, 500);
+      } else {
+        setCustomerIntents([]);
+        setFilteredIntents([]);
+        setKeywords(['全部']);
+        setIntents(['全部']);
+      }
+      
+      setLoading(false);
     } catch (err) {
+      console.error('Error fetching customer intent data:', err);
       setError('获取客户意向数据失败');
       setLoading(false);
     }
@@ -120,32 +123,39 @@ const DataAnalyze: React.FC = () => {
     try {
       setLoading(true);
       
-      // In a real application, this would be an API call
-      // const response = await axios.post('/api/analysis-tasks', {
-      //   profile_sentence: profileSentence,
-      //   comment_ids: filteredComments.map(c => c.id).slice(0, 20) // Limit to 20 comments
+      // Using the actual API to start an analysis task
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+      const payload = {
+        profile_sentence: profileSentence,
+        comment_ids: filteredComments.map(c => c.id).slice(0, 20) // Limit to 20 comments
+      };
+      
+      // Use the correct DAG ID
+      const dagId = 'xhs_comments_openrouter';
+      const dagRunId = `${dagId}_${timestamp}`;
+      
+      // In a production environment, this would be an API call to trigger the Airflow DAG
+      // For now, we're simulating the API call
+      const newTask = {
+        dag_run_id: dagRunId,
+        state: 'running',
+        start_date: new Date().toISOString(),
+        end_date: '',
+        conf: JSON.stringify(payload)
+      };
+      
+      // Here you would make the actual API call to trigger the DAG
+      // const response = await axios.post('/api/airflow/dags/xhs_comments_openrouter/dag_runs', {
+      //   dag_run_id: dagRunId,
+      //   conf: payload
       // });
       
-      // Mock successful response
-      setTimeout(() => {
-        const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
-        const newTask = {
-          dag_run_id: `xhs_comments_openrouter_${timestamp}`,
-          state: 'running',
-          start_date: new Date().toISOString(),
-          end_date: '',
-          conf: JSON.stringify({
-            profile_sentence: profileSentence,
-            comment_ids: filteredComments.map(c => c.id).slice(0, 20)
-          })
-        };
-        
-        setAnalysisTask(newTask);
-        setAnalysisStatus('running');
-        setSuccess('已提交分析任务，任务ID: ' + newTask.dag_run_id);
-        setLoading(false);
-      }, 1000);
+      setAnalysisTask(newTask);
+      setAnalysisStatus('running');
+      setSuccess('已提交分析任务，任务ID: ' + newTask.dag_run_id);
+      setLoading(false);
     } catch (err) {
+      console.error('Error starting analysis task:', err);
       setError('提交分析任务失败');
       setLoading(false);
     }
@@ -158,33 +168,32 @@ const DataAnalyze: React.FC = () => {
     try {
       setLoading(true);
       
-      // In a real application, this would be an API call
-      // const response = await axios.get(`/api/analysis-tasks/${analysisTask.dag_run_id}`);
+      // In a production environment, this would be an API call to check the Airflow DAG status
+      // For now, we're simulating the API call
+      // const response = await axios.get(`/api/airflow/dags/xhs_comments_openrouter/dag_runs/${analysisTask.dag_run_id}`);
       // const status = response.data.state;
       
-      // Mock status check
-      setTimeout(() => {
-        // Randomly determine if the task is complete
-        const isComplete = Math.random() > 0.5;
+      // Simulate checking status with a 50% chance of completion for demo purposes
+      const isComplete = Math.random() > 0.5;
+      
+      if (isComplete) {
+        setAnalysisStatus('success');
+        setAnalysisTask({
+          ...analysisTask,
+          state: 'success',
+          end_date: new Date().toISOString()
+        });
+        setSuccess('分析任务已完成！');
         
-        if (isComplete) {
-          setAnalysisStatus('success');
-          setAnalysisTask({
-            ...analysisTask,
-            state: 'success',
-            end_date: new Date().toISOString()
-          });
-          setSuccess('分析任务已完成！');
-          
-          // Simulate fetching new results
-          fetchCustomerIntents();
-        } else {
-          setSuccess('分析任务仍在执行中，请稍后再次检查');
-        }
-        
-        setLoading(false);
-      }, 1000);
+        // Fetch the updated customer intent data
+        fetchCustomerIntents();
+      } else {
+        setSuccess('分析任务仍在执行中，请稍后再次检查');
+      }
+      
+      setLoading(false);
     } catch (err) {
+      console.error('Error checking analysis task status:', err);
       setError('检查分析任务状态失败');
       setLoading(false);
     }
@@ -439,7 +448,6 @@ const DataAnalyze: React.FC = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">意向</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分数</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
                   </tr>
                 </thead>
@@ -460,7 +468,6 @@ const DataAnalyze: React.FC = () => {
                           {item.intent}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.score.toFixed(2)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.keyword}</td>
                     </tr>
                   ))}

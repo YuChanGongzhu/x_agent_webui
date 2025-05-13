@@ -6,6 +6,7 @@ const tokenUsageUrl = process.env.REACT_APP_GET_CHAT_TOKEN;
 const getNoteUrl=process.env.REACT_APP_TECENT_GET_NOTES;
 const getKeywordUrl=process.env.REACT_APP_TECENT_GET_KEYWORDS;
 const getCommentsUrl=process.env.REACT_APP_TECENT_GET_COMMENTS;
+const getIntentCustomersUrl=process.env.REACT_APP_TECENT_GET_INTENT_CUSTOMERS;
 
 export interface ChatMessage {
     msg_id: string;
@@ -401,6 +402,89 @@ export const getXhsCommentsByKeywordApi = async (keyword: string): Promise<XhsCo
     return await response.json() as Promise<XhsCommentsResponse>;
   } catch (error) {
     console.error('Error fetching Xiaohongshu comments by keyword:', error);
+    throw error;
+  }
+};
+
+/**
+ * Interface for Customer Intent data
+ */
+export interface CustomerIntent {
+  id: number;
+  comment_id: number;
+  keyword: string;
+  author: string;
+  intent: string;
+  content: string;
+  note_url: string;
+  profile_sentence: string;
+  analyzed_at: string;
+  [key: string]: any; // For any other fields that might be returned
+}
+
+/**
+ * Interface for Customer Intent API response
+ */
+export interface CustomerIntentResponse {
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    records: CustomerIntent[];
+    filters: {
+      keywords: string[];
+      intents: string[];
+    };
+  } | null;
+}
+
+/**
+ * Retrieves customer intent data filtered by keyword and/or intent type
+ * @param params Optional parameters for filtering
+ * @param params.keyword Optional keyword to filter by
+ * @param params.intent Optional intent type to filter by
+ * @returns Promise with the customer intent response
+ */
+export const getIntentCustomersApi = async (params?: {
+  keyword?: string;
+  intent?: string;
+  get_keywords?: boolean;
+  get_intents?: boolean;
+}): Promise<CustomerIntentResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    // Add optional filters to query parameters
+    if (params?.keyword) {
+      queryParams.append('keyword', params.keyword);
+    }
+    
+    if (params?.intent) {
+      queryParams.append('intent', params.intent);
+    }
+    
+    // Add flags for getting keywords or intents lists
+    if (params?.get_keywords) {
+      queryParams.append('get_keywords', 'true');
+    }
+    
+    if (params?.get_intents) {
+      queryParams.append('get_intents', 'true');
+    }
+    
+    const baseUrl = getIntentCustomersUrl || '';
+    const url = queryParams.toString()
+      ? `${baseUrl}?${queryParams.toString()}`
+      : baseUrl;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch customer intent data');
+    }
+    
+    return await response.json() as Promise<CustomerIntentResponse>;
+  } catch (error) {
+    console.error('Error fetching customer intent data:', error);
     throw error;
   }
 };
