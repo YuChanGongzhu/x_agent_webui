@@ -214,62 +214,38 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       
-      // Get tasks from both API endpoints
+      // Get tasks from Airflow API directly
       let allTasks: Task[] = [];
       
-      // First try to get tasks using the real API
-      try {
-        // Use a default keyword to fetch some initial notes
-        const defaultKeyword = keywords.length > 0 ? keywords[0] : '美食';
-        const notesResponse = await getXhsNotesByKeywordApi(defaultKeyword);
-        
-        console.log('Notes API response:', notesResponse);
-        
-        if (notesResponse && notesResponse.code === 0 && notesResponse.data && notesResponse.data.records) {
-          // Transform the notes into task format
-          const notesTasks = notesResponse.data.records.map((note: any) => ({
-            dag_run_id: note.id || `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            state: 'success',
-            start_date: note.create_time || new Date().toISOString(),
-            end_date: note.update_time || '',
-            note: note.title || '',
-            conf: JSON.stringify({ keyword: note.keyword })
-          }));
-          allTasks = [...allTasks, ...notesTasks];
-        }
-      } catch (apiError) {
-        console.error('Error fetching from notes API, falling back to Airflow:', apiError);
-        
-        // Fallback to Airflow API if the real API fails
-        const notesResponse = await getDagRuns("xhs_notes_collector", 50, "-start_date");
-        const commentsResponse = await getDagRuns("xhs_comments_collector", 50, "-start_date");
-        
-        console.log('Fallback - Notes response:', notesResponse);
-        console.log('Fallback - Comments response:', commentsResponse);
-        
-        if (notesResponse && notesResponse.dag_runs) {
-          const notesTasks = notesResponse.dag_runs.map((run: any) => ({
-            dag_run_id: run.dag_run_id,
-            state: run.state,
-            start_date: run.start_date,
-            end_date: run.end_date || '',
-            note: run.note || '',
-            conf: JSON.stringify(run.conf)
-          }));
-          allTasks = [...allTasks, ...notesTasks];
-        }
-        
-        if (commentsResponse && commentsResponse.dag_runs) {
-          const commentsTasks = commentsResponse.dag_runs.map((run: any) => ({
-            dag_run_id: run.dag_run_id,
-            state: run.state,
-            start_date: run.start_date,
-            end_date: run.end_date || '',
-            note: run.note || '',
-            conf: JSON.stringify(run.conf)
-          }));
-          allTasks = [...allTasks, ...commentsTasks];
-        }
+      // Directly fetch DAG runs from Airflow API
+      const notesResponse = await getDagRuns("xhs_notes_collector", 50, "-start_date");
+      const commentsResponse = await getDagRuns("xhs_comments_collector", 50, "-start_date");
+      
+      console.log('Notes response from Airflow:', notesResponse);
+      console.log('Comments response from Airflow:', commentsResponse);
+      
+      if (notesResponse && notesResponse.dag_runs) {
+        const notesTasks = notesResponse.dag_runs.map((run: any) => ({
+          dag_run_id: run.dag_run_id,
+          state: run.state,
+          start_date: run.start_date,
+          end_date: run.end_date || '',
+          note: run.note || '',
+          conf: JSON.stringify(run.conf)
+        }));
+        allTasks = [...allTasks, ...notesTasks];
+      }
+      
+      if (commentsResponse && commentsResponse.dag_runs) {
+        const commentsTasks = commentsResponse.dag_runs.map((run: any) => ({
+          dag_run_id: run.dag_run_id,
+          state: run.state,
+          start_date: run.start_date,
+          end_date: run.end_date || '',
+          note: run.note || '',
+          conf: JSON.stringify(run.conf)
+        }));
+        allTasks = [...allTasks, ...commentsTasks];
       }
       
       // Sort by start_date (newest first) - ensure we're using proper date comparison
