@@ -43,6 +43,7 @@ const DataCollect: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(100);
   const [maxComments, setMaxComments] = useState(50);
+  const [targetUsername, setTargetUsername] = useState('');
   
   // State for data
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -117,12 +118,13 @@ const DataCollect: React.FC = () => {
       // Prepare configuration
       const conf = {
         keyword,
-        max_notes: maxNotes
+        max_notes: maxNotes,
+        target_username: targetUsername
       };
       
       // Trigger DAG run using Airflow API
       const response = await triggerDagRun(
-        "xhs_notes_collector", 
+        "xhs_notes_collector_concurrent", 
         dag_run_id,
         conf
       );
@@ -141,6 +143,7 @@ const DataCollect: React.FC = () => {
       setSuccess(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`);
       setLoading(false);
       setKeyword('');
+      setTargetUsername('');
       
       // Refresh task list
       fetchRecentTasks();
@@ -429,7 +432,7 @@ const DataCollect: React.FC = () => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
         <form onSubmit={handleCreateNotesTask} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
               <input
@@ -438,6 +441,16 @@ const DataCollect: React.FC = () => {
                 onChange={(e) => setKeyword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 placeholder="输入关键字"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">目标用户名</label>
+              <input
+                type="text"
+                value={targetUsername}
+                onChange={(e) => setTargetUsername(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="输入用户名（可选）"
               />
             </div>
             <div>
