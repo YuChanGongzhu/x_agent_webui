@@ -119,12 +119,12 @@ const DataCollect: React.FC = () => {
       const conf = {
         keyword,
         max_notes: maxNotes,
-        target_username: targetUsername
+        email:targetUsername
       };
       
       // Trigger DAG run using Airflow API
       const response = await triggerDagRun(
-        "xhs_notes_collector_concurrent", 
+        "notes_collector", 
         dag_run_id,
         conf
       );
@@ -444,7 +444,7 @@ const DataCollect: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">目标用户名</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">目标邮件名称</label>
               <input
                 type="text"
                 value={targetUsername}
