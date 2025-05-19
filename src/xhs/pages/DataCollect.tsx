@@ -55,6 +55,10 @@ const DataCollect: React.FC = () => {
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [tasksPerPage] = useState(10);
+  const [currentNotesPage, setCurrentNotesPage] = useState(1);
+  const [notesPerPage] = useState(10);
+  const [currentCommentsPage, setCurrentCommentsPage] = useState(1);
+  const [commentsPerPage] = useState(10);
   
   // State for loading and errors
   const [loading, setLoading] = useState(false);
@@ -205,6 +209,15 @@ const DataCollect: React.FC = () => {
 
   // Fetch recent tasks
 
+  // Reset pagination when notes or comments change
+  useEffect(() => {
+    setCurrentNotesPage(1);
+  }, [notes]);
+  
+  useEffect(() => {
+    setCurrentCommentsPage(1);
+  }, [comments]);
+  
   // Fetch notes and comments when selectedKeyword changes
   useEffect(() => {
     if (selectedKeyword) {
@@ -355,71 +368,18 @@ const DataCollect: React.FC = () => {
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
   const currentTasks = tasks.slice(indexOfFirstTask, indexOfLastTask);
   
-  // Change page
+  // Change page for tasks
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   
-  // Generate pagination buttons
+  // Change page for notes
+  const paginateNotes = (pageNumber: number) => setCurrentNotesPage(pageNumber);
+  
+  // Change page for comments
+  const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
+  
+  // Generate pagination buttons for tasks - No longer used, replaced with inline pagination
   const renderPaginationButtons = () => {
-    const pageNumbers = [];
-    const totalPages = Math.ceil(tasks.length / tasksPerPage);
-    
-    // First page / Previous button
-    pageNumbers.push(
-      <button 
-        key="first" 
-        onClick={() => paginate(1)}
-        disabled={currentPage === 1}
-        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-      >
-        上—页
-      </button>
-    );
-    
-    // Page numbers - simplified version
-    for (let i = 1; i <= totalPages; i++) {
-      // Show only a few pages with ellipsis for brevity
-      if (
-        i === 1 || 
-        i === totalPages || 
-        i === currentPage - 1 || 
-        i === currentPage || 
-        i === currentPage + 1
-      ) {
-        pageNumbers.push(
-          <button
-            key={i}
-            onClick={() => paginate(i)}
-            className={`px-3 py-1 mx-1 rounded ${currentPage === i ? 'bg-indigo-600 text-white' : 'border border-gray-300'}`}
-          >
-            {i}
-          </button>
-        );
-      } else if (
-        (i === 2 && currentPage > 3) || 
-        (i === totalPages - 1 && currentPage < totalPages - 2)
-      ) {
-        // Add ellipsis
-        pageNumbers.push(
-          <span key={`ellipsis-${i}`} className="px-3 py-1 mx-1">
-            ...
-          </span>
-        );
-      }
-    }
-    
-    // Last page / Next button
-    pageNumbers.push(
-      <button 
-        key="last" 
-        onClick={() => paginate(totalPages)}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-      >
-        下—页
-      </button>
-    );
-    
-    return pageNumbers;
+    return null;
   };
 
   return (
@@ -486,9 +446,6 @@ const DataCollect: React.FC = () => {
               <div className="text-sm text-gray-500 mb-2">
                 显示 {indexOfFirstTask + 1} - {Math.min(indexOfLastTask, tasks.length)} 条，共 {tasks.length} 条记录
               </div>
-              <div className="flex justify-center">
-                {renderPaginationButtons()}
-              </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -543,6 +500,72 @@ const DataCollect: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            
+            {/* Pagination for tasks */}
+            {tasks.length > tasksPerPage && (
+              <div className="flex justify-center mt-4">
+                <nav className="flex items-center">
+                  <button 
+                    onClick={() => paginate(1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    首页
+                  </button>
+                  <button 
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    上一页
+                  </button>
+                  
+                  {[...Array(Math.min(5, Math.ceil(tasks.length / tasksPerPage)))].map((_, i) => {
+                    let pageNum: number = 0; // Initialize with default value
+                    const totalPages = Math.ceil(tasks.length / tasksPerPage);
+                    
+                    // Logic to show page numbers centered around current page
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    if (pageNum > 0 && pageNum <= totalPages) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => paginate(pageNum)}
+                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                  
+                  <button 
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    下一页
+                  </button>
+                  <button 
+                    onClick={() => paginate(Math.ceil(tasks.length / tasksPerPage))}
+                    disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    末页
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
           </>
         ) : (
@@ -612,7 +635,9 @@ const DataCollect: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {notes.map((note) => (
+                  {notes
+                    .slice((currentNotesPage - 1) * notesPerPage, currentNotesPage * notesPerPage)
+                    .map((note) => (
                     <tr key={note.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
@@ -634,6 +659,72 @@ const DataCollect: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              
+              {/* Pagination for notes */}
+              {notes.length > notesPerPage && (
+                <div className="flex justify-center mt-4">
+                  <nav className="flex items-center">
+                    <button 
+                      onClick={() => paginateNotes(1)}
+                      disabled={currentNotesPage === 1}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      首页
+                    </button>
+                    <button 
+                      onClick={() => paginateNotes(currentNotesPage - 1)}
+                      disabled={currentNotesPage === 1}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      上一页
+                    </button>
+                    
+                    {[...Array(Math.min(5, Math.ceil(notes.length / notesPerPage)))].map((_, i) => {
+                      let pageNum: number = 0; // Initialize with default value
+                      const totalPages = Math.ceil(notes.length / notesPerPage);
+                      
+                      // Logic to show page numbers centered around current page
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentNotesPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentNotesPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentNotesPage - 2 + i;
+                      }
+                      
+                      if (pageNum > 0 && pageNum <= totalPages) {
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => paginateNotes(pageNum)}
+                            className={`px-3 py-1 mx-1 rounded ${currentNotesPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    <button 
+                      onClick={() => paginateNotes(currentNotesPage + 1)}
+                      disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      下一页
+                    </button>
+                    <button 
+                      onClick={() => paginateNotes(Math.ceil(notes.length / notesPerPage))}
+                      disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      末页
+                    </button>
+                  </nav>
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -663,7 +754,9 @@ const DataCollect: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {comments.map((comment) => (
+                  {comments
+                    .slice((currentCommentsPage - 1) * commentsPerPage, currentCommentsPage * commentsPerPage)
+                    .map((comment) => (
                     <tr key={comment.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
@@ -684,6 +777,72 @@ const DataCollect: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              
+              {/* Pagination for comments */}
+              {comments.length > commentsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <nav className="flex items-center">
+                    <button 
+                      onClick={() => paginateComments(1)}
+                      disabled={currentCommentsPage === 1}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      首页
+                    </button>
+                    <button 
+                      onClick={() => paginateComments(currentCommentsPage - 1)}
+                      disabled={currentCommentsPage === 1}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      上一页
+                    </button>
+                    
+                    {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map((_, i) => {
+                      let pageNum: number = 0; // Initialize with default value
+                      const totalPages = Math.ceil(comments.length / commentsPerPage);
+                      
+                      // Logic to show page numbers centered around current page
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentCommentsPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentCommentsPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentCommentsPage - 2 + i;
+                      }
+                      
+                      if (pageNum > 0 && pageNum <= totalPages) {
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => paginateComments(pageNum)}
+                            className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    <button 
+                      onClick={() => paginateComments(currentCommentsPage + 1)}
+                      disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      下一页
+                    </button>
+                    <button 
+                      onClick={() => paginateComments(Math.ceil(comments.length / commentsPerPage))}
+                      disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      末页
+                    </button>
+                  </nav>
+                </div>
+              )}
             </div>
           </>
         ) : (
