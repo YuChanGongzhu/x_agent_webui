@@ -179,7 +179,7 @@ const DataCollect: React.FC = () => {
       
       // Trigger DAG run using Airflow API
       const response = await triggerDagRun(
-        "xhs_comments_collector", 
+        "comments_collector", 
         dag_run_id,
         conf
       );
@@ -234,8 +234,8 @@ const DataCollect: React.FC = () => {
       let allTasks: Task[] = [];
       
       // Directly fetch DAG runs from Airflow API
-      const notesResponse = await getDagRuns("xhs_notes_collector", 50, "-start_date");
-      const commentsResponse = await getDagRuns("xhs_comments_collector", 50, "-start_date");
+      const notesResponse = await getDagRuns("notes_collector", 50, "-start_date");
+      const commentsResponse = await getDagRuns("comments_collector", 50, "-start_date");
       
       console.log('Notes response from Airflow:', notesResponse);
       console.log('Comments response from Airflow:', commentsResponse);

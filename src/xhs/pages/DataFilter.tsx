@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getKeywordsApi, getXhsCommentsByKeywordApi, XhsComment } from '../../api/mysql';
 
+// Simple spinner component
+const Spinner = () => (
+  <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+);
+
 // Using the XhsComment interface from the API
 type Comment = XhsComment;
 
@@ -8,16 +13,20 @@ const DataFilter: React.FC = () => {
   // State for keywords and selected keyword
   const [keywords, setKeywords] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState('');
-  
+
   // State for comments data
   const [originalComments, setOriginalComments] = useState<Comment[]>([]);
   const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
-  
+
   // State for filter conditions
   const [minLikes, setMinLikes] = useState(0);
   const [minLength, setMinLength] = useState(2);
   const [filterKeywords, setFilterKeywords] = useState('');
-  
+
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [commentsPerPage] = useState(10);
+
   // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,24 +41,19 @@ const DataFilter: React.FC = () => {
   const fetchKeywords = async () => {
     try {
       setLoading(true);
-      // Get keywords from real API endpoint
       const response = await getKeywordsApi();
-      
-      // Check if response has data and data has keywords
+
       if (response && response.data) {
-        // Extract keywords from the response
         const extractedKeywords = response.data;
-        
+
         if (extractedKeywords.length > 0) {
           setKeywords(extractedKeywords);
           setSelectedKeyword(extractedKeywords[0]);
         } else {
-          // No keywords found in the response
           setKeywords([]);
           setError('未找到关键词');
         }
       } else {
-        // No data in the response
         setKeywords([]);
         setError('未找到关键词数据');
       }
@@ -73,25 +77,20 @@ const DataFilter: React.FC = () => {
   const fetchComments = async (keyword: string) => {
     try {
       setLoading(true);
-      // Get comments from real API endpoint
       const response = await getXhsCommentsByKeywordApi(keyword);
-      
-      // Check if response has data
+
       if (response && response.data) {
-        // Extract comments from the response
         const extractedComments = response.data.records;
-        
+
         if (extractedComments && extractedComments.length > 0) {
           setOriginalComments(extractedComments);
           setFilteredComments(extractedComments);
         } else {
-          // No comments found in the response
           setOriginalComments([]);
           setFilteredComments([]);
           setError(`未找到关键词 "${keyword}" 的评论数据`);
         }
       } else {
-        // No data in the response
         setOriginalComments([]);
         setFilteredComments([]);
         setError('未找到评论数据');
@@ -106,27 +105,26 @@ const DataFilter: React.FC = () => {
     }
   };
 
+  // Change page for comments pagination
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
   // Apply filters to comments
   const applyFilters = () => {
     if (!originalComments.length) return;
 
     try {
       setLoading(true);
-      
-      // Start with the original comments
+
       let filtered = [...originalComments];
-      
-      // Filter by minimum likes
+
       if (minLikes > 0) {
         filtered = filtered.filter(comment => comment.like_count >= minLikes);
       }
-      
-      // Filter by minimum comment length
+
       if (minLength > 0) {
         filtered = filtered.filter(comment => comment.content.length >= minLength);
       }
-      
-      // Filter by keywords
+
       if (filterKeywords.trim()) {
         const keywords = filterKeywords.split(',').map(k => k.trim()).filter(k => k);
         if (keywords.length > 0) {
@@ -134,8 +132,7 @@ const DataFilter: React.FC = () => {
           filtered = filtered.filter(comment => pattern.test(comment.content));
         }
       }
-      
-      // Remove duplicates (based on content)
+
       const uniqueContents = new Set();
       filtered = filtered.filter(comment => {
         if (uniqueContents.has(comment.content)) {
@@ -144,8 +141,7 @@ const DataFilter: React.FC = () => {
         uniqueContents.add(comment.content);
         return true;
       });
-      
-      // Update filtered comments
+
       setFilteredComments(filtered);
       setLoading(false);
     } catch (err) {
@@ -157,14 +153,12 @@ const DataFilter: React.FC = () => {
   // Apply filters when filter conditions change
   useEffect(() => {
     applyFilters();
-  }, [minLikes, minLength, filterKeywords]);
+    setCurrentPage(1);
+  }, [minLikes, minLength, filterKeywords, originalComments]);
 
   // Pass data to analysis page
   const handlePassToAnalysis = () => {
-    // In a real application, this would store the data in a global state or context
-    // For demonstration, we'll just simulate success
     if (filteredComments.length > 0) {
-      // Store in sessionStorage for demo purposes
       sessionStorage.setItem('filtered_comments', JSON.stringify(filteredComments));
       setSuccess('数据已传递到分析页面，请切换到分析标签页查看');
     } else {
@@ -180,14 +174,17 @@ const DataFilter: React.FC = () => {
 
       {/* Keyword Selection */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
+        <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>
         <select
           value={selectedKeyword}
           onChange={(e) => setSelectedKeyword(e.target.value)}
+          disabled={loading}
           className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
         >
           {keywords.map((keyword) => (
-            <option key={keyword} value={keyword}>{keyword}</option>
+            <option key={keyword} value={keyword}>
+              {keyword}
+            </option>
           ))}
         </select>
       </div>
@@ -195,7 +192,7 @@ const DataFilter: React.FC = () => {
       {/* Filter Conditions */}
       {originalComments.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">过滤条件设置</h2>
+          <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">最小点赞数</label>
@@ -204,6 +201,7 @@ const DataFilter: React.FC = () => {
                 value={minLikes}
                 onChange={(e) => setMinLikes(parseInt(e.target.value) || 0)}
                 min={0}
+                disabled={loading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               />
             </div>
@@ -214,6 +212,7 @@ const DataFilter: React.FC = () => {
                 value={minLength}
                 onChange={(e) => setMinLength(parseInt(e.target.value) || 2)}
                 min={2}
+                disabled={loading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               />
             </div>
@@ -224,6 +223,7 @@ const DataFilter: React.FC = () => {
                 value={filterKeywords}
                 onChange={(e) => setFilterKeywords(e.target.value)}
                 placeholder="例如：优惠,折扣,价格"
+                disabled={loading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               />
             </div>
@@ -235,7 +235,7 @@ const DataFilter: React.FC = () => {
       {originalComments.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">评论数据</h2>
+            <h2 className="text-lg font-semibold">评论数据 {loading && <Spinner />}</h2>
             <div className="text-sm text-gray-500">
               <span className="mr-4">原始评论数量: {originalComments.length}</span>
               <span>过滤后评论数量: {filteredComments.length}</span>
@@ -247,52 +247,118 @@ const DataFilter: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredComments.map((comment) => (
-                  <tr key={comment.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                        {comment.note_url}
-                      </a>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                      <div className="truncate max-w-xs md:max-w-md">{comment.content}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
-                  </tr>
-                ))}
+                {filteredComments
+                  .slice((currentPage - 1) * commentsPerPage, currentPage * commentsPerPage)
+                  .map((comment) => (
+                    <tr key={comment.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                          {comment.note_url}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                        <div className="line-clamp-3 hover:line-clamp-none">
+                          {comment.content || '无内容'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
+
+            {/* Pagination for comments */}
+            {filteredComments.length > commentsPerPage && (
+              <div className="flex justify-center mt-4">
+                <nav className="flex items-center">
+                  <button
+                    onClick={() => paginate(1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    首页
+                  </button>
+                  <button
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    上一页
+                  </button>
+
+                  {[...Array(Math.min(5, Math.ceil(filteredComments.length / commentsPerPage)))].map((_, i) => {
+                    let pageNum: number = 0;
+                    const totalPages = Math.ceil(filteredComments.length / commentsPerPage);
+
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    if (pageNum > 0 && pageNum <= totalPages) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => paginate(pageNum)}
+                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === Math.ceil(filteredComments.length / commentsPerPage)}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    下一页
+                  </button>
+                  <button
+                    onClick={() => paginate(Math.ceil(filteredComments.length / commentsPerPage))}
+                    disabled={currentPage === Math.ceil(filteredComments.length / commentsPerPage)}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    末页
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
 
           <div className="mt-4">
             <button
               onClick={handlePassToAnalysis}
               disabled={loading || filteredComments.length === 0}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex items-center justify-center"
             >
-              传递到分析页面
+              {loading ? <><Spinner /><span className="ml-2">处理中...</span></> : '传递到分析页面'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Loading State */}
-      {loading && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <p className="text-gray-700">加载中...</p>
-          </div>
-        </div>
-      )}
+      {/* Loading spinner shown in appropriate places */}
 
       {/* Success and Error Messages */}
       {success && (
