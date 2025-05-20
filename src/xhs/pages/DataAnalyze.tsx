@@ -40,6 +40,10 @@ const DataAnalyze: React.FC = () => {
   const [selectedIntent, setSelectedIntent] = useState<string>('全部');
   const [filteredIntents, setFilteredIntents] = useState<CustomerIntent[]>([]);
   
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  
   // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,6 +64,9 @@ const DataAnalyze: React.FC = () => {
     // Fetch customer intent data
     fetchCustomerIntents();
   }, []);
+  
+  // Change page for pagination
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   // Fetch customer intent data
   const fetchCustomerIntents = async () => {
@@ -199,10 +206,10 @@ const DataAnalyze: React.FC = () => {
     }
   };
 
-  // Filter customer intents based on selected keyword and intent
+  // Filter customer intent data when selections change
   useEffect(() => {
     if (customerIntents.length === 0) return;
-
+    
     let filtered = [...customerIntents];
     
     if (selectedKeyword !== '全部') {
@@ -214,6 +221,8 @@ const DataAnalyze: React.FC = () => {
     }
     
     setFilteredIntents(filtered);
+    // Reset to first page when filters change
+    paginate(1);
   }, [selectedKeyword, selectedIntent, customerIntents]);
 
   // Format date for display
@@ -452,12 +461,14 @@ const DataAnalyze: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredIntents.map((item) => (
+                  {filteredIntents
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((item) => (
                     <tr key={item.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                        <div className="truncate max-w-xs md:max-w-md">{item.content}</div>
+                        <div className="line-clamp-3 hover:line-clamp-none">{item.content}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -473,6 +484,72 @@ const DataAnalyze: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              
+              {/* Pagination */}
+              {filteredIntents.length > itemsPerPage && (
+                <div className="flex justify-center mt-4 mb-4">
+                  <nav className="flex items-center">
+                    <button 
+                      onClick={() => paginate(1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      首页
+                    </button>
+                    <button 
+                      onClick={() => paginate(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      上一页
+                    </button>
+                    
+                    {[...Array(Math.min(5, Math.ceil(filteredIntents.length / itemsPerPage)))].map((_, i) => {
+                      let pageNum: number = 0; // Initialize with default value
+                      const totalPages = Math.ceil(filteredIntents.length / itemsPerPage);
+                      
+                      // Logic to show page numbers centered around current page
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      if (pageNum > 0 && pageNum <= totalPages) {
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => paginate(pageNum)}
+                            className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    <button 
+                      onClick={() => paginate(currentPage + 1)}
+                      disabled={currentPage === Math.ceil(filteredIntents.length / itemsPerPage)}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      下一页
+                    </button>
+                    <button 
+                      onClick={() => paginate(Math.ceil(filteredIntents.length / itemsPerPage))}
+                      disabled={currentPage === Math.ceil(filteredIntents.length / itemsPerPage)}
+                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                    >
+                      末页
+                    </button>
+                  </nav>
+                </div>
+              )}
             </div>
             
             <button
