@@ -25,10 +25,13 @@ interface Comment {
   note_id: string;
   note_url: string;
   content: string;
-  nickname: string;
-  like_count: number;
-  created_time: string;
+  author: string;      // 从nickname改为author
+  likes: number;       // 从like_count改为likes
+  created_time?: string;
   keyword: string;
+  collect_time?: string;  // 添加collect_time字段
+  created_at?: string;    // 添加created_at字段
+  updated_at?: string;    // 添加updated_at字段
 }
 
 // Tab types
@@ -225,8 +228,7 @@ const DataCollect: React.FC = () => {
       // Prepare configuration
       const conf = {
         keyword: selectedKeyword,
-        max_comments: maxComments,
-        email: targetEmail
+        max_comments: maxComments
       };
       
       // Trigger DAG run using Airflow API
@@ -391,8 +393,20 @@ const DataCollect: React.FC = () => {
       
       // Set comments data from response
       if (response && response.code === 0 && response.data && response.data.records) {
-        // The API now returns data in the correct format, no need for extensive transformation
-        setComments(response.data.records);
+        // 将API返回的数据映射到Comment接口
+        const mappedComments: Comment[] = response.data.records.map((record: any) => ({
+          id: record.id?.toString() || '',
+          note_id: record.note_id?.toString() || '',
+          note_url: record.note_url || '',
+          content: record.content || '',
+          author: record.author || '',
+          likes: record.likes || 0,
+          keyword: record.keyword || '',
+          collect_time: record.collect_time,
+          created_at: record.created_at,
+          updated_at: record.updated_at
+        }));
+        setComments(mappedComments);
       } else {
         // Handle empty or invalid response
         setComments([]);
@@ -873,8 +887,8 @@ const DataCollect: React.FC = () => {
                             {comment.content || '无内容'}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
                       </tr>
                     ))}
                   </tbody>
