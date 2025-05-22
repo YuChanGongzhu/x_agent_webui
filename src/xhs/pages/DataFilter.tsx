@@ -273,8 +273,8 @@ const DataFilter: React.FC = () => {
                           {comment.content || '无内容'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
                     </tr>
                   ))}
               </tbody>
