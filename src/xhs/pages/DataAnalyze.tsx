@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getIntentCustomersApi, CustomerIntent, CustomerIntentResponse } from '../../api/mysql';
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
+import { useNavigate } from 'react-router-dom';
 
 interface Comment {
   id: number;
@@ -24,6 +25,7 @@ interface AnalysisTask {
 }
 
 const DataAnalyze: React.FC = () => {
+  const navigate = useNavigate();
   // State for filtered comments from previous page
   const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
   
@@ -72,6 +74,36 @@ const DataAnalyze: React.FC = () => {
     // Fetch customer intent data
     fetchCustomerIntents();
   }, []);
+  
+  // 传递意向客户到模板管理页面
+  const handleTransferToTemplateManager = () => {
+    if (filteredIntents.length === 0) {
+      setError('没有可传递的意向客户数据');
+      return;
+    }
+    
+    // 提取意向客户的评论IDs用于兼容性
+    const commentIds = filteredIntents.map(intent => intent.comment_id).filter(Boolean);
+    
+    if (commentIds.length === 0) {
+      setError('所选意向客户中没有有效的评论ID');
+      return;
+    }
+    
+    // 将完整的filteredIntents数组存储到sessionStorage
+    sessionStorage.setItem('filtered_intents', JSON.stringify(filteredIntents));
+    
+    // 为了兼容性，仍然保存评论IDs
+    sessionStorage.setItem('selected_comment_ids', JSON.stringify(commentIds));
+    
+    // 显示成功消息
+    setSuccess(`已成功传递 ${filteredIntents.length} 条意向客户数据到模板管理页面`);
+    
+    // 导航到模板管理页面
+    setTimeout(() => {
+      navigate('/xhs/templates');
+    }, 500);
+  };
   
   // 这里已经在上面定义了paginate函数，所以这里不需要重复定义
 
@@ -663,12 +695,24 @@ const DataAnalyze: React.FC = () => {
               )}
             </div>
             
-            <button
-              onClick={handleExportData}
-              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-            >
-              导出筛选后的意向客户数据
-            </button>
+            <div className="flex space-x-4">
+              <button
+                onClick={handleExportData}
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                导出筛选后的意向客户数据
+              </button>
+              
+              <button
+                onClick={handleTransferToTemplateManager}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                </svg>
+                传递意向客户到模板管理
+              </button>
+            </div>
           </>
         ) : (
           <p className="text-yellow-600">未找到符合条件的意向客户数据</p>

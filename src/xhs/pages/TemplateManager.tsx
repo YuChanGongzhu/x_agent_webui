@@ -1,22 +1,47 @@
 import React, { useState, useEffect } from 'react';
+import { Card, Table, Button, Modal, Form, Input, message, Tabs, Spin, Checkbox, Tag, Pagination } from 'antd';
+import { DeleteOutlined, EditOutlined, SendOutlined, ImportOutlined, PlusOutlined } from '@ant-design/icons';
+import { 
+  getReplyTemplatesApi, 
+  createReplyTemplateApi, 
+  updateReplyTemplateApi, 
+  deleteReplyTemplateApi,
+  getXhsCommentsApi,
+  ReplyTemplate
+} from '../../api/mysql';
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
-import { Card, Button, Input, Form, message, Table, Modal, Checkbox, Spin, Tabs, Pagination } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons';
-import { getReplyTemplatesApi, createReplyTemplateApi, updateReplyTemplateApi, deleteReplyTemplateApi, ReplyTemplate } from '../../api/mysql';
 import axios from 'axios';
 
 const { TextArea } = Input;
-const { TabPane } = Tabs;
 
-// Comment interface
+// 评论接口定义
 interface Comment {
+  id?: number;
+  comment_id: string;
+  content: string;
+  author: string;
+  note_id?: string;
+  note_url?: string;
+  note_title?: string;
+  sent?: boolean;
+  is_selected?: boolean;
+}
+
+// 意向客户接口定义
+interface CustomerIntent {
   id: number;
   comment_id: string;
   author: string;
   content: string;
-  note_url: string;
-  is_selected?: boolean;
+  note_id: string;
+  note_title?: string;
+  keyword: string;
+  intent: string;
+  created_at?: string;
+  updated_at?: string;
 }
+
+const { TabPane } = Tabs;
 
 const TemplateManager: React.FC = () => {
   // 模板状态
@@ -31,13 +56,56 @@ const TemplateManager: React.FC = () => {
 
   // 评论状态
   const [comments, setComments] = useState<Comment[]>([]);
+  const [customerIntents, setCustomerIntents] = useState<CustomerIntent[]>([]); // 新增意向客户数据状态
   const [selectedComments, setSelectedComments] = useState<string[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [maxComments, setMaxComments] = useState(10);
   const [dagRunId, setDagRunId] = useState('');
   const [dagRunStatus, setDagRunStatus] = useState('');
+  const [dataSource, setDataSource] = useState<'comments' | 'intents'>('comments'); // 数据来源状态
 
-  // 组件挂载时获取模板和评论
+  // 检查是否有从DataAnalyze页面传递过来的意向客户数据
+  useEffect(() => {
+    // 检查是否有意向客户数据
+    const storedIntents = sessionStorage.getItem('filtered_intents');
+    if (storedIntents) {
+      try {
+        const parsedIntents = JSON.parse(storedIntents);
+        if (Array.isArray(parsedIntents) && parsedIntents.length > 0) {
+          setCustomerIntents(parsedIntents);
+          // 提取评论IDs
+          const commentIds = parsedIntents.map((intent: CustomerIntent) => intent.comment_id).filter(Boolean);
+          setSelectedComments(commentIds);
+          setDataSource('intents'); // 设置数据来源为意向客户
+          message.success(`已接收 ${parsedIntents.length} 条意向客户数据`);
+          // 清除sessionStorage中的数据，避免重复加载
+          sessionStorage.removeItem('filtered_intents');
+          sessionStorage.removeItem('selected_comment_ids');
+        }
+      } catch (err) {
+        console.error('解析传递的意向客户数据失败:', err);
+      }
+    } else {
+      // 兼容性检查，如果没有意向客户数据，检查是否有评论ID
+      const storedCommentIds = sessionStorage.getItem('selected_comment_ids');
+      if (storedCommentIds) {
+        try {
+          const parsedCommentIds = JSON.parse(storedCommentIds);
+          if (Array.isArray(parsedCommentIds) && parsedCommentIds.length > 0) {
+            setSelectedComments(parsedCommentIds);
+            setDataSource('comments'); // 设置数据来源为评论
+            message.success(`已接收 ${parsedCommentIds.length} 条评论数据`);
+            // 清除sessionStorage中的数据，避免重复加载
+            sessionStorage.removeItem('selected_comment_ids');
+          }
+        } catch (err) {
+          console.error('解析传递的评论ID失败:', err);
+        }
+      }
+    }
+  }, []);
+
+  // 组件初始化时获取模板和评论数据
   useEffect(() => {
     fetchTemplates();
     fetchComments();
@@ -67,14 +135,27 @@ const TemplateManager: React.FC = () => {
   const fetchComments = async () => {
     try {
       setCommentsLoading(true);
-      const response = await axios.get('/api/comments', {
-        params: {
-          is_sent: 0, // 只获取未发送的评论
-          limit: 100
-        }
-      });
       
-      setComments(response.data.comments || []);
+      // 使用getXhsCommentsApi获取评论数据
+      const response = await getXhsCommentsApi(100); // 只传递limit参数
+      
+      if (response && response.data && response.data.records) {
+        // 将API返回的评论数据转换为组件需要的格式
+        const formattedComments: Comment[] = response.data.records.map((comment: any) => ({
+          comment_id: comment.id || comment.comment_id || '',
+          content: comment.content || '',
+          author: comment.author_name || comment.author || '',
+          note_id: comment.note_id || '',
+          note_title: comment.note_title || '',
+          sent: comment.is_sent === 1 // 将is_sent转换为布尔值
+        }));
+        
+        // 只保留未发送的评论
+        const unsentComments = formattedComments.filter(comment => !comment.sent);
+        setComments(unsentComments);
+      } else {
+        setComments([]);
+      }
     } catch (error) {
       console.error('获取评论失败:', error);
       message.error('获取评论失败');
@@ -179,15 +260,14 @@ const TemplateManager: React.FC = () => {
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const newDagRunId = `xhs_comments_template_replier_${timestamp}`;
       
-      // 准备配置
+      // 准备配置 - 使用真实的Airflow DAG ID和参数格式
       const conf = {
-        comment_ids: selectedComments,
-        max_comments: maxComments
+        comment_ids: selectedComments // 这里直接传递评论ID数组，Airflow会在DAG中通过 comment_ids = context['dag_run'].conf.get('comment_ids') 获取
       };
       
       // 使用Airflow API触发DAG运行
       const response = await triggerDagRun(
-        "xhs_comments_template_replier", 
+        "xhs_comments_template_replier", // 真实的DAG ID
         newDagRunId,
         conf
       );
@@ -195,7 +275,7 @@ const TemplateManager: React.FC = () => {
       if (response && response.dag_run_id) {
         setDagRunId(response.dag_run_id);
         setDagRunStatus('running');
-        message.success('已提交触达任务');
+        message.success(`已提交触达任务，处理 ${selectedComments.length} 条评论`);
       } else {
         message.error('提交触达任务失败');
       }
@@ -293,35 +373,69 @@ const TemplateManager: React.FC = () => {
       title: '选择',
       dataIndex: 'comment_id',
       key: 'selection',
-      width: 80,
-      render: (commentId: string) => (
+      render: (comment_id: string) => (
         <Checkbox
-          checked={selectedComments.includes(commentId)}
-          onChange={(e) => handleCommentSelection(commentId, e.target.checked)}
+          checked={selectedComments.includes(comment_id)}
+          onChange={(e) => handleCommentSelection(comment_id, e.target.checked)}
         />
+      ),
+    },
+    {
+      title: '评论内容',
+      dataIndex: 'content',
+      key: 'content',
+    },
+    {
+      title: '作者',
+      dataIndex: 'author',
+      key: 'author',
+    },
+  ];
+
+  // 意向客户列定义
+  const intentColumns = [
+    {
+      title: '选择',
+      dataIndex: 'comment_id',
+      key: 'selection',
+      render: (comment_id: string) => (
+        <Checkbox
+          checked={selectedComments.includes(comment_id)}
+          onChange={(e) => handleCommentSelection(comment_id, e.target.checked)}
+          disabled={!comment_id} // 如果没有comment_id则禁用
+        />
+      ),
+    },
+    {
+      title: '内容',
+      dataIndex: 'content',
+      key: 'content',
+      render: (text: string) => (
+        <div className="line-clamp-3 hover:line-clamp-none">{text}</div>
       ),
     },
     {
       title: '作者',
       dataIndex: 'author',
       key: 'author',
-      width: 120,
     },
     {
-      title: '内容',
-      dataIndex: 'content',
-      key: 'content',
-      ellipsis: true,
+      title: '关键词',
+      dataIndex: 'keyword',
+      key: 'keyword',
     },
     {
-      title: '笔记链接',
-      dataIndex: 'note_url',
-      key: 'note_url',
-      width: 120,
-      render: (url: string) => (
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          查看
-        </a>
+      title: '意向度',
+      dataIndex: 'intent',
+      key: 'intent',
+      render: (intent: string) => (
+        <Tag color={
+          intent === '高意向' ? 'green' :
+          intent === '中意向' ? 'orange' :
+          'default'
+        }>
+          {intent}
+        </Tag>
       ),
     },
   ];
@@ -358,14 +472,14 @@ const TemplateManager: React.FC = () => {
                   current={currentPage}
                   pageSize={pageSize}
                   total={totalTemplates}
-                  onChange={(page) => setCurrentPage(page)}
-                  onShowSizeChange={(current, size) => {
+                  onChange={(page: number) => setCurrentPage(page)}
+                  onShowSizeChange={(current: number, size: number) => {
                     setCurrentPage(1);
                     setPageSize(size);
                   }}
                   showSizeChanger
                   showQuickJumper
-                  showTotal={(total) => `共 ${total} 条`}
+                  showTotal={(total: number) => `共 ${total} 条`}
                   locale={{
                     items_per_page: '条/页',
                     jump_to: '跳至',
@@ -409,19 +523,17 @@ const TemplateManager: React.FC = () => {
           <Card title="用户触达管理">
             <Spin spinning={commentsLoading}>
               <div className="mb-4 flex items-center">
-                <span className="mr-2">最大处理评论数:</span>
-                <Input
-                  type="number"
-                  style={{ width: 100 }}
-                  value={maxComments}
-                  onChange={(e) => setMaxComments(parseInt(e.target.value) || 10)}
-                  min={1}
-                  max={100}
-                />
+                {selectedComments.length > 0 && (
+                  <Tag color="blue" className="mr-4">
+                    {dataSource === 'intents' ? 
+                      `来自意向客户分析: ${customerIntents.length} 条数据` : 
+                      `选中评论: ${selectedComments.length} 条`}
+                  </Tag>
+                )}
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
-                  className="ml-4"
+                  className="mr-4"
                   onClick={handleReachOut}
                   disabled={selectedComments.length === 0 || loading}
                 >
@@ -429,7 +541,7 @@ const TemplateManager: React.FC = () => {
                 </Button>
                 {dagRunId && (
                   <Button
-                    className="ml-2"
+                    className="mr-4"
                     onClick={checkDagRunStatus}
                     disabled={loading}
                   >
@@ -437,25 +549,80 @@ const TemplateManager: React.FC = () => {
                   </Button>
                 )}
                 {dagRunStatus && (
-                  <span className="ml-2">
+                  <span className="mr-4">
                     当前任务状态: <strong>{dagRunStatus}</strong>
                   </span>
                 )}
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => {
+                    // 清除当前选择，准备接收新的评论ID
+                    setSelectedComments([]);
+                    // 重定向到意向客户分析页面
+                    window.location.href = '/data-analyze';
+                  }}
+                >
+                  选择意向客户
+                </Button>
               </div>
 
               <div className="mb-2">
-                已选择 {selectedComments.length} 条评论
+                已选择 {selectedComments.length} 条{dataSource === 'intents' ? '意向客户' : '评论'}
               </div>
-
-              <Table
-                dataSource={comments}
-                columns={commentColumns}
-                rowKey="comment_id"
-                pagination={{
-                  pageSize: 10,
-                  showSizeChanger: true,
-                }}
-              />
+              
+              {dataSource === 'intents' ? (
+                <Table
+                  dataSource={customerIntents}
+                  columns={intentColumns}
+                  rowKey="id"
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total: number) => `共 ${total} 条意向客户数据`,
+                    locale: {
+                      items_per_page: '条/页',
+                      jump_to: '跳至',
+                      jump_to_confirm: '确定',
+                      page: '页',
+                      prev_page: '上一页',
+                      next_page: '下一页',
+                      prev_5: '向前 5 页',
+                      next_5: '向后 5 页',
+                      prev_3: '向前 3 页',
+                      next_3: '向后 3 页'
+                    }
+                  }}
+                  locale={{
+                    emptyText: '没有意向客户数据'
+                  }}
+                />
+              ) : (
+                <Table
+                  dataSource={comments.filter(comment => selectedComments.includes(comment.comment_id))}
+                  columns={commentColumns}
+                  rowKey="comment_id"
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total: number) => `共 ${total} 条评论`,
+                    locale: {
+                      items_per_page: '条/页',
+                      jump_to: '跳至',
+                      jump_to_confirm: '确定',
+                      page: '页',
+                      prev_page: '上一页',
+                      next_page: '下一页',
+                      prev_5: '向前 5 页',
+                      next_5: '向后 5 页',
+                      prev_3: '向前 3 页',
+                      next_3: '向后 3 页'
+                    }
+                  }}
+                  locale={{
+                    emptyText: '没有选中的评论'
+                  }}
+                />
+              )}
             </Spin>
           </Card>
         </TabPane>
