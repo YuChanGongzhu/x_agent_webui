@@ -11,6 +11,7 @@ import DataCollect from './xhs/pages/DataCollect';
 import DataFilter from './xhs/pages/DataFilter';
 import DataAnalyze from './xhs/pages/DataAnalyze';
 import GenerateMsg from './xhs/pages/GenerateMsg';
+import TemplateManager from './xhs/pages/TemplateManager';
 import DeviceManagement from './devices/DeviceManagement';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
                         <Route path="/xhs/filter" element={<DataFilter />} />
                         <Route path="/xhs/analyze" element={<DataAnalyze />} />
                         <Route path="/xhs/generate" element={<GenerateMsg />} />
+                        <Route path="/xhs/templates" element={<TemplateManager />} />
                         <Route path="/devices" element={<DeviceManagement />} />
                       </Routes>
                     </div>

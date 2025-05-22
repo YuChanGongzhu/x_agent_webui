@@ -50,7 +50,8 @@ const initialMenuItems: NavItemWithIcons[] = [
       { name: '数据采集', url: '/xhs/collect' },
       { name: '数据筛选', url: '/xhs/filter' },
       { name: '数据分析', url: '/xhs/analyze' },
-      { name: '内容生成', url: '/xhs/generate' }
+      { name: '内容生成', url: '/xhs/generate' },
+      { name: '模板管理', url: '/xhs/templates' }
     ],
     expanded: false
   },

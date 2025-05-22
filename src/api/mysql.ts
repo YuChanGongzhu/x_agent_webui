@@ -7,6 +7,8 @@ const getNoteUrl=process.env.REACT_APP_TECENT_GET_NOTES;
 const getKeywordUrl=process.env.REACT_APP_TECENT_GET_KEYWORDS;
 const getCommentsUrl=process.env.REACT_APP_TECENT_GET_COMMENTS;
 const getIntentCustomersUrl=process.env.REACT_APP_TECENT_GET_INTENT_CUSTOMERS;
+const getReplyTemplatesUrl=process.env.REACT_APP_TECENT_GET_REPLY_TEMPLATES;
+const updateReplyTemplateUrl=process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLATE;
 
 export interface ChatMessage {
     msg_id: string;
@@ -721,6 +723,183 @@ export const getWxChatHistorySummaryApi = async (wxid: string, room_id: string):
     return response.json() as Promise<ChatHistorySummaryResponse>;
   } catch (error) {
     console.error('Error fetching chat history summary:', error);
+    throw error;
+  }
+};
+
+/**
+ * Interface for Reply Template
+ */
+export interface ReplyTemplate {
+  id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Interface for Reply Templates Response
+ */
+export interface ReplyTemplatesResponse {
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    records: ReplyTemplate[];
+  } | null;
+}
+
+/**
+ * Retrieves reply templates with pagination and optional user filtering
+ * 
+ * @param params Optional parameters for filtering and pagination
+ * @param params.user_id Optional user ID to filter templates by
+ * @param params.page Page number for pagination (default: 1)
+ * @param params.page_size Number of templates per page (default: 10)
+ * @returns Promise with the reply templates response
+ */
+export const getReplyTemplatesApi = async (params?: {
+  user_id?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ReplyTemplatesResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.user_id) queryParams.append('user_id', params.user_id);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const baseUrl = getReplyTemplatesUrl || '';
+    const url = queryParams.toString()
+      ? `${baseUrl}?${queryParams.toString()}`
+      : baseUrl;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch reply templates');
+    }
+    
+    return await response.json() as ReplyTemplatesResponse;
+  } catch (error) {
+    console.error('Error fetching reply templates:', error);
+    throw error;
+  }
+};
+
+/**
+ * Creates a new reply template
+ * 
+ * @param data Template data to create
+ * @param data.content Template content
+ * @param data.user_id User ID who owns the template
+ * @returns Promise with the created template response
+ */
+export const createReplyTemplateApi = async (data: {
+  content: string;
+  user_id: string;
+}): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
+  try {
+    const baseUrl = updateReplyTemplateUrl || '';
+    
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'add',
+        content: data.content,
+        user_id: data.user_id
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create reply template');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating reply template:', error);
+    throw error;
+  }
+};
+
+/**
+ * Updates an existing reply template
+ * 
+ * @param id Template ID to update
+ * @param data Template data to update
+ * @param data.content Updated template content
+ * @param data.user_id User ID who owns the template
+ * @returns Promise with the update response
+ */
+export const updateReplyTemplateApi = async (
+  id: number,
+  data: {
+    content: string;
+    user_id: string;
+  }
+): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
+  try {
+    const baseUrl = updateReplyTemplateUrl || '';
+    
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'update',
+        template_id: id,
+        content: data.content,
+        user_id: data.user_id
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update reply template');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating reply template:', error);
+    throw error;
+  }
+};
+
+/**
+ * Deletes a reply template
+ * 
+ * @param id Template ID to delete
+ * @param user_id User ID who owns the template, defaults to 'zacks'
+ * @returns Promise with the deletion response
+ */
+export const deleteReplyTemplateApi = async (id: number, user_id: string = 'zacks'): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
+  try {
+    const baseUrl = updateReplyTemplateUrl || '';
+    
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'delete',
+        template_id: id,
+        user_id: user_id
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete reply template');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting reply template:', error);
     throw error;
   }
 };
