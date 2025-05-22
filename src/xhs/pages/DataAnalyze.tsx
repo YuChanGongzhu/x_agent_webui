@@ -9,6 +9,7 @@ interface Comment {
   author: string;
   likes: number;
   keyword: string;
+  note_url: string;
 }
 
 // Using the CustomerIntent interface imported from mysql.ts
@@ -44,6 +45,9 @@ const DataAnalyze: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   
+  // Pagination function
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  
   // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -65,8 +69,7 @@ const DataAnalyze: React.FC = () => {
     fetchCustomerIntents();
   }, []);
   
-  // Change page for pagination
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  // 这里已经在上面定义了paginate函数，所以这里不需要重复定义
 
   // Fetch customer intent data
   const fetchCustomerIntents = async () => {
@@ -307,32 +310,102 @@ const DataAnalyze: React.FC = () => {
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredComments.slice(0, 10).map((comment) => (
-                  <tr key={comment.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                      <div className="truncate max-w-xs md:max-w-md">{comment.content}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
-                  </tr>
-                ))}
-                {filteredComments.length > 10 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-sm text-gray-500 text-center">
-                      显示前10条评论，共 {filteredComments.length} 条
-                    </td>
-                  </tr>
-                )}
+                {filteredComments
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((comment) => (
+                    <tr key={comment.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                          {comment.note_url}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                        <div className="line-clamp-3 hover:line-clamp-none">
+                          {comment.content || '无内容'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
+            
+            {/* Pagination for comments */}
+            {filteredComments.length > itemsPerPage && (
+              <div className="flex justify-center mt-4">
+                <nav className="flex items-center">
+                  <button
+                    onClick={() => paginate(1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    首页
+                  </button>
+                  <button
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    上一页
+                  </button>
+
+                  {[...Array(Math.min(5, Math.ceil(filteredComments.length / itemsPerPage)))].map((_, i) => {
+                    let pageNum: number = 0;
+                    const totalPages = Math.ceil(filteredComments.length / itemsPerPage);
+
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    if (pageNum > 0 && pageNum <= totalPages) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => paginate(pageNum)}
+                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === Math.ceil(filteredComments.length / itemsPerPage)}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    下一页
+                  </button>
+                  <button
+                    onClick={() => paginate(Math.ceil(filteredComments.length / itemsPerPage))}
+                    disabled={currentPage === Math.ceil(filteredComments.length / itemsPerPage)}
+                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                  >
+                    末页
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
           
           <div className="mb-4">
