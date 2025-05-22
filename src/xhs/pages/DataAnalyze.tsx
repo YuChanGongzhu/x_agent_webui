@@ -266,18 +266,7 @@ const DataAnalyze: React.FC = () => {
     return date.toLocaleString('zh-CN');
   };
 
-  // Generate content button handler
-  const handleGenerateContent = () => {
-    // In a real application, this would navigate to the generate message page
-    // or trigger content generation
-    setSuccess('正在跳转到生成文案页面...');
-    setTimeout(() => {
-      // Store selected intents in session storage for the next page
-      sessionStorage.setItem('selected_intents', JSON.stringify(filteredIntents));
-      // In a real application, this would navigate to the next page
-      // history.push('/generate-msg');
-    }, 1000);
-  };
+  // 已移除生成文案功能
 
   // Export data as CSV
   const handleExportData = () => {
@@ -528,12 +517,9 @@ const DataAnalyze: React.FC = () => {
           )}
           
           {analysisStatus === 'success' && (
-            <button
-              onClick={handleGenerateContent}
-              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              生成文案
-            </button>
+            <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md">
+              分析任务已完成
+            </div>
           )}
         </div>
       )}
@@ -679,16 +665,9 @@ const DataAnalyze: React.FC = () => {
             
             <button
               onClick={handleExportData}
-              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-2"
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
             >
               导出筛选后的意向客户数据
-            </button>
-            
-            <button
-              onClick={handleGenerateContent}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              生成文案
             </button>
           </>
         ) : (
