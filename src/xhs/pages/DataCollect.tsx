@@ -225,7 +225,8 @@ const DataCollect: React.FC = () => {
       // Prepare configuration
       const conf = {
         keyword: selectedKeyword,
-        max_comments: maxComments
+        max_comments: maxComments,
+        email: targetEmail
       };
       
       // Trigger DAG run using Airflow API
