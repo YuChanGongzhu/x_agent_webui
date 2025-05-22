@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getAllVariables, getDagRuns, triggerDagRun } from '../../api/airflow';
 import { getKeywordsApi, getXhsNotesByKeywordApi, getXhsCommentsByKeywordApi } from '../../api/mysql';
+import { useUser } from '../../context/UserContext';
+import { UserProfileService } from '../../management/userManagement/userProfileService';
 
 interface Keyword {
   keyword: string;
@@ -49,7 +51,8 @@ const DataCollect: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(100);
   const [maxComments, setMaxComments] = useState(50);
-  const [targetUsername, setTargetUsername] = useState('');
+  const [targetEmail, setTargetEmail] = useState('');
+  const [availableEmails, setAvailableEmails] = useState<string[]>([]);
   
   // State for data
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -70,6 +73,48 @@ const DataCollect: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // 获取用户上下文
+  const { isAdmin, email } = useUser();
+
+  // 获取可用的邮箱列表
+  useEffect(() => {
+    const fetchAvailableEmails = async () => {
+      if (isAdmin) {
+        // 管理员可以看到所有用户的邮箱
+        try {
+          const response = await UserProfileService.getAllUserProfiles();
+          if (response && Array.isArray(response)) {
+            const emails = response
+              .filter((user: { email?: string }) => user.email) // 过滤掉没有邮箱的用户
+              .map((user: { email?: string }) => user.email as string);
+            setAvailableEmails(emails);
+          } else {
+            console.error('获取用户列表失败');
+            // 如果获取失败，至少添加当前用户的邮箱
+            if (email) {
+              setAvailableEmails([email]);
+              setTargetEmail(email);
+            }
+          }
+        } catch (err) {
+          console.error('获取用户列表出错:', err);
+          if (email) {
+            setAvailableEmails([email]);
+            setTargetEmail(email);
+          }
+        }
+      } else {
+        // 非管理员只能看到自己的邮箱
+        if (email) {
+          setAvailableEmails([email]);
+          setTargetEmail(email);
+        }
+      }
+    };
+
+    fetchAvailableEmails();
+  }, [isAdmin, email]);
 
   // Fetch keywords on component mount
   useEffect(() => {
@@ -129,7 +174,7 @@ const DataCollect: React.FC = () => {
       const conf = {
         keyword,
         max_notes: maxNotes,
-        email:targetUsername
+        email: targetEmail
       };
       
       // Trigger DAG run using Airflow API
@@ -153,7 +198,7 @@ const DataCollect: React.FC = () => {
       setSuccess(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`);
       setLoading(false);
       setKeyword('');
-      setTargetUsername('');
+      // 不清空目标邮箱，保持选择状态
       
       // Refresh task list
       fetchRecentTasks();
@@ -428,14 +473,20 @@ const DataCollect: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">目标邮件名称</label>
-                  <input
-                    type="text"
-                    value={targetUsername}
-                    onChange={(e) => setTargetUsername(e.target.value)}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">目标邮箱</label>
+                  <select
+                    value={targetEmail}
+                    onChange={(e) => setTargetEmail(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="输入用户名（可选）"
-                  />
+                  >
+                    {availableEmails.length === 0 ? (
+                      <option value="">无可用邮箱</option>
+                    ) : (
+                      availableEmails.map((email) => (
+                        <option key={email} value={email}>{email}</option>
+                      ))
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
