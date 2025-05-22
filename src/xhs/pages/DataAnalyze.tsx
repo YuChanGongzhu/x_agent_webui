@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getIntentCustomersApi, CustomerIntent, CustomerIntentResponse } from '../../api/mysql';
+import { triggerDagRun, getDagRuns } from '../../api/airflow';
 
 interface Comment {
   id: number;
@@ -44,6 +45,9 @@ const DataAnalyze: React.FC = () => {
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  
+  // State for tab navigation
+  const [activeTab, setActiveTab] = useState<'comments' | 'intents'>('comments');
   
   // Pagination function
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -141,21 +145,30 @@ const DataAnalyze: React.FC = () => {
       };
       
       // Use the correct DAG ID
-      const dagId = 'xhs_comments_openrouter';
+      const dagId = 'comments_analyzer';
       const dagRunId = `${dagId}_${timestamp}`;
       
-      // In a production environment, this would be an API call to trigger the Airflow DAG
-      // For now, we're simulating the API call
-      const newTask = {
-        dag_run_id: dagRunId,
-        state: 'running',
-        start_date: new Date().toISOString(),
-        end_date: '',
-        conf: JSON.stringify(payload)
+      // Prepare configuration
+      const conf = {
+        profile_sentence: profileSentence,
+        comment_ids: filteredComments.map(c => c.id).slice(0, 20) // Limit to 20 comments
       };
       
-      // Here you would make the actual API call to trigger the DAG
-      // const response = await axios.post('/api/airflow/dags/xhs_comments_openrouter/dag_runs', {
+      // Trigger DAG run using Airflow API
+      const response = await triggerDagRun(
+        dagId,
+        dagRunId,
+        conf
+      );
+      
+      // Add new task to the list
+      const newTask = {
+        dag_run_id: response.dag_run_id,
+        state: response.state,
+        start_date: response.start_date || new Date().toISOString(),
+        end_date: response.end_date || '',
+        conf: JSON.stringify(conf)
+      };
       //   dag_run_id: dagRunId,
       //   conf: payload
       // });
@@ -178,27 +191,45 @@ const DataAnalyze: React.FC = () => {
     try {
       setLoading(true);
       
-      // In a production environment, this would be an API call to check the Airflow DAG status
-      // For now, we're simulating the API call
-      // const response = await axios.get(`/api/airflow/dags/xhs_comments_openrouter/dag_runs/${analysisTask.dag_run_id}`);
-      // const status = response.data.state;
+      // Get the DAG ID from the dag_run_id (format: dagId_timestamp)
+      const dagId = 'comments_analyzer';
+      const dagRunId = analysisTask.dag_run_id;
       
-      // Simulate checking status with a 50% chance of completion for demo purposes
-      const isComplete = Math.random() > 0.5;
+      // Get the specific DAG run status from Airflow API
+      const response = await getDagRuns(dagId, 100, "-start_date");
       
-      if (isComplete) {
-        setAnalysisStatus('success');
+      // Find the specific DAG run by ID
+      const specificDagRun = response && response.dag_runs ? 
+        response.dag_runs.find((run: any) => run.dag_run_id === dagRunId) : null;
+      console.log('Analysis task status response:', response);
+      console.log('Looking for DAG run ID:', dagRunId);
+      
+      if (specificDagRun) {
+        console.log('Found specific DAG run:', specificDagRun);
+        const currentState = specificDagRun.state;
+        
+        // Update the analysis task with the current state
         setAnalysisTask({
           ...analysisTask,
-          state: 'success',
-          end_date: new Date().toISOString()
+          state: currentState,
+          end_date: specificDagRun.end_date || analysisTask.end_date
         });
-        setSuccess('分析任务已完成！');
         
-        // Fetch the updated customer intent data
-        fetchCustomerIntents();
+        if (currentState === 'success') {
+          setAnalysisStatus('success');
+          setSuccess('分析任务已完成！');
+          
+          // Fetch the updated customer intent data
+          fetchCustomerIntents();
+        } else if (currentState === 'failed') {
+          setAnalysisStatus('failed');
+          setError('分析任务失败，请检查日志');
+        } else {
+          // Still running
+          setSuccess('分析任务仍在执行中，请稍后再次检查');
+        }
       } else {
-        setSuccess('分析任务仍在执行中，请稍后再次检查');
+        setError('无法获取任务状态，请稍后再试');
       }
       
       setLoading(false);
@@ -298,8 +329,28 @@ const DataAnalyze: React.FC = () => {
         <p className="text-blue-700">本页面用于分析和分类小红书评论数据。</p>
       </div>
 
-      {/* Filtered Comments Section */}
-      {filteredComments.length > 0 ? (
+      {/* Tabs Navigation */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex">
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'comments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            >
+              评论数据
+            </button>
+            <button
+              onClick={() => setActiveTab('intents')}
+              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'intents' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            >
+              意向客户
+            </button>
+          </nav>
+        </div>
+      </div>
+      
+      {/* Comments Tab Content */}
+      {activeTab === 'comments' && filteredComments.length > 0 ? (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">已加载过滤后的评论数据</h2>
           <p className="mb-4">共 {filteredComments.length} 条评论</p>
@@ -428,11 +479,11 @@ const DataAnalyze: React.FC = () => {
             {loading ? '处理中...' : '分析内容'}
           </button>
         </div>
-      ) : (
+      ) : activeTab === 'comments' ? (
         <div className="bg-yellow-50 p-4 rounded-lg mb-6">
           <p className="text-yellow-700">没有找到过滤后的评论数据，请先在数据预处理页面进行过滤</p>
         </div>
-      )}
+      ) : null}
 
       {/* Analysis Task Status */}
       {analysisTask && (
@@ -487,10 +538,11 @@ const DataAnalyze: React.FC = () => {
         </div>
       )}
 
-      {/* Customer Intent Data */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">意向客户数据</h2>
-        <p className="mb-4 text-gray-600">本部分展示已分析的意向客户数据，可通过关键词和意向类型进行筛选</p>
+      {/* Customer Intent Data - Only show in Intents Tab */}
+      {activeTab === 'intents' && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">意向客户数据</h2>
+          <p className="mb-4 text-gray-600">本部分展示已分析的意向客户数据，可通过关键词和意向类型进行筛选</p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
@@ -643,6 +695,7 @@ const DataAnalyze: React.FC = () => {
           <p className="text-yellow-600">未找到符合条件的意向客户数据</p>
         )}
       </div>
+      )}
 
       {/* Success and Error Messages */}
       {success && (
