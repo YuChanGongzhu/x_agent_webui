@@ -29,6 +29,9 @@ interface Comment {
   keyword: string;
 }
 
+// Tab types
+type TabType = '任务' | '笔记' | '评论';
+
 interface Task {
   dag_run_id: string;
   state: string;
@@ -39,6 +42,9 @@ interface Task {
 }
 
 const DataCollect: React.FC = () => {
+  // State for tab navigation
+  const [activeTab, setActiveTab] = useState<TabType>('任务');
+  
   // State for form inputs
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(100);
@@ -384,471 +390,516 @@ const DataCollect: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="bg-blue-50 p-4 rounded-lg mb-6">
+      <div className="bg-blue-50 p-4 rounded-lg mb-2">
         <p className="text-blue-700">本页面用于从小红书收集数据并创建数据采集任务</p>
       </div>
 
-      {/* Create Notes Collection Task */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
-        <form onSubmit={handleCreateNotesTask} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="输入关键字"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">目标邮件名称</label>
-              <input
-                type="text"
-                value={targetUsername}
-                onChange={(e) => setTargetUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="输入用户名（可选）"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
-              <input
-                type="number"
-                value={maxNotes}
-                onChange={(e) => setMaxNotes(parseInt(e.target.value))}
-                min={1}
-                max={1000}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-              />
-            </div>
-          </div>
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              {loading ? '处理中...' : '创建笔记采集任务'}
-            </button>
-          </div>
-        </form>
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-200 mb-2">
+        {(['任务', '笔记', '评论'] as TabType[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`py-2 px-4 font-medium text-sm ${activeTab === tab 
+              ? 'border-b-2 border-primary text-primary' 
+              : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* Recent Tasks */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">最近的笔记采集任务</h2>
-        {tasks.length > 0 ? (
-          <>
-            <div className="mb-4">
-              <div className="text-sm text-gray-500 mb-2">
-                显示 {indexOfFirstTask + 1} - {Math.min(indexOfLastTask, tasks.length)} 条，共 {tasks.length} 条记录
+      {/* Task Tab Content */}
+      {activeTab === '任务' && (
+        <>
+          {/* Create Notes Collection Task */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
+            <form onSubmit={handleCreateNotesTask} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
+                  <input
+                    type="text"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="输入关键字"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">目标邮件名称</label>
+                  <input
+                    type="text"
+                    value={targetUsername}
+                    onChange={(e) => setTargetUsername(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="输入用户名（可选）"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
+                  <input
+                    type="number"
+                    value={maxNotes}
+                    onChange={(e) => setMaxNotes(parseInt(e.target.value))}
+                    min={1}
+                    max={1000}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  />
+                </div>
               </div>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      任务ID
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      状态
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      开始时间
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      结束时间
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      配置
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {currentTasks.map((task) => (
-                    <tr key={task.dag_run_id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {task.dag_run_id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        task.state === 'success' ? 'bg-green-100 text-green-800' :
-                        task.state === 'running' ? 'bg-blue-100 text-blue-800' :
-                        task.state === 'failed' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {task.state === 'success' ? '成功' :
-                         task.state === 'running' ? '运行中' :
-                         task.state === 'failed' ? '失败' : task.state}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(task.start_date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(task.end_date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {task.conf}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {/* Pagination for tasks */}
-            {tasks.length > tasksPerPage && (
-              <div className="flex justify-center mt-4">
-                <nav className="flex items-center">
-                  <button 
-                    onClick={() => paginate(1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                  >
-                    首页
-                  </button>
-                  <button 
-                    onClick={() => paginate(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                  >
-                    上一页
-                  </button>
-                  
-                  {[...Array(Math.min(5, Math.ceil(tasks.length / tasksPerPage)))].map((_, i) => {
-                    let pageNum: number = 0; // Initialize with default value
-                    const totalPages = Math.ceil(tasks.length / tasksPerPage);
-                    
-                    // Logic to show page numbers centered around current page
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    if (pageNum > 0 && pageNum <= totalPages) {
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => paginate(pageNum)}
-                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    }
-                    return null;
-                  })}
-                  
-                  <button 
-                    onClick={() => paginate(currentPage + 1)}
-                    disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
-                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                  >
-                    下一页
-                  </button>
-                  <button 
-                    onClick={() => paginate(Math.ceil(tasks.length / tasksPerPage))}
-                    disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
-                    className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                  >
-                    末页
-                  </button>
-                </nav>
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  {loading ? '处理中...' : '创建笔记采集任务'}
+                </button>
               </div>
+            </form>
+          </div>
+
+          {/* Recent Tasks */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">最近的笔记采集任务</h2>
+            {tasks.length > 0 ? (
+              <>
+                <div className="mb-4">
+                  <div className="text-sm text-gray-500 mb-2">
+                    显示 {indexOfFirstTask + 1} - {Math.min(indexOfLastTask, tasks.length)} 条，共 {tasks.length} 条记录
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          任务ID
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          状态
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          开始时间
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          结束时间
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          配置
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {currentTasks.map((task) => (
+                        <tr key={task.dag_run_id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {task.dag_run_id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            task.state === 'success' ? 'bg-green-100 text-green-800' :
+                            task.state === 'running' ? 'bg-blue-100 text-blue-800' :
+                            task.state === 'failed' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {task.state === 'success' ? '成功' :
+                             task.state === 'running' ? '运行中' :
+                             task.state === 'failed' ? '失败' : task.state}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(task.start_date)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(task.end_date)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {task.conf}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {/* Pagination for tasks */}
+                {tasks.length > tasksPerPage && (
+                  <div className="flex justify-center mt-4">
+                    <nav className="flex items-center">
+                      <button 
+                        onClick={() => paginate(1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        首页
+                      </button>
+                      <button 
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        上一页
+                      </button>
+                      
+                      {[...Array(Math.min(5, Math.ceil(tasks.length / tasksPerPage)))].map((_, i) => {
+                        let pageNum: number = 0; // Initialize with default value
+                        const totalPages = Math.ceil(tasks.length / tasksPerPage);
+                        
+                        // Logic to show page numbers centered around current page
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        if (pageNum > 0 && pageNum <= totalPages) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => paginate(pageNum)}
+                              className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+                      
+                      <button 
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        下一页
+                      </button>
+                      <button 
+                        onClick={() => paginate(Math.ceil(tasks.length / tasksPerPage))}
+                        disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        末页
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </div>
+              </>
+            ) : (
+              <p className="text-gray-500">没有找到笔记采集任务记录</p>
             )}
           </div>
-          </>
-        ) : (
-          <p className="text-gray-500">没有找到笔记采集任务记录</p>
-        )}
-      </div>
+        </>
+      )}
 
-      <div className="border-t border-gray-200 my-6"></div>
+      {/* Notes Tab Content */}
+      {activeTab === '笔记' && (
+        <>
+          {/* Keyword Selection */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
+            <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
+                <select
+                  value={selectedKeyword}
+                  onChange={(e) => setSelectedKeyword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                >
+                  {keywords.map((kw) => (
+                    <option key={kw} value={kw}>{kw}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
 
-      {/* Keyword Selection and Comment Collection */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
-            <select
-              value={selectedKeyword}
-              onChange={(e) => setSelectedKeyword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          {/* Display Collected Notes */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">已采集的笔记</h2>
+            {notes.length > 0 ? (
+              <>
+                <p className="mb-2">原始笔记数量: {notes.length}</p>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论数</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {notes
+                        .slice((currentNotesPage - 1) * notesPerPage, currentNotesPage * notesPerPage)
+                        .map((note) => (
+                        <tr key={note.id}>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                            <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                              {note.note_url}
+                            </a>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
+                          <td className="px-3 py-2 text-sm text-gray-500 max-w-md">
+                            <div className="line-clamp-3 hover:line-clamp-none">
+                              {note.content || '无内容'}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(note.collected_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {/* Pagination for notes */}
+                  {notes.length > notesPerPage && (
+                    <div className="flex justify-center mt-4">
+                      <nav className="flex items-center">
+                        <button 
+                          onClick={() => paginateNotes(1)}
+                          disabled={currentNotesPage === 1}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          首页
+                        </button>
+                        <button 
+                          onClick={() => paginateNotes(currentNotesPage - 1)}
+                          disabled={currentNotesPage === 1}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          上一页
+                        </button>
+                        
+                        {[...Array(Math.min(5, Math.ceil(notes.length / notesPerPage)))].map((_, i) => {
+                          let pageNum: number = 0; // Initialize with default value
+                          const totalPages = Math.ceil(notes.length / notesPerPage);
+                          
+                          // Logic to show page numbers centered around current page
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentNotesPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentNotesPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentNotesPage - 2 + i;
+                          }
+                          
+                          if (pageNum > 0 && pageNum <= totalPages) {
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => paginateNotes(pageNum)}
+                                className={`px-3 py-1 mx-1 rounded ${currentNotesPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        <button 
+                          onClick={() => paginateNotes(currentNotesPage + 1)}
+                          disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          下一页
+                        </button>
+                        <button 
+                          onClick={() => paginateNotes(Math.ceil(notes.length / notesPerPage))}
+                          disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          末页
+                        </button>
+                      </nav>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-yellow-600">⚠️ 没有找到相关笔记数据</p>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Comments Tab Content */}
+      {activeTab === '评论' && (
+        <>
+          {/* Keyword Selection and Comment Collection */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
+                <select
+                  value={selectedKeyword}
+                  onChange={(e) => setSelectedKeyword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                >
+                  {keywords.map((kw) => (
+                    <option key={kw} value={kw}>{kw}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
+                <input
+                  type="number"
+                  value={maxComments}
+                  onChange={(e) => setMaxComments(parseInt(e.target.value))}
+                  min={1}
+                  max={1000}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleCreateCommentsTask}
+              disabled={loading || !selectedKeyword}
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >
-              {keywords.map((kw) => (
-                <option key={kw} value={kw}>{kw}</option>
-              ))}
-            </select>
+              {loading ? '处理中...' : '创建笔记评论收集任务'}
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
-            <input
-              type="number"
-              value={maxComments}
-              onChange={(e) => setMaxComments(parseInt(e.target.value))}
-              min={1}
-              max={1000}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-            />
-          </div>
+        </>
+      )}
+
+      {/* Display Collected Comments - Only shown in the Comments tab */}
+      {activeTab === '评论' && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">已采集的评论</h2>
+          {comments.length > 0 ? (
+            <>
+              <p className="mb-2">原始评论数量: {comments.length}</p>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {comments
+                      .slice((currentCommentsPage - 1) * commentsPerPage, currentCommentsPage * commentsPerPage)
+                      .map((comment) => (
+                      <tr key={comment.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                            {comment.note_url}
+                          </a>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                          <div className="line-clamp-3 hover:line-clamp-none">
+                            {comment.content || '无内容'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {/* Pagination for comments */}
+                {comments.length > commentsPerPage && (
+                  <div className="flex justify-center mt-4">
+                    <nav className="flex items-center">
+                      <button 
+                        onClick={() => paginateComments(1)}
+                        disabled={currentCommentsPage === 1}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        首页
+                      </button>
+                      <button 
+                        onClick={() => paginateComments(currentCommentsPage - 1)}
+                        disabled={currentCommentsPage === 1}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        上一页
+                      </button>
+                      
+                      {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map((_, i) => {
+                        let pageNum: number = 0; // Initialize with default value
+                        const totalPages = Math.ceil(comments.length / commentsPerPage);
+                        
+                        // Logic to show page numbers centered around current page
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentCommentsPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentCommentsPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentCommentsPage - 2 + i;
+                        }
+                        
+                        if (pageNum > 0 && pageNum <= totalPages) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => paginateComments(pageNum)}
+                              className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+                      
+                      <button 
+                        onClick={() => paginateComments(currentCommentsPage + 1)}
+                        disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        下一页
+                      </button>
+                      <button 
+                        onClick={() => paginateComments(Math.ceil(comments.length / commentsPerPage))}
+                        disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        末页
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="text-yellow-600">⚠️ 没有找到相关评论数据</p>
+          )}
         </div>
-        <button
-          onClick={handleCreateCommentsTask}
-          disabled={loading || !selectedKeyword}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-        >
-          {loading ? '处理中...' : '创建笔记评论收集任务'}
-        </button>
-      </div>
-
-      <div className="border-t border-gray-200 my-6"></div>
-
-      {/* Display Collected Notes */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">已采集的笔记</h2>
-        {notes.length > 0 ? (
-          <>
-            <p className="mb-2">原始笔记数量: {notes.length}</p>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论数</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {notes
-                    .slice((currentNotesPage - 1) * notesPerPage, currentNotesPage * notesPerPage)
-                    .map((note) => (
-                    <tr key={note.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                          {note.note_url}
-                        </a>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                        <div className="line-clamp-3 hover:line-clamp-none">
-                          {note.content || '无内容'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(note.collected_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              
-              {/* Pagination for notes */}
-              {notes.length > notesPerPage && (
-                <div className="flex justify-center mt-4">
-                  <nav className="flex items-center">
-                    <button 
-                      onClick={() => paginateNotes(1)}
-                      disabled={currentNotesPage === 1}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      首页
-                    </button>
-                    <button 
-                      onClick={() => paginateNotes(currentNotesPage - 1)}
-                      disabled={currentNotesPage === 1}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      上一页
-                    </button>
-                    
-                    {[...Array(Math.min(5, Math.ceil(notes.length / notesPerPage)))].map((_, i) => {
-                      let pageNum: number = 0; // Initialize with default value
-                      const totalPages = Math.ceil(notes.length / notesPerPage);
-                      
-                      // Logic to show page numbers centered around current page
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentNotesPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentNotesPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentNotesPage - 2 + i;
-                      }
-                      
-                      if (pageNum > 0 && pageNum <= totalPages) {
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => paginateNotes(pageNum)}
-                            className={`px-3 py-1 mx-1 rounded ${currentNotesPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      }
-                      return null;
-                    })}
-                    
-                    <button 
-                      onClick={() => paginateNotes(currentNotesPage + 1)}
-                      disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      下一页
-                    </button>
-                    <button 
-                      onClick={() => paginateNotes(Math.ceil(notes.length / notesPerPage))}
-                      disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      末页
-                    </button>
-                  </nav>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <p className="text-yellow-600">⚠️ 没有找到相关笔记数据</p>
-        )}
-      </div>
-
-      <div className="border-t border-gray-200 my-6"></div>
-
-      {/* Display Collected Comments */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">已采集的评论</h2>
-        {comments.length > 0 ? (
-          <>
-            <p className="mb-2">原始评论数量: {comments.length}</p>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {comments
-                    .slice((currentCommentsPage - 1) * commentsPerPage, currentCommentsPage * commentsPerPage)
-                    .map((comment) => (
-                    <tr key={comment.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                          {comment.note_url}
-                        </a>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                        <div className="line-clamp-3 hover:line-clamp-none">
-                          {comment.content || '无内容'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.nickname}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.like_count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              
-              {/* Pagination for comments */}
-              {comments.length > commentsPerPage && (
-                <div className="flex justify-center mt-4">
-                  <nav className="flex items-center">
-                    <button 
-                      onClick={() => paginateComments(1)}
-                      disabled={currentCommentsPage === 1}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      首页
-                    </button>
-                    <button 
-                      onClick={() => paginateComments(currentCommentsPage - 1)}
-                      disabled={currentCommentsPage === 1}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      上一页
-                    </button>
-                    
-                    {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map((_, i) => {
-                      let pageNum: number = 0; // Initialize with default value
-                      const totalPages = Math.ceil(comments.length / commentsPerPage);
-                      
-                      // Logic to show page numbers centered around current page
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentCommentsPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentCommentsPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentCommentsPage - 2 + i;
-                      }
-                      
-                      if (pageNum > 0 && pageNum <= totalPages) {
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => paginateComments(pageNum)}
-                            className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      }
-                      return null;
-                    })}
-                    
-                    <button 
-                      onClick={() => paginateComments(currentCommentsPage + 1)}
-                      disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      下一页
-                    </button>
-                    <button 
-                      onClick={() => paginateComments(Math.ceil(comments.length / commentsPerPage))}
-                      disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
-                      className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                    >
-                      末页
-                    </button>
-                  </nav>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <p className="text-yellow-600">⚠️ 没有找到相关评论数据</p>
-        )}
-      </div>
+      )}
 
       {/* Success and Error Messages */}
       {success && (
