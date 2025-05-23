@@ -48,6 +48,8 @@ interface Task {
 
 const DataCollect: React.FC = () => {
   // ...原有state...
+  const [refreshingKeywords, setRefreshingKeywords] = useState(false);
+  // ...原有state...
   const [refreshingTasks, setRefreshingTasks] = useState(false);
   // State for tab navigation
   const [activeTab, setActiveTab] = useState<TabType>('任务');
@@ -719,10 +721,36 @@ const DataCollect: React.FC = () => {
         <>
           {/* Keyword Selection */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
-            <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">选择关键字</h2>
+              <button
+                onClick={async () => {
+                  setRefreshingKeywords(true);
+                  try {
+                    await fetchKeywords();
+                  } finally {
+                    setRefreshingKeywords(false);
+                  }
+                }}
+                className={`flex items-center px-3 py-1 rounded text-primary border border-primary hover:bg-primary hover:text-white transition disabled:opacity-70 disabled:cursor-not-allowed ml-2`}
+                disabled={refreshingKeywords}
+                title="刷新关键词列表"
+              >
+                {refreshingKeywords ? (
+                  <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                刷新关键词
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
                 <select
                   value={selectedKeyword}
                   onChange={(e) => setSelectedKeyword(e.target.value)}
