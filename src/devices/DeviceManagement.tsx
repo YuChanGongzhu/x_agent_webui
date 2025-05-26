@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getVariable, setVariable, triggerDagRun } from '../api/airflow';
+import { getVariable, setVariable, triggerDagRun, getDagRunDetail } from '../api/airflow';
 import { message, Spin, Button, Modal, Form, Input, InputNumber, Space, Table, Tag, Card, Popconfirm, Tooltip, Typography, Badge } from 'antd';
 import { useIsAdmin } from '../context/userHooks';
 import { useUserEmail } from '../context/userHooks';
@@ -83,21 +83,69 @@ const DeviceManagement: React.FC = () => {
     fetchDevices();
   }, []);
 
+  // 存储当前运行的DAG ID
+  const [currentDagRunId, setCurrentDagRunId] = useState<string | null>(null);
+  
+  // 检查DAG运行状态的函数
+  const checkDagRunStatus = async (dagRunId: string) => {
+    try {
+      const response = await getDagRunDetail('update_device_list', dagRunId);
+      console.log('DAG运行状态:', response);
+      
+      // 根据DAG状态更新refreshing
+      if (response && response.state) {
+        // 如果DAG状态为'running'或'queued'，则继续刷新状态
+        if (['running', 'queued'].includes(response.state)) {
+          setRefreshing(true);
+          
+          // 继续轮询检查状态
+          setTimeout(() => {
+            checkDagRunStatus(dagRunId);
+          }, 2000);
+        } else {
+          // DAG已完成或失败
+          setRefreshing(false);
+          fetchDevices(); // 获取最新设备列表
+          setCurrentDagRunId(null);
+          
+          // 根据状态显示相应消息
+          if (response.state === 'success') {
+            message.success('设备列表已成功刷新');
+          } else if (response.state === 'failed') {
+            message.error('设备列表刷新失败');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('检查DAG状态失败:', error);
+      setRefreshing(false);
+      setCurrentDagRunId(null);
+    }
+  };
+
   // 刷新设备列表（触发DAG）
   const handleRefreshDevices = async () => {
     try {
       setRefreshing(true);
-      await triggerDagRun('update_device_list');
-      message.success('设备刷新任务已触发，请稍后查看更新结果');
+      const response = await triggerDagRun('update_device_list');
       
-      // 延迟几秒后重新获取设备列表，给DAG执行的时间
-      setTimeout(() => {
-        fetchDevices();
-        setRefreshing(false);
-      }, 5000);
+      if (response && response.dag_run_id) {
+        message.success('设备刷新任务已触发，请稍后查看更新结果');
+        setCurrentDagRunId(response.dag_run_id);
+        
+        // 开始轮询检查DAG状态
+        checkDagRunStatus(response.dag_run_id);
+      } else {
+        message.warning('设备刷新任务触发成功，但未返回DAG运行ID');
+        // 退回到原有逻辑
+        setTimeout(() => {
+          fetchDevices();
+          setRefreshing(false);
+        }, 5000);
+      }
     } catch (error) {
-      console.error('触发设备刷新任务失败:', error);
-      message.error('触发设备刷新任务失败，请稍后重试');
+      console.error('刷新设备列表失败:', error);
+      message.error('刷新设备列表失败');
       setRefreshing(false);
     }
   };
