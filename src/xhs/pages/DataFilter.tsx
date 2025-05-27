@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { getKeywordsApi, getXhsCommentsByKeywordApi, XhsComment } from '../../api/mysql';
+import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse } from '../../api/mysql';
+
+// Get comments keywords from API
+const getCommentsKeyword = async (): Promise<KeywordsResponse> => {
+  try {
+    const baseUrl = process.env.REACT_APP_TECENT_GET_COMMENTS_KEYWORD || '';
+    
+    const response = await fetch(baseUrl);
+    if (!response.ok) {
+      throw new Error('Failed to fetch comments keywords');
+    }
+    
+    return await response.json() as Promise<KeywordsResponse>;
+  } catch (error) {
+    console.error('Error fetching comments keywords:', error);
+    throw error;
+  }
+};
 
 // Simple spinner component
 const Spinner = () => (
@@ -41,7 +58,7 @@ const DataFilter: React.FC = () => {
   const fetchKeywords = async () => {
     try {
       setLoading(true);
-      const response = await getKeywordsApi();
+      const response = await getCommentsKeyword();
 
       if (response && response.data) {
         const extractedKeywords = response.data;
