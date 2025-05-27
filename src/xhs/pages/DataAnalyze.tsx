@@ -356,13 +356,13 @@ const DataAnalyze: React.FC = () => {
           <nav className="-mb-px flex">
             <button
               onClick={() => setActiveTab('comments')}
-              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'comments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'comments' ? 'border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             >
               评论数据
             </button>
             <button
               onClick={() => setActiveTab('intents')}
-              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'intents' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'intents' ? 'border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             >
               意向客户
             </button>
@@ -397,7 +397,7 @@ const DataAnalyze: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
                           {comment.note_url}
                         </a>
                       </td>
@@ -452,7 +452,7 @@ const DataAnalyze: React.FC = () => {
                         <button
                           key={pageNum}
                           onClick={() => paginate(pageNum)}
-                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
                         >
                           {pageNum}
                         </button>
@@ -486,7 +486,7 @@ const DataAnalyze: React.FC = () => {
               value={profileSentence}
               onChange={(e) => setProfileSentence(e.target.value)}
               placeholder="例如：这是一个对美妆产品感兴趣的年轻女性用户群体..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
               rows={3}
             />
             <p className="text-xs text-gray-500 mt-1">添加用户画像描述可以帮助AI更好地理解评论背景</p>
@@ -495,7 +495,7 @@ const DataAnalyze: React.FC = () => {
           <button
             onClick={handleStartAnalysis}
             disabled={loading || analysisStatus === 'running'}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)]"
           >
             {loading ? '处理中...' : '分析内容'}
           </button>
@@ -568,7 +568,7 @@ const DataAnalyze: React.FC = () => {
             <select
               value={selectedKeyword}
               onChange={(e) => setSelectedKeyword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
             >
               {keywords.map((keyword) => (
                 <option key={keyword} value={keyword}>{keyword}</option>
@@ -580,7 +580,7 @@ const DataAnalyze: React.FC = () => {
             <select
               value={selectedIntent}
               onChange={(e) => setSelectedIntent(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
             >
               {intents.map((intent) => (
                 <option key={intent} value={intent}>{intent}</option>
@@ -667,7 +667,7 @@ const DataAnalyze: React.FC = () => {
                           <button
                             key={pageNum}
                             onClick={() => paginate(pageNum)}
-                            className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                            className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
                           >
                             {pageNum}
                           </button>

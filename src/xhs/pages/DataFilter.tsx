@@ -3,7 +3,7 @@ import { getKeywordsApi, getXhsCommentsByKeywordApi, XhsComment } from '../../ap
 
 // Simple spinner component
 const Spinner = () => (
-  <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+  <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[rgba(248,213,126,1)]"></div>
 );
 
 // Using the XhsComment interface from the API
@@ -173,13 +173,13 @@ const DataFilter: React.FC = () => {
       </div>
 
       {/* Keyword Selection */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-2">
         <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>
         <select
           value={selectedKeyword}
           onChange={(e) => setSelectedKeyword(e.target.value)}
           disabled={loading}
-          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
         >
           {keywords.map((keyword) => (
             <option key={keyword} value={keyword}>
@@ -202,7 +202,7 @@ const DataFilter: React.FC = () => {
                 onChange={(e) => setMinLikes(parseInt(e.target.value) || 0)}
                 min={0}
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
               />
             </div>
             <div>
@@ -213,7 +213,7 @@ const DataFilter: React.FC = () => {
                 onChange={(e) => setMinLength(parseInt(e.target.value) || 2)}
                 min={2}
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
               />
             </div>
             <div>
@@ -224,7 +224,7 @@ const DataFilter: React.FC = () => {
                 onChange={(e) => setFilterKeywords(e.target.value)}
                 placeholder="例如：优惠,折扣,价格"
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
               />
             </div>
           </div>
@@ -263,7 +263,7 @@ const DataFilter: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
                           {comment.note_url}
                         </a>
                       </td>
@@ -318,7 +318,7 @@ const DataFilter: React.FC = () => {
                         <button
                           key={pageNum}
                           onClick={() => paginate(pageNum)}
-                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                          className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
                         >
                           {pageNum}
                         </button>
@@ -350,7 +350,7 @@ const DataFilter: React.FC = () => {
             <button
               onClick={handlePassToAnalysis}
               disabled={loading || filteredComments.length === 0}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex items-center justify-center"
+              className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)] flex items-center justify-center"
             >
               {loading ? <><Spinner /><span className="ml-2">处理中...</span></> : '传递到分析页面'}
             </button>

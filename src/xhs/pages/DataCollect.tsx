@@ -503,7 +503,7 @@ const DataCollect: React.FC = () => {
             <select
               value={targetEmail}
               onChange={(e) => setTargetEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
             >
               {availableEmails.length === 0 ? (
                 <option value="">无可用邮箱</option>
@@ -524,7 +524,7 @@ const DataCollect: React.FC = () => {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`py-2 px-4 font-medium text-sm ${activeTab === tab 
-              ? 'border-b-2 border-primary text-primary' 
+              ? 'border-b-2 border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' 
               : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
           >
             {tab}
@@ -536,7 +536,7 @@ const DataCollect: React.FC = () => {
       {activeTab === '任务' && (
         <>
           {/* Create Notes Collection Task */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
             <form onSubmit={handleCreateNotesTask} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -546,14 +546,12 @@ const DataCollect: React.FC = () => {
                     type="text"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
                     placeholder="输入关键字"
                   />
                 </div>
                 <div>
                   <input type="hidden" value={targetEmail} />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
                   <input
                     type="number"
@@ -561,25 +559,25 @@ const DataCollect: React.FC = () => {
                     onChange={(e) => setMaxNotes(parseInt(e.target.value))}
                     min={1}
                     max={1000}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
                   />
                 </div>
-              </div>
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                >
-                  {loading ? '处理中...' : '创建笔记采集任务'}
-                </button>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)] w-full"
+                  >
+                    {loading ? '处理中...' : '创建笔记采集任务'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
 
           {/* Recent Tasks */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
+            <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold">最近的笔记采集任务</h2>
               <button
                 onClick={async () => {
@@ -590,12 +588,12 @@ const DataCollect: React.FC = () => {
                     setRefreshingTasks(false);
                   }
                 }}
-                className={`p-2 text-primary hover:text-primary-dark focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
                 title="刷新任务列表"
                 disabled={refreshingTasks}
               >
                 {refreshingTasks ? (
-                  <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                   </svg>
@@ -726,7 +724,7 @@ const DataCollect: React.FC = () => {
                             <button
                               key={pageNum}
                               onClick={() => paginate(pageNum)}
-                              className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                              className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
                             >
                               {pageNum}
                             </button>
@@ -777,7 +775,7 @@ const DataCollect: React.FC = () => {
                     setRefreshingKeywords(false);
                   }
                 }}
-                className={`flex items-center px-3 py-1 rounded text-primary border border-primary hover:bg-primary hover:text-white transition disabled:opacity-70 disabled:cursor-not-allowed ml-2`}
+                className={`flex items-center px-3 py-1 rounded text-[rgba(248,213,126,1)] border border-[rgba(248,213,126,1)] hover:bg-[rgba(248,213,126,1)] hover:text-white transition disabled:opacity-70 disabled:cursor-not-allowed ml-2`}
                 disabled={refreshingKeywords}
                 title="刷新关键词列表"
               >
@@ -799,7 +797,7 @@ const DataCollect: React.FC = () => {
                 <select
                   value={selectedKeyword}
                   onChange={(e) => setSelectedKeyword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
                 >
                   {keywords.map((kw) => (
                     <option key={kw} value={kw}>{kw}</option>
@@ -837,7 +835,7 @@ const DataCollect: React.FC = () => {
                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                            <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                            <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
                               {note.note_url}
                             </a>
                           </td>
@@ -894,7 +892,7 @@ const DataCollect: React.FC = () => {
                               <button
                                 key={pageNum}
                                 onClick={() => paginateNotes(pageNum)}
-                                className={`px-3 py-1 mx-1 rounded ${currentNotesPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                                className={`px-3 py-1 mx-1 rounded ${currentNotesPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
                               >
                                 {pageNum}
                               </button>
@@ -941,7 +939,7 @@ const DataCollect: React.FC = () => {
                 <select
                   value={selectedKeyword}
                   onChange={(e) => setSelectedKeyword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
                 >
                   {keywords.map((kw) => (
                     <option key={kw} value={kw}>{kw}</option>
@@ -956,14 +954,14 @@ const DataCollect: React.FC = () => {
                   onChange={(e) => setMaxComments(parseInt(e.target.value))}
                   min={1}
                   max={1000}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
                 />
               </div>
             </div>
             <button
               onClick={handleCreateCommentsTask}
               disabled={loading || !selectedKeyword}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)]"
             >
               {loading ? '处理中...' : '创建笔记评论收集任务'}
             </button>
@@ -999,7 +997,7 @@ const DataCollect: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                          <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
                             {comment.note_url}
                           </a>
                         </td>
@@ -1055,7 +1053,7 @@ const DataCollect: React.FC = () => {
                             <button
                               key={pageNum}
                               onClick={() => paginateComments(pageNum)}
-                              className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-primary text-white' : 'border border-gray-300'}`}
+                              className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
                             >
                               {pageNum}
                             </button>
