@@ -363,7 +363,7 @@ const Register: React.FC = () => {
               loading={loading}
               block
               size={isMobile ? 'middle' : 'large'}
-              style={{ backgroundColor: 'rgba(108, 93, 211, 1)', borderColor: 'rgba(108, 93, 211, 1)' }}
+              style={{ backgroundColor: 'rgba(248, 213, 126, 1)', borderColor: 'rgba(248, 213, 126, 1)' }}
             >
               注册
             </Button>
@@ -371,7 +371,7 @@ const Register: React.FC = () => {
 
           <div style={{ textAlign: 'center' }}>
             已有账号？{' '}
-            <Button type="link" onClick={() => navigate('/login')} style={{ color: 'rgba(108, 93, 211, 1)' }}>
+            <Button type="link" onClick={() => navigate('/login')} style={{ color: 'rgba(248, 213, 126, 1)' }}>
               立即登录
             </Button>
           </div>
@@ -381,7 +381,7 @@ const Register: React.FC = () => {
       {/* Contact Information Footer */}
       <div style={{ 
         width: isMobile ? '100%' : '400px', 
-        backgroundColor: 'rgba(108, 93, 211, 1)', 
+        backgroundColor: 'rgba(248, 213, 126, 1)', 
         color: 'white', 
         padding: isMobile ? '12px 16px' : '16px 32px',
         display: 'flex',

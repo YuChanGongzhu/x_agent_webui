@@ -221,10 +221,10 @@ const NavBar: React.FC = () => {
   return (
     <>
       {/* Mobile Hamburger Menu with horizontal nav bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[rgba(108,93,211,1)] shadow-md flex items-center justify-between h-14">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[rgba(248,213,126,1)] shadow-md flex items-center justify-between h-14">
         <button 
           onClick={() => setIsMobileMenuOpen(true)}
-          className="text-white hover:text-gray-200 p-4"
+          className="text-black hover:text-gray-800 p-4"
           aria-label="Open navigation menu"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-7 h-7">
@@ -236,16 +236,16 @@ const NavBar: React.FC = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-start">
-          <div className="bg-[rgba(108,93,211,1)] h-screen w-[85vw] shadow-lg overflow-y-auto flex flex-col transition-all duration-300 ease-in-out">
+          <div className="bg-[rgba(248,213,126,1)] h-screen w-[85vw] shadow-lg overflow-y-auto flex flex-col transition-all duration-300 ease-in-out">
             {/* Mobile Menu Header with Close Button */}
             <div className="flex items-center justify-between p-4 border-b border-white/20">
               <div className="flex items-center space-x-2">
                 <img src={lucyaiLogo} alt="LUCYAI" className="w-8 h-8" />
-                <span className="text-2xl font-semibold text-white">LUCYAI</span>
+                <span className="text-2xl font-semibold text-black">LUCYAI</span>
               </div>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="text-white/70 hover:text-white"
+                className="text-black/70 hover:text-black"
                 aria-label="Close navigation menu"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-7 h-7">
@@ -263,7 +263,7 @@ const NavBar: React.FC = () => {
                     <div key={item.name} className="w-full px-2">
                       <div
                         className={`flex items-center space-x-3 cursor-pointer p-3 rounded-lg w-full
-                          ${selected === item.name ? 'bg-white text-[rgba(108,93,211,1)]' : 'text-white hover:bg-[rgba(255,255,255,0.1)]'}`}
+                          ${selected === item.name ? 'bg-white text-[rgba(248,213,126,1)]' : 'text-black hover:bg-[rgba(255,255,255,0.3)]'}`}
                         onClick={() => {
                           handleClick(item);
                           setIsMobileMenuOpen(false);
@@ -281,7 +281,7 @@ const NavBar: React.FC = () => {
             <div className="mt-auto pt-4 border-t border-white/20 relative p-2">
               <div className="flex items-center px-2">
                 <div 
-                  className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.1)] rounded-lg p-2 w-full" 
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.3)] rounded-lg p-2 w-full" 
                   onClick={() => setShowLogoutDialog(!showLogoutDialog)}
                   title="点击显示选项"
                 >
@@ -291,11 +291,11 @@ const NavBar: React.FC = () => {
                     className="w-8 h-8 rounded-full bg-white"
                   />
                   <div className="overflow-hidden">
-                    <div className="text-sm font-medium truncate text-white">
+                    <div className="text-sm font-medium truncate text-black">
                       {userData.displayName || userData.email?.split('@')[0] || '用户'}
                     </div>
                     <div 
-                      className="text-xs text-white/70 truncate"
+                      className="text-xs text-black/70 truncate"
                       title={userData.email || '账号'}
                     >
                       {userData.email || '账号'}
@@ -311,13 +311,13 @@ const NavBar: React.FC = () => {
                 >
                   <button
                     onClick={handleLogout}
-                    className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(108,93,211,1)]"
+                    className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(248,213,126,1)]"
                   >
                     退出登录
                   </button>
                   <button
                     onClick={() => navigate('/charge')}
-                    className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(108,93,211,1)]"
+                    className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(248,213,126,1)]"
                   >
                     充值中心
                   </button>
@@ -329,16 +329,16 @@ const NavBar: React.FC = () => {
       )}
       
       {/* Desktop Navigation */}
-      <div className={`hidden md:flex bg-[rgba(108,93,211,1)] p-2 ${isCollapsed ? 'w-[4.5vw]' : 'w-[10vw]'} rounded-lg shadow-lg h-screen flex-col transition-all duration-300 text-base text-white`}>
+      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] p-2 ${isCollapsed ? 'w-[4.5vw]' : 'w-[10vw]'} rounded-lg shadow-lg h-screen flex-col transition-all duration-300 text-base text-black`}>
         {/* Logo Section */}
         <div className="flex items-center justify-between mb-2 px-2">
           <div className="flex items-center space-x-2">
             <img src={lucyaiLogo} alt="LUCYAI" className="w-8 h-8" />
-            {!isCollapsed && <span className="text-2xl font-semibold text-white">LUCYAI</span>}
+            {!isCollapsed && <span className="text-2xl font-semibold text-black">LUCYAI</span>}
           </div>
           <button 
             onClick={toggleCollapse}
-            className="text-white/70 hover:text-white"
+            className="text-black/70 hover:text-black"
           >
             {isCollapsed ? (
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
@@ -361,7 +361,7 @@ const NavBar: React.FC = () => {
                 <div key={item.name} className="w-full px-2">
                   <div
                     className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} cursor-pointer p-2 rounded-lg w-full
-                      ${selected === item.name ? 'bg-white text-[rgba(108,93,211,1)]' : 'text-white hover:bg-[rgba(255,255,255,0.1)]'}`}
+                      ${selected === item.name ? 'bg-white text-[rgba(248,213,126,1)]' : 'text-black hover:bg-[rgba(255,255,255,0.3)]'}`}
                     onClick={() => handleClick(item)}
                   >
                     <div className="flex items-center space-x-3">
@@ -391,7 +391,7 @@ const NavBar: React.FC = () => {
                         <div 
                           key={subItem.name}
                           className={`flex items-center space-x-3 cursor-pointer p-2 rounded-lg w-full
-                            ${location.pathname === subItem.url ? 'bg-white/20 text-white font-medium' : 'text-white/80 hover:bg-white/10'}`}
+                            ${location.pathname === subItem.url ? 'bg-white/40 text-black font-medium' : 'text-black/80 hover:bg-white/30'}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(subItem.url);
@@ -411,7 +411,7 @@ const NavBar: React.FC = () => {
         <div className="mt-auto pt-4 border-t border-white/20 relative">
           <div className="flex items-center justify-between px-2">
             <div 
-              className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.1)] rounded-lg p-1 w-full" 
+              className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.3)] rounded-lg p-1 w-full" 
               onClick={() => setShowLogoutDialog(!showLogoutDialog)}
               title="点击显示选项"
             >
@@ -422,11 +422,11 @@ const NavBar: React.FC = () => {
               />
               {!isCollapsed && (
                 <div className="max-w-[10vw] overflow-hidden">
-                  <div className="text-sm font-medium truncate text-white">
+                  <div className="text-sm font-medium truncate text-black">
                     {userData.displayName || userData.email?.split('@')[0] || '用户'}
                   </div>
                   <div 
-                    className="text-xs text-white/70 truncate"
+                    className="text-xs text-black/70 truncate"
                     title={userData.email || '账号'}
                   >
                     {userData.email || '账号'}
@@ -443,13 +443,13 @@ const NavBar: React.FC = () => {
             >
               <button
                 onClick={handleLogout}
-                className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(108,93,211,1)]"
+                className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(248,213,126,1)]"
               >
                 退出登录
               </button>
               <button
                 onClick={() => navigate('/charge')}
-                className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(108,93,211,1)]"
+                className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(248,213,126,1)]"
               >
                 充值中心
               </button>
