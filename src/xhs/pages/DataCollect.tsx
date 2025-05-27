@@ -58,7 +58,18 @@ const DataCollect: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(10);
   const [maxComments, setMaxComments] = useState(50);
-  const [targetEmail, setTargetEmail] = useState('');
+  // 使用localStorage存储目标邮箱，确保页面刷新后仍然保持选择
+  const [targetEmail, setTargetEmail] = useState(() => {
+    const savedEmail = localStorage.getItem('xhs_target_email');
+    return savedEmail || '';
+  });
+  
+  // 当目标邮箱变化时，更新localStorage
+  useEffect(() => {
+    if (targetEmail) {
+      localStorage.setItem('xhs_target_email', targetEmail);
+    }
+  }, [targetEmail]);
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
   
   // State for data
@@ -96,26 +107,45 @@ const DataCollect: React.FC = () => {
               .filter((user: { email?: string }) => user.email) // 过滤掉没有邮箱的用户
               .map((user: { email?: string }) => user.email as string);
             setAvailableEmails(emails);
+            
+            // 如果localStorage中有存储的邮箱且在可用列表中，则使用它
+            const savedEmail = localStorage.getItem('xhs_target_email');
+            if (savedEmail && emails.includes(savedEmail)) {
+              setTargetEmail(savedEmail);
+            } 
+            // 否则，如果当前没有选择的邮箱但有可用邮箱，则选择第一个
+            else if (!targetEmail && emails.length > 0) {
+              setTargetEmail(emails[0]);
+            }
           } else {
             console.error('获取用户列表失败');
             // 如果获取失败，至少添加当前用户的邮箱
             if (email) {
               setAvailableEmails([email]);
-              setTargetEmail(email);
+              // 只有在没有已选择邮箱的情况下才设置
+              if (!targetEmail) {
+                setTargetEmail(email);
+              }
             }
           }
         } catch (err) {
           console.error('获取用户列表出错:', err);
           if (email) {
             setAvailableEmails([email]);
-            setTargetEmail(email);
+            // 只有在没有已选择邮箱的情况下才设置
+            if (!targetEmail) {
+              setTargetEmail(email);
+            }
           }
         }
       } else {
         // 非管理员只能看到自己的邮箱
         if (email) {
           setAvailableEmails([email]);
-          setTargetEmail(email);
+          // 只有在没有已选择邮箱的情况下才设置
+          if (!targetEmail) {
+            setTargetEmail(email);
+          }
         }
       }
     };
@@ -453,10 +483,38 @@ const DataCollect: React.FC = () => {
     return null;
   };
 
+  useEffect(()=>{
+    console.log("邮箱",targetEmail)
+  },[targetEmail])
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="bg-blue-50 p-4 rounded-lg mb-2">
         <p className="text-blue-700">本页面用于从小红书收集数据并创建数据采集任务</p>
+      </div>
+
+      {/* 目标邮箱选择 - 全局可用 */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+        <div className="flex items-center">
+          <div className="w-1/4">
+            <label className="block text-sm font-medium text-gray-700">目标邮箱</label>
+          </div>
+          <div className="w-3/4">
+            <select
+              value={targetEmail}
+              onChange={(e) => setTargetEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            >
+              {availableEmails.length === 0 ? (
+                <option value="">无可用邮箱</option>
+              ) : (
+                availableEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Tab Navigation */}
@@ -493,20 +551,7 @@ const DataCollect: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">目标邮箱</label>
-                  <select
-                    value={targetEmail}
-                    onChange={(e) => setTargetEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                  >
-                    {availableEmails.length === 0 ? (
-                      <option value="">无可用邮箱</option>
-                    ) : (
-                      availableEmails.map((email) => (
-                        <option key={email} value={email}>{email}</option>
-                      ))
-                    )}
-                  </select>
+                  <input type="hidden" value={targetEmail} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
