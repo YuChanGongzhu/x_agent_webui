@@ -210,8 +210,23 @@ const DeviceManagement: React.FC = () => {
       const response = await getVariable(VARIABLE_NAME);
       const currentDevices = JSON.parse(response.value) as Device[];
       
-      // 过滤掉要删除的设备
-      const updatedDevices = currentDevices.filter(device => device.device_ip !== deviceIp);
+      // 需要获取要删除的设备的完整信息（包括IP和端口）
+      // 在表格中我们只有IP和邮箱，需要找到完全匹配的记录
+      const deviceToDelete = currentDevices.find(device => 
+        device.device_ip === deviceIp && device.email === deviceEmail
+      );
+      
+      if (!deviceToDelete) {
+        message.error('未找到要删除的设备');
+        return;
+      }
+      
+      // 过滤掉要删除的特定设备（匹配IP和端口）
+      const updatedDevices = currentDevices.filter(device => 
+        !(device.device_ip === deviceIp && 
+          device.port === deviceToDelete.port && 
+          device.email === deviceEmail)
+      );
       
       // 更新Airflow变量
       await setVariable(VARIABLE_NAME, JSON.stringify(updatedDevices));
@@ -408,7 +423,7 @@ const DeviceManagement: React.FC = () => {
           ) : (
             <Table 
               columns={columns} 
-              dataSource={filteredDevices.map(device => ({ ...device, key: device.device_ip }))} 
+              dataSource={filteredDevices.map(device => ({ ...device, key: `${device.device_ip}:${device.port}` }))} 
               pagination={false}
               bordered
               size="middle"
