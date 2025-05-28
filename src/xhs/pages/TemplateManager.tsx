@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, message, Tabs, Spin, Checkbox, Tag, Pagination } from 'antd';
-import { DeleteOutlined, EditOutlined, SendOutlined, ImportOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, SendOutlined, ImportOutlined, PlusOutlined, CheckSquareOutlined, ReloadOutlined } from '@ant-design/icons';
 import { 
   getReplyTemplatesApi, 
   createReplyTemplateApi, 
@@ -563,6 +563,31 @@ const TemplateManager: React.FC = () => {
                   }}
                 >
                   选择意向客户
+                </Button>
+                <Button
+                  icon={selectedComments.length === 0 ? <CheckSquareOutlined /> : <DeleteOutlined />}
+                  onClick={() => {
+                    // 检查是否已经全选
+                    if (selectedComments.length > 0) {
+                      // 如果已经有选择的评论，则清空选择
+                      setSelectedComments([]);
+                    } else {
+                      // 根据当前数据源选择全部评论或意向客户
+                      if (dataSource === 'intents') {
+                        const allCommentIds = customerIntents
+                          .map(intent => intent.comment_id)
+                          .filter(id => id); // 过滤掉空值
+                        setSelectedComments(allCommentIds);
+                      } else {
+                        const allCommentIds = comments
+                          .map(comment => comment.comment_id)
+                          .filter(id => id); // 过滤掉空值
+                        setSelectedComments(allCommentIds);
+                      }
+                    }
+                  }}
+                >
+                  {selectedComments.length > 0 ? '取消全选' : '全选'}
                 </Button>
               </div>
 
