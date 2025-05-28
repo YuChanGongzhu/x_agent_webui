@@ -173,7 +173,7 @@ const DataAnalyze: React.FC = () => {
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const payload = {
         profile_sentence: profileSentence,
-        comment_ids: filteredComments.map(c => c.id).slice(0, 20) // Limit to 20 comments
+        comment_ids: filteredComments.map(c => c.id) // No limit on comments
       };
       
       // Use the correct DAG ID
@@ -183,7 +183,7 @@ const DataAnalyze: React.FC = () => {
       // Prepare configuration
       const conf = {
         profile_sentence: profileSentence,
-        comment_ids: filteredComments.map(c => c.id).slice(0, 20) // Limit to 20 comments
+        comment_ids: filteredComments.map(c => c.id) // No limit on comments
       };
       
       // Trigger DAG run using Airflow API
