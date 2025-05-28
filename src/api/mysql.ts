@@ -6,6 +6,7 @@ const tokenUsageUrl = process.env.REACT_APP_GET_CHAT_TOKEN;
 const getNoteUrl=process.env.REACT_APP_TECENT_GET_NOTES;
 const getKeywordUrl=process.env.REACT_APP_TECENT_GET_KEYWORDS;
 const getCommentsUrl=process.env.REACT_APP_TECENT_GET_COMMENTS;
+const getCommentsKeywordUrl=process.env.REACT_APP_TECENT_GET_COMMENTS_KEYWORD;
 const getIntentCustomersUrl=process.env.REACT_APP_TECENT_GET_INTENT_CUSTOMERS;
 const getReplyTemplatesUrl=process.env.REACT_APP_TECENT_GET_REPLY_TEMPLATES;
 const updateReplyTemplateUrl=process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLATE;
@@ -866,6 +867,26 @@ export const updateReplyTemplateApi = async (
     return await response.json();
   } catch (error) {
     console.error('Error updating reply template:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves all unique comment keywords
+ * @returns Promise with the comment keywords response
+ */
+export const getCommentsKeyword = async (): Promise<KeywordsResponse> => {
+  try {
+    const baseUrl = getCommentsKeywordUrl || '';
+    
+    const response = await fetch(baseUrl);
+    if (!response.ok) {
+      throw new Error('Failed to fetch comments keywords');
+    }
+    
+    return await response.json() as Promise<KeywordsResponse>;
+  } catch (error) {
+    console.error('Error fetching comments keywords:', error);
     throw error;
   }
 };
