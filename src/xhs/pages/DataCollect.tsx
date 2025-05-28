@@ -18,6 +18,7 @@ interface Note {
   keyword: string;
   note_url: string;
   collected_at: string;
+  last_comments_collected_at: string | null;
 }
 
 interface Comment {
@@ -401,7 +402,8 @@ const DataCollect: React.FC = () => {
           comments: item.comments || 0,
           keyword: item.keyword || keyword,
           note_url: item.note_url || '',
-          collected_at: item.create_time || new Date().toISOString()
+          collected_at: item.create_time || new Date().toISOString(),
+          last_comments_collected_at: item.last_comments_collected_at || null
         }));
         
         setNotes(transformedNotes);
@@ -852,6 +854,7 @@ const DataCollect: React.FC = () => {
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论数</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论采集时间</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -875,6 +878,7 @@ const DataCollect: React.FC = () => {
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(note.collected_at)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.last_comments_collected_at ? formatDate(note.last_comments_collected_at) : '未采集'}</td>
                         </tr>
                       ))}
                     </tbody>
