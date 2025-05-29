@@ -627,7 +627,7 @@ const DataCollect: React.FC = () => {
                           关键词
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          笔记数量
+                          收集数量
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           任务ID
@@ -645,13 +645,24 @@ const DataCollect: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {currentTasks.map((task) => {
-                        // Parse the configuration JSON string to extract keyword and max_notes
+                        // Parse the configuration JSON string to extract keyword and collection quantity
                         let keyword = "";
-                        let maxNotes = 0;
+                        let collectionQuantity = 0;
+                        let isCommentTask = false;
+                        
                         try {
                           const conf = JSON.parse(task.conf);
                           keyword = conf.keyword || "";
-                          maxNotes = conf.max_notes || 0;
+                          
+                          // Determine if this is a comments collection task
+                          isCommentTask = task.dag_run_id.includes('xhs_comments');
+                          
+                          // Set the appropriate collection quantity based on task type
+                          if (isCommentTask) {
+                            collectionQuantity = conf.max_comments || 0;
+                          } else {
+                            collectionQuantity = conf.max_notes || 0;
+                          }
                         } catch (e) {
                           // Handle parsing error
                           console.error("Error parsing task configuration:", e);
@@ -663,7 +674,7 @@ const DataCollect: React.FC = () => {
                               {keyword}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {maxNotes}
+                              {collectionQuantity} {isCommentTask ? '评论' : '笔记'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {task.dag_run_id}
