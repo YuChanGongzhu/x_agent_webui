@@ -645,7 +645,6 @@ const DataCollect: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {currentTasks.map((task) => {
-                        // Parse the configuration JSON string to extract keyword and collection quantity
                         let keyword = "";
                         let collectionQuantity = 0;
                         let isCommentTask = false;

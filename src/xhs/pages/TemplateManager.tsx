@@ -246,7 +246,6 @@ const TemplateManager: React.FC = () => {
     }
   };
 
-  // 触发DAG以触达用户
   const handleReachOut = async () => {
     if (selectedComments.length === 0) {
       message.warning('请至少选择一条评论');
@@ -256,18 +255,19 @@ const TemplateManager: React.FC = () => {
     try {
       setLoading(true);
       
-      // 创建唯一的dag_run_id时间戳
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const newDagRunId = `xhs_comments_template_replier_${timestamp}`;
       
-      // 准备配置 - 使用真实的Airflow DAG ID和参数格式
+      // 从 localStorage 中获取目标邮箱
+      const targetEmail = localStorage.getItem('xhs_target_email') || '';
+      
       const conf = {
-        comment_ids: selectedComments // 这里直接传递评论ID数组，Airflow会在DAG中通过 comment_ids = context['dag_run'].conf.get('comment_ids') 获取
+        comment_ids: selectedComments, 
+        email: targetEmail
       };
       
-      // 使用Airflow API触发DAG运行
       const response = await triggerDagRun(
-        "xhs_comments_template_replier", // 真实的DAG ID
+        "xhs_comments_template_replier", 
         newDagRunId,
         conf
       );
@@ -556,9 +556,7 @@ const TemplateManager: React.FC = () => {
                 <Button
                   icon={<ImportOutlined />}
                   onClick={() => {
-                    // 清除当前选择，准备接收新的评论ID
                     setSelectedComments([]);
-                    // 重定向到意向客户分析页面
                     window.location.href = '/data-analyze';
                   }}
                 >
@@ -567,21 +565,18 @@ const TemplateManager: React.FC = () => {
                 <Button
                   icon={selectedComments.length === 0 ? <CheckSquareOutlined /> : <DeleteOutlined />}
                   onClick={() => {
-                    // 检查是否已经全选
                     if (selectedComments.length > 0) {
-                      // 如果已经有选择的评论，则清空选择
                       setSelectedComments([]);
                     } else {
-                      // 根据当前数据源选择全部评论或意向客户
                       if (dataSource === 'intents') {
                         const allCommentIds = customerIntents
                           .map(intent => intent.comment_id)
-                          .filter(id => id); // 过滤掉空值
+                          .filter(id => id);
                         setSelectedComments(allCommentIds);
                       } else {
                         const allCommentIds = comments
                           .map(comment => comment.comment_id)
-                          .filter(id => id); // 过滤掉空值
+                          .filter(id => id);
                         setSelectedComments(allCommentIds);
                       }
                     }
