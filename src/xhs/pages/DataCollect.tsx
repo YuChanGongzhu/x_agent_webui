@@ -59,7 +59,7 @@ const DataCollect: React.FC = () => {
   // State for form inputs
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(10);
-  const [maxComments, setMaxComments] = useState(50);
+  const [maxComments, setMaxComments] = useState(10);
   // 使用localStorage存储目标邮箱，确保页面刷新后仍然保持选择
   const [targetEmail, setTargetEmail] = useState(() => {
     const savedEmail = localStorage.getItem('xhs_target_email');
@@ -78,6 +78,7 @@ const DataCollect: React.FC = () => {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   
@@ -216,7 +217,6 @@ const DataCollect: React.FC = () => {
         email: targetEmail
       };
       
-      // Trigger DAG run using Airflow API
       const response = await triggerDagRun(
         "notes_collector", 
         dag_run_id,
@@ -262,13 +262,17 @@ const DataCollect: React.FC = () => {
       const dag_run_id = `xhs_comments_${timestamp}`;
       
       // Prepare configuration
-      const conf = {
+      const conf: any = {
         keyword: selectedKeyword,
         max_comments: maxComments,
         email: targetEmail
       };
       
-      // Trigger DAG run using Airflow API
+      // Add selected note URLs if any are selected
+      if (selectedNotes.length > 0) {
+        conf.note_urls = selectedNotes;
+      }
+      
       const response = await triggerDagRun(
         "comments_collector", 
         dag_run_id,
@@ -813,20 +817,40 @@ const DataCollect: React.FC = () => {
           {/* Display Collected Notes */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">已采集的笔记</h2>
-            <button
-              onClick={async () => {
-                setRefreshingNotes(true);
-                try {
-                  await fetchNotes(selectedKeyword);
-                } finally {
-                  setRefreshingNotes(false);
-                }
-              }}
-              className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingNotes ? 'opacity-70 cursor-not-allowed' : ''}`}
-              title="刷新笔记列表"
-              disabled={refreshingNotes}
-            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-semibold">已采集的笔记</h2>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="select-all-notes"
+                    checked={notes.length > 0 && selectedNotes.length === notes.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // Select all notes
+                        setSelectedNotes(notes.map(note => note.note_url));
+                      } else {
+                        // Deselect all notes
+                        setSelectedNotes([]);
+                      }
+                    }}
+                    className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded mr-2"
+                  />
+                  <label htmlFor="select-all-notes" className="text-sm text-gray-600">全选</label>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  setRefreshingNotes(true);
+                  try {
+                    await fetchNotes(selectedKeyword);
+                  } finally {
+                    setRefreshingNotes(false);
+                  }
+                }}
+                className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingNotes ? 'opacity-70 cursor-not-allowed' : ''}`}
+                title="刷新笔记列表"
+                disabled={refreshingNotes}
+              >
               {refreshingNotes ? (
                 <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -841,11 +865,15 @@ const DataCollect: React.FC = () => {
           </div>
             {notes.length > 0 ? (
               <>
-                <p className="mb-2">原始笔记数量: {notes.length}</p>
+                <div className="flex justify-between items-center mb-2">
+                  <p>原始笔记数量: {notes.length}</p>
+                  <p>已选择: {selectedNotes.length} 条笔记</p>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">选择</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
@@ -862,6 +890,20 @@ const DataCollect: React.FC = () => {
                         .slice((currentNotesPage - 1) * notesPerPage, currentNotesPage * notesPerPage)
                         .map((note) => (
                         <tr key={note.id}>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedNotes.includes(note.note_url)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedNotes([...selectedNotes, note.note_url]);
+                                } else {
+                                  setSelectedNotes(selectedNotes.filter(url => url !== note.note_url));
+                                }
+                              }}
+                              className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
+                            />
+                          </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
