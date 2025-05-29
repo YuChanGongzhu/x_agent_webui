@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse, getCommentsKeyword } from '../../api/mysql';
+import { useNavigate } from 'react-router-dom';
 
 
 
@@ -12,6 +13,8 @@ const Spinner = () => (
 type Comment = XhsComment;
 
 const DataFilter: React.FC = () => {
+  const navigate = useNavigate();
+  
   // State for keywords and selected keyword
   const [keywords, setKeywords] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState('');
@@ -152,17 +155,20 @@ const DataFilter: React.FC = () => {
     }
   };
 
-  // Apply filters when filter conditions change
   useEffect(() => {
     applyFilters();
     setCurrentPage(1);
   }, [minLikes, minLength, filterKeywords, originalComments]);
 
-  // Pass data to analysis page
   const handlePassToAnalysis = () => {
     if (filteredComments.length > 0) {
       sessionStorage.setItem('filtered_comments', JSON.stringify(filteredComments));
-      setSuccess('数据已传递到分析页面，请切换到分析标签页查看');
+      setSuccess('数据已传递到分析页面');
+      
+      // Navigate to the analysis page after a 1-second delay
+      setTimeout(() => {
+        navigate('/xhs/analyze');
+      }, 1000); // 1000ms = 1 second
     } else {
       setError('没有可传递的数据');
     }
