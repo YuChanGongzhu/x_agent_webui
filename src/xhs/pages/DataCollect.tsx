@@ -19,6 +19,11 @@ interface Note {
   note_url: string;
   collected_at: string;
   last_comments_collected_at: string | null;
+  userInfo: string;
+  note_location?: string;
+  note_time?: string;
+  collect_time?: string;
+  collects?: number;
 }
 
 interface Comment {
@@ -166,13 +171,18 @@ const DataCollect: React.FC = () => {
   const fetchKeywords = async () => {
     try {
       setLoading(true);
+      setRefreshingKeywords(true);
+      
       // Get keywords from real API endpoint
-      const response = await getKeywordsApi();
+      // If user is not admin, filter by their email
+      const response = await getKeywordsApi(!isAdmin && email ? email : undefined);
       
       // Check if response has data and data has keywords
       if (response && response.data) {
         // Extract keywords from the response
         const extractedKeywords = response.data;
+        
+        console.log(`Keywords for ${!isAdmin && email ? `email: ${email}` : 'admin'}:`, extractedKeywords);
         
         if (extractedKeywords.length > 0) {
           setKeywords(extractedKeywords);
@@ -188,11 +198,13 @@ const DataCollect: React.FC = () => {
         setError('未找到关键词数据');
       }
       setLoading(false);
+      setRefreshingKeywords(false);
     } catch (err) {
       console.error('Error fetching keywords:', err);
       setError('获取关键词失败');
       setKeywords([]);
       setLoading(false);
+      setRefreshingKeywords(false);
     }
   };
 
@@ -324,13 +336,14 @@ const DataCollect: React.FC = () => {
   const fetchRecentTasks = async () => {
     try {
       setLoading(true);
+      setRefreshingTasks(true);
       
       // Get tasks from Airflow API directly
       let allTasks: Task[] = [];
       
       // Directly fetch DAG runs from Airflow API
-      const notesResponse = await getDagRuns("notes_collector", 50, "-start_date");
-      const commentsResponse = await getDagRuns("comments_collector", 50, "-start_date");
+      const notesResponse = await getDagRuns("notes_collector", 200, "-start_date");
+      const commentsResponse = await getDagRuns("comments_collector", 200, "-start_date");
       
       console.log('Notes response from Airflow:', notesResponse);
       console.log('Comments response from Airflow:', commentsResponse);
@@ -369,13 +382,34 @@ const DataCollect: React.FC = () => {
       console.log('All tasks (sorted):', allTasks);
       console.log('Total tasks count:', allTasks.length);
       
-      // Display all tasks without limiting
-      setTasks(allTasks);
+      // Filter tasks by email if user is not admin
+      if (!isAdmin && email) {
+        const filteredTasks = allTasks.filter(task => {
+          try {
+            // Parse the conf JSON string to check the email
+            const conf = JSON.parse(task.conf);
+            return conf.email === email;
+          } catch (error) {
+            console.error('Error parsing task conf:', error);
+            return false;
+          }
+        });
+        
+        console.log(`Filtered tasks for email ${email}:`, filteredTasks.length);
+        setTasks(filteredTasks);
+      } else {
+        // Admin can see all tasks
+        console.log('Admin user or no email, showing all tasks');
+        setTasks(allTasks);
+      }
+      
       setLoading(false);
+      setRefreshingTasks(false);
     } catch (err) {
       console.error('Error fetching recent tasks:', err);
       setError('获取任务列表失败');
       setLoading(false);
+      setRefreshingTasks(false);
     }
   };
 
@@ -407,7 +441,12 @@ const DataCollect: React.FC = () => {
           keyword: item.keyword || keyword,
           note_url: item.note_url || '',
           collected_at: item.create_time || new Date().toISOString(),
-          last_comments_collected_at: item.last_comments_collected_at || null
+          last_comments_collected_at: item.last_comments_collected_at || null,
+          userInfo: item.userInfo || email || '', // Add userInfo field with global email as default
+          note_location: item.note_location || '无地区',
+          note_time: item.note_time || '',
+          collect_time: item.collect_time || '',
+          collects: item.collects || item.collect_count || 0
         }));
         
         setNotes(transformedNotes);

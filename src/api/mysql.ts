@@ -362,13 +362,17 @@ export interface KeywordsResponse {
 
 /**
  * Retrieves all unique keywords from Xiaohongshu notes
+ * @param email Optional email to filter keywords by user
  * @returns Promise with the keywords response
  */
-export const getKeywordsApi = async (): Promise<KeywordsResponse> => {
+export const getKeywordsApi = async (email?: string): Promise<KeywordsResponse> => {
   try {
     const baseUrl = getKeywordUrl || '';
     
-    const response = await fetch(baseUrl);
+    // Add email parameter to query if provided
+    const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
+    
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch keywords');
     }
