@@ -456,6 +456,7 @@ export interface CustomerIntentResponse {
  * @param params Optional parameters for filtering
  * @param params.keyword Optional keyword to filter by
  * @param params.intent Optional intent type to filter by
+ * @param params.email Optional email to filter by user
  * @returns Promise with the customer intent response
  */
 export const getIntentCustomersApi = async (params?: {
@@ -463,6 +464,7 @@ export const getIntentCustomersApi = async (params?: {
   intent?: string;
   get_keywords?: boolean;
   get_intents?: boolean;
+  email?: string;
 }): Promise<CustomerIntentResponse> => {
   try {
     const queryParams = new URLSearchParams();
@@ -474,6 +476,11 @@ export const getIntentCustomersApi = async (params?: {
     
     if (params?.intent) {
       queryParams.append('intent', params.intent);
+    }
+    
+    // Add email filter if provided
+    if (params?.email) {
+      queryParams.append('email', params.email);
     }
     
     // Add flags for getting keywords or intents lists

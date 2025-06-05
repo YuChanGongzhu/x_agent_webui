@@ -3,6 +3,7 @@ import axios from 'axios';
 import { getIntentCustomersApi, CustomerIntent, CustomerIntentResponse } from '../../api/mysql';
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 
 interface Comment {
   id: number;
@@ -26,6 +27,7 @@ interface AnalysisTask {
 
 const DataAnalyze: React.FC = () => {
   const navigate = useNavigate();
+  const { isAdmin, email } = useUser(); // Get user info from context
   // State for filtered comments from previous page
   const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
   
@@ -112,35 +114,34 @@ const DataAnalyze: React.FC = () => {
     try {
       setLoading(true);
       
-      // Using the actual API to fetch customer intent data
-      const response = await getIntentCustomersApi();
+      // First filter all customers by email
+      const response = await getIntentCustomersApi({
+        email: !isAdmin && email ? email : undefined
+      });
+      
+      console.log(`Fetching customer intents for ${!isAdmin && email ? `email: ${email}` : 'admin'}`);
       
       if (response && response.data) {
         const intentData = response.data.records || [];
         setCustomerIntents(intentData);
         setFilteredIntents(intentData);
         
-        // Extract unique keywords and intents
+        console.log(`Found ${intentData.length} customer intents for ${!isAdmin && email ? `email: ${email}` : 'admin'}`);
+        
+        // Extract unique keywords and intents directly from the filtered data
         const uniqueKeywords = ['全部'];
         const uniqueIntents = ['全部'];
         
-        // Add keywords from the filters if available
-        if (response.data.filters && response.data.filters.keywords) {
-          uniqueKeywords.push(...response.data.filters.keywords);
-        } else {
-          // Fallback to extracting from records
-          const keywordsFromData = [...new Set(intentData.map(item => item.keyword).filter(Boolean))];
-          uniqueKeywords.push(...keywordsFromData);
-        }
+        // Extract unique keywords from the filtered data
+        const keywordsFromData = [...new Set(intentData.map(item => item.keyword).filter(Boolean))];
+        uniqueKeywords.push(...keywordsFromData);
         
-        // Add intents from the filters if available
-        if (response.data.filters && response.data.filters.intents) {
-          uniqueIntents.push(...response.data.filters.intents);
-        } else {
-          // Fallback to extracting from records
-          const intentsFromData = [...new Set(intentData.map(item => item.intent).filter(Boolean))];
-          uniqueIntents.push(...intentsFromData);
-        }
+        // Extract unique intents from the filtered data
+        const intentsFromData = [...new Set(intentData.map(item => item.intent).filter(Boolean))];
+        uniqueIntents.push(...intentsFromData);
+        
+        console.log('Extracted keywords:', keywordsFromData);
+        console.log('Extracted intents:', intentsFromData);
         
         setKeywords(uniqueKeywords);
         setIntents(uniqueIntents);
