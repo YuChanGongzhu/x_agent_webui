@@ -387,9 +387,10 @@ export const getKeywordsApi = async (email?: string): Promise<KeywordsResponse> 
 /**
  * Retrieves Xiaohongshu comments filtered by a specific keyword
  * @param keyword The keyword to filter comments by
+ * @param email Optional email to filter comments by user
  * @returns Promise with the comments response
  */
-export const getXhsCommentsByKeywordApi = async (keyword: string): Promise<XhsCommentsResponse> => {
+export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string): Promise<XhsCommentsResponse> => {
   try {
     if (!keyword) {
       throw new Error('Missing required parameter: keyword');
@@ -397,6 +398,11 @@ export const getXhsCommentsByKeywordApi = async (keyword: string): Promise<XhsCo
     
     const queryParams = new URLSearchParams();
     queryParams.append('keyword', keyword);
+    
+    // Add email parameter to query if provided
+    if (email) {
+      queryParams.append('email', email);
+    }
     
     const baseUrl = getCommentsUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;

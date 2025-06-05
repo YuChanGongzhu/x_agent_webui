@@ -38,6 +38,9 @@ interface Comment {
   collect_time?: string;  // 添加collect_time字段
   created_at?: string;    // 添加created_at字段
   updated_at?: string;    // 添加updated_at字段
+  userInfo: string;       // 添加userInfo字段
+  location?: string;      // 添加location字段
+  comment_time?: string;  // 添加comment_time字段
 }
 
 // Tab types
@@ -468,9 +471,12 @@ const DataCollect: React.FC = () => {
   const fetchComments = async (keyword: string) => {
     try {
       setLoading(true);
+      setRefreshingComments(true);
       
-      // Use the new comments API endpoint
-      const response = await getXhsCommentsByKeywordApi(keyword);
+      // Use the new comments API endpoint with email filtering for non-admin users
+      const response = await getXhsCommentsByKeywordApi(keyword, !isAdmin && email ? email : undefined);
+      
+      console.log(`Comments for ${!isAdmin && email ? `email: ${email}` : 'admin'} and keyword: ${keyword}`);
       
       // Set comments data from response
       if (response && response.code === 0 && response.data && response.data.records) {
@@ -485,7 +491,10 @@ const DataCollect: React.FC = () => {
           keyword: record.keyword || '',
           collect_time: record.collect_time,
           created_at: record.created_at,
-          updated_at: record.updated_at
+          updated_at: record.updated_at,
+          userInfo: record.userInfo || email || '', // Add userInfo field with global email as default
+          location: record.location || '',
+          comment_time: record.comment_time || ''
         }));
         setComments(mappedComments);
       } else {
@@ -495,11 +504,13 @@ const DataCollect: React.FC = () => {
       }
       
       setLoading(false);
+      setRefreshingComments(false);
     } catch (err) {
       console.error('Error fetching comments data:', err);
       setError('获取评论数据失败');
       setComments([]);
       setLoading(false);
+      setRefreshingComments(false);
     }
   };
 
