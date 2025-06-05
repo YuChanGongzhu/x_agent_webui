@@ -883,13 +883,17 @@ export const updateReplyTemplateApi = async (
 
 /**
  * Retrieves all unique comment keywords
+ * @param email Optional email to filter keywords by user
  * @returns Promise with the comment keywords response
  */
-export const getCommentsKeyword = async (): Promise<KeywordsResponse> => {
+export const getCommentsKeyword = async (email?: string): Promise<KeywordsResponse> => {
   try {
     const baseUrl = getCommentsKeywordUrl || '';
     
-    const response = await fetch(baseUrl);
+    // Add email parameter to query if provided
+    const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
+    
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch comments keywords');
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse, getCommentsKeyword } from '../../api/mysql';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 
 
 
@@ -14,6 +15,7 @@ type Comment = XhsComment;
 
 const DataFilter: React.FC = () => {
   const navigate = useNavigate();
+  const { isAdmin, email } = useUser(); // Get user info from context
   
   // State for keywords and selected keyword
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -37,29 +39,40 @@ const DataFilter: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Fetch keywords on component mount
+  // Fetch keywords when component mounts or when email/admin status changes
   useEffect(() => {
     fetchKeywords();
-  }, []);
+  }, [email, isAdmin]); // Add email and isAdmin to dependency array
 
   // Fetch keywords from API
   const fetchKeywords = async () => {
     try {
       setLoading(true);
-      const response = await getCommentsKeyword();
+      // Filter keywords by email for non-admin users
+      const response = await getCommentsKeyword(!isAdmin && email ? email : undefined);
 
       if (response && response.data) {
         const extractedKeywords = response.data;
+        
+        console.log(`Comments keywords for ${!isAdmin && email ? `email: ${email}` : 'admin'}:`, extractedKeywords);
 
         if (extractedKeywords.length > 0) {
           setKeywords(extractedKeywords);
           setSelectedKeyword(extractedKeywords[0]);
         } else {
           setKeywords([]);
+          setSelectedKeyword('');
+          // Clear comments data when no keywords are found
+          setOriginalComments([]);
+          setFilteredComments([]);
           setError('未找到关键词');
         }
       } else {
         setKeywords([]);
+        setSelectedKeyword('');
+        // Clear comments data when no keywords data is found
+        setOriginalComments([]);
+        setFilteredComments([]);
         setError('未找到关键词数据');
       }
       setLoading(false);
@@ -82,7 +95,10 @@ const DataFilter: React.FC = () => {
   const fetchComments = async (keyword: string) => {
     try {
       setLoading(true);
-      const response = await getXhsCommentsByKeywordApi(keyword);
+      // Filter comments by email for non-admin users
+      const response = await getXhsCommentsByKeywordApi(keyword, !isAdmin && email ? email : undefined);
+      
+      console.log(`Comments for ${!isAdmin && email ? `email: ${email}` : 'admin'} and keyword: ${keyword}`);
 
       if (response && response.data) {
         const extractedComments = response.data.records;
