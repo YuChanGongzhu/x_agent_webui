@@ -750,10 +750,9 @@ export const getWxChatHistorySummaryApi = async (wxid: string, room_id: string):
  */
 export interface ReplyTemplate {
   id: number;
-  user_id: string;
+  email: string; // Email of the user who owns the template
   content: string;
   created_at: string;
-  updated_at: string;
 }
 
 /**
@@ -778,14 +777,23 @@ export interface ReplyTemplatesResponse {
  * @returns Promise with the reply templates response
  */
 export const getReplyTemplatesApi = async (params?: {
-  user_id?: string;
+  user_id?: string; // Deprecated, kept for backward compatibility
+  email: string; // User's email address
   page?: number;
   page_size?: number;
 }): Promise<ReplyTemplatesResponse> => {
   try {
+    if (!params?.email) {
+      console.error('Error: email parameter is required for getReplyTemplatesApi');
+      throw new Error('email parameter is required');
+    }
+    
     const queryParams = new URLSearchParams();
     
-    if (params?.user_id) queryParams.append('user_id', params.user_id);
+    // Send email parameter to backend
+    queryParams.append('email', params.email);
+    console.log(`Fetching templates with email: ${params.email}`);
+    
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
     
@@ -817,10 +825,20 @@ export const getReplyTemplatesApi = async (params?: {
  */
 export const createReplyTemplateApi = async (data: {
   content: string;
-  user_id: string;
+  user_id?: string; // Deprecated, kept for backward compatibility
+  email: string; // User's email address
 }): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
+    if (!data.email) {
+      console.error('Error: email parameter is required for createReplyTemplateApi');
+      throw new Error('email parameter is required');
+    }
+    
     const baseUrl = updateReplyTemplateUrl || '';
+    console.log(`Creating template with email: ${data.email}`);
+    
+    // Send email parameter directly to backend
+    const userIdentifier = { email: data.email };
     
     const response = await fetch(baseUrl, {
       method: 'POST',
@@ -830,7 +848,7 @@ export const createReplyTemplateApi = async (data: {
       body: JSON.stringify({
         action: 'add',
         content: data.content,
-        user_id: data.user_id
+        ...userIdentifier
       }),
     });
     
@@ -858,11 +876,21 @@ export const updateReplyTemplateApi = async (
   id: number,
   data: {
     content: string;
-    user_id: string;
+    user_id?: string; // Deprecated, kept for backward compatibility
+    email: string; // User's email address
   }
 ): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
+    if (!data.email) {
+      console.error('Error: email parameter is required for updateReplyTemplateApi');
+      throw new Error('email parameter is required');
+    }
+    
     const baseUrl = updateReplyTemplateUrl || '';
+    console.log(`Updating template ${id} with email: ${data.email}`);
+    
+    // Send email parameter directly to backend
+    const userIdentifier = { email: data.email };
     
     const response = await fetch(baseUrl, {
       method: 'POST',
@@ -873,7 +901,7 @@ export const updateReplyTemplateApi = async (
         action: 'update',
         template_id: id,
         content: data.content,
-        user_id: data.user_id
+        ...userIdentifier
       }),
     });
     
@@ -916,12 +944,17 @@ export const getCommentsKeyword = async (email?: string): Promise<KeywordsRespon
  * Deletes a reply template
  * 
  * @param id Template ID to delete
- * @param user_id User ID who owns the template, defaults to 'zacks'
  * @returns Promise with the deletion response
  */
-export const deleteReplyTemplateApi = async (id: number, user_id: string = 'zacks'): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
+export const deleteReplyTemplateApi = async (id: number, email: string): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
+    if (!email) {
+      console.error('Error: email parameter is required for deleteReplyTemplateApi');
+      throw new Error('email parameter is required');
+    }
+    
     const baseUrl = updateReplyTemplateUrl || '';
+    console.log(`Deleting template ${id} with email: ${email}`);
     
     const response = await fetch(baseUrl, {
       method: 'POST',
@@ -931,7 +964,7 @@ export const deleteReplyTemplateApi = async (id: number, user_id: string = 'zack
       body: JSON.stringify({
         action: 'delete',
         template_id: id,
-        user_id: user_id
+        email: email // Send email parameter directly to backend
       }),
     });
     

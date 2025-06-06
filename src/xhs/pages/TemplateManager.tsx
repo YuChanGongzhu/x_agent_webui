@@ -11,6 +11,7 @@ import {
 } from '../../api/mysql';
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
 import axios from 'axios';
+import { useUser } from '../../context/UserContext';
 
 const { TextArea } = Input;
 
@@ -44,6 +45,9 @@ interface CustomerIntent {
 const { TabPane } = Tabs;
 
 const TemplateManager: React.FC = () => {
+  // Get user info from context
+  const { email, isAdmin } = useUser();
+  
   // 模板状态
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -107,19 +111,38 @@ const TemplateManager: React.FC = () => {
 
   // 组件初始化时获取模板和评论数据
   useEffect(() => {
-    fetchTemplates();
+    // 当email可用时获取模板
+    if (email) {
+      console.log(`Email available, fetching templates for: ${email}`);
+      fetchTemplates();
+    }
+  }, [email]); // 依赖于email变化
+  
+  // 分页变化时获取模板和评论
+  useEffect(() => {
+    if (email) {
+      fetchTemplates();
+    }
     fetchComments();
   }, [currentPage, pageSize]);
 
   // 从后端获取模板
   const fetchTemplates = async () => {
     try {
+      // 确保有email才能获取模板
+      if (!email) {
+        message.error('用户邮箱不能为空，无法获取模板');
+        return;
+      }
+      
       setLoading(true);
       const response = await getReplyTemplatesApi({
         page: currentPage,
         page_size: pageSize,
-        user_id: 'zacks' // 默认用户ID，可以动态设置
+        email: email // 使用当前用户的邮箱
       });
+      
+      console.log(`Fetching templates for user: ${email}`);
       
       setTemplates(response.data?.records || []);
       setTotalTemplates(response.data?.total || 0);
@@ -166,12 +189,20 @@ const TemplateManager: React.FC = () => {
 
   // 处理模板创建
   const handleAddTemplate = async () => {
+    // 确保有email才能创建模板
+    if (!email) {
+      message.error('用户邮箱不能为空，无法创建模板');
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await createReplyTemplateApi({
         content: templateContent,
-        user_id: 'zacks' // 默认用户ID，可以动态设置
+        email: email // 使用当前用户的邮箱
       });
+      
+      console.log(`Adding template for user: ${email}`);
       
       if (response.code === 0) {
         message.success('添加模板成功');
@@ -193,12 +224,20 @@ const TemplateManager: React.FC = () => {
   const handleUpdateTemplate = async () => {
     if (!editingTemplate) return;
     
+    // 确保有email才能更新模板
+    if (!email) {
+      message.error('用户邮箱不能为空，无法更新模板');
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await updateReplyTemplateApi(editingTemplate.id, {
         content: templateContent,
-        user_id: 'zacks' // 默认用户ID，可以动态设置
+        email: email // 使用当前用户的邮箱
       });
+      
+      console.log(`Updating template ${editingTemplate.id} for user: ${email}`);
       
       if (response.code === 0) {
         message.success('更新模板成功');
@@ -219,9 +258,17 @@ const TemplateManager: React.FC = () => {
 
   // 处理模板删除
   const handleDeleteTemplate = async (id: number) => {
+    // 确保有email才能删除模板
+    if (!email) {
+      message.error('用户邮箱不能为空，无法删除模板');
+      return;
+    }
+    
     try {
       setLoading(true);
-      const response = await deleteReplyTemplateApi(id, 'zacks');
+      const response = await deleteReplyTemplateApi(id, email);
+      
+      console.log(`Deleting template ${id} for user: ${email}`);
       
       if (response.code === 0) {
         message.success('删除模板成功');
