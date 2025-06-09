@@ -485,6 +485,16 @@ const TemplateManager: React.FC = () => {
         </Tag>
       ),
     },
+    {
+      title: '是否已回复',
+      dataIndex: 'is_reply',
+      key: 'is_reply',
+      render: (is_reply: number) => (
+        <Tag color={is_reply === 1 ? 'green' : 'red'}>
+          {is_reply === 1 ? '已回复' : '未回复'}
+        </Tag>
+      ),
+    },
   ];
 
   return (
