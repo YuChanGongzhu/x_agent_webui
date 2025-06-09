@@ -57,8 +57,10 @@ const DataFilter: React.FC = () => {
         console.log(`Comments keywords for ${!isAdmin && email ? `email: ${email}` : 'admin'}:`, extractedKeywords);
 
         if (extractedKeywords.length > 0) {
-          setKeywords(extractedKeywords);
-          setSelectedKeyword(extractedKeywords[0]);
+          //获取到的关键字列表需要倒序
+          const extractedKeywordsReverse = extractedKeywords.reverse();
+          setKeywords(extractedKeywordsReverse);
+          setSelectedKeyword(extractedKeywordsReverse[0]);
         } else {
           setKeywords([]);
           setSelectedKeyword('');

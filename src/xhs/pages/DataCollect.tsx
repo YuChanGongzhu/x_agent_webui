@@ -63,7 +63,7 @@ const DataCollect: React.FC = () => {
   const [refreshingComments, setRefreshingComments] = useState(false);
   // State for tab navigation
   const [activeTab, setActiveTab] = useState<TabType>('任务');
-  
+
   // State for form inputs
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(10);
@@ -73,7 +73,7 @@ const DataCollect: React.FC = () => {
     const savedEmail = localStorage.getItem('xhs_target_email');
     return savedEmail || '';
   });
-  
+
   // 当目标邮箱变化时，更新localStorage
   useEffect(() => {
     if (targetEmail) {
@@ -81,7 +81,7 @@ const DataCollect: React.FC = () => {
     }
   }, [targetEmail]);
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
-  
+
   // State for data
   const [keywords, setKeywords] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState('');
@@ -89,7 +89,7 @@ const DataCollect: React.FC = () => {
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  
+
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [tasksPerPage] = useState(10);
@@ -97,7 +97,7 @@ const DataCollect: React.FC = () => {
   const [notesPerPage] = useState(10);
   const [currentCommentsPage, setCurrentCommentsPage] = useState(1);
   const [commentsPerPage] = useState(10);
-  
+
   // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -118,12 +118,12 @@ const DataCollect: React.FC = () => {
               .filter((user: { email?: string }) => user.email) // 过滤掉没有邮箱的用户
               .map((user: { email?: string }) => user.email as string);
             setAvailableEmails(emails);
-            
+
             // 如果localStorage中有存储的邮箱且在可用列表中，则使用它
             const savedEmail = localStorage.getItem('xhs_target_email');
             if (savedEmail && emails.includes(savedEmail)) {
               setTargetEmail(savedEmail);
-            } 
+            }
             // 否则，如果当前没有选择的邮箱但有可用邮箱，则选择第一个
             else if (!targetEmail && emails.length > 0) {
               setTargetEmail(emails[0]);
@@ -175,21 +175,23 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       setRefreshingKeywords(true);
-      
+
       // Get keywords from real API endpoint
       // If user is not admin, filter by their email
       const response = await getKeywordsApi(!isAdmin && email ? email : undefined);
-      
+
       // Check if response has data and data has keywords
       if (response && response.data) {
         // Extract keywords from the response
         const extractedKeywords = response.data;
-        
+
         console.log(`Keywords for ${!isAdmin && email ? `email: ${email}` : 'admin'}:`, extractedKeywords);
-        
+
         if (extractedKeywords.length > 0) {
-          setKeywords(extractedKeywords);
-          setSelectedKeyword(extractedKeywords[0]);
+          //获取到的关键字列表需要倒序
+          const extractedKeywordsReverse = extractedKeywords.reverse();
+          setKeywords(extractedKeywordsReverse);
+          setSelectedKeyword(extractedKeywordsReverse[0]);
         } else {
           // No keywords found in the response
           setKeywords([]);
@@ -224,20 +226,20 @@ const DataCollect: React.FC = () => {
       // Create timestamp for unique dag_run_id
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const dag_run_id = `xhs_notes_${timestamp}`;
-      
+
       // Prepare configuration
       const conf = {
         keyword,
         max_notes: maxNotes,
         email: targetEmail
       };
-      
+
       const response = await triggerDagRun(
-        "notes_collector", 
+        "notes_collector",
         dag_run_id,
         conf
       );
-      
+
       // Add new task to the list
       const newTask = {
         dag_run_id: response.dag_run_id,
@@ -247,13 +249,13 @@ const DataCollect: React.FC = () => {
         note: response.note || '',
         conf: JSON.stringify(conf)
       };
-      
+
       setTasks([newTask, ...tasks]);
       setSuccess(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`);
       setLoading(false);
       setKeyword('');
       // 不清空目标邮箱，保持选择状态
-      
+
       // Refresh task list
       fetchRecentTasks();
     } catch (err) {
@@ -275,25 +277,25 @@ const DataCollect: React.FC = () => {
       // Create timestamp for unique dag_run_id
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const dag_run_id = `xhs_comments_${timestamp}`;
-      
+
       // Prepare configuration
       const conf: any = {
         keyword: selectedKeyword,
         max_comments: maxComments,
         email: targetEmail
       };
-      
+
       // Add selected note URLs if any are selected
       if (selectedNotes.length > 0) {
         conf.note_urls = selectedNotes;
       }
-      
+
       const response = await triggerDagRun(
-        "comments_collector", 
+        "comments_collector",
         dag_run_id,
         conf
       );
-      
+
       // Add new task to the list
       const newTask = {
         dag_run_id: response.dag_run_id,
@@ -303,11 +305,11 @@ const DataCollect: React.FC = () => {
         note: response.note || '',
         conf: JSON.stringify(conf)
       };
-      
+
       setTasks([newTask, ...tasks]);
       setSuccess(`成功创建笔记评论收集任务，任务ID: ${newTask.dag_run_id}`);
       setLoading(false);
-      
+
       // Refresh task list
       fetchRecentTasks();
     } catch (err) {
@@ -323,11 +325,11 @@ const DataCollect: React.FC = () => {
   useEffect(() => {
     setCurrentNotesPage(1);
   }, [notes]);
-  
+
   useEffect(() => {
     setCurrentCommentsPage(1);
   }, [comments]);
-  
+
   // Fetch notes and comments when selectedKeyword changes
   useEffect(() => {
     if (selectedKeyword) {
@@ -340,17 +342,17 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       setRefreshingTasks(true);
-      
+
       // Get tasks from Airflow API directly
       let allTasks: Task[] = [];
-      
+
       // Directly fetch DAG runs from Airflow API
       const notesResponse = await getDagRuns("notes_collector", 200, "-start_date");
       const commentsResponse = await getDagRuns("comments_collector", 200, "-start_date");
-      
+
       console.log('Notes response from Airflow:', notesResponse);
       console.log('Comments response from Airflow:', commentsResponse);
-      
+
       if (notesResponse && notesResponse.dag_runs) {
         const notesTasks = notesResponse.dag_runs.map((run: any) => ({
           dag_run_id: run.dag_run_id,
@@ -362,7 +364,7 @@ const DataCollect: React.FC = () => {
         }));
         allTasks = [...allTasks, ...notesTasks];
       }
-      
+
       if (commentsResponse && commentsResponse.dag_runs) {
         const commentsTasks = commentsResponse.dag_runs.map((run: any) => ({
           dag_run_id: run.dag_run_id,
@@ -374,17 +376,17 @@ const DataCollect: React.FC = () => {
         }));
         allTasks = [...allTasks, ...commentsTasks];
       }
-      
+
       // Sort by start_date (newest first) - ensure we're using proper date comparison
       allTasks.sort((a, b) => {
         const dateA = new Date(a.start_date).getTime();
         const dateB = new Date(b.start_date).getTime();
         return dateB - dateA; // Newest first
       });
-      
+
       console.log('All tasks (sorted):', allTasks);
       console.log('Total tasks count:', allTasks.length);
-      
+
       // Filter tasks by email if user is not admin
       if (!isAdmin && email) {
         const filteredTasks = allTasks.filter(task => {
@@ -397,7 +399,7 @@ const DataCollect: React.FC = () => {
             return false;
           }
         });
-        
+
         console.log(`Filtered tasks for email ${email}:`, filteredTasks.length);
         setTasks(filteredTasks);
       } else {
@@ -405,7 +407,7 @@ const DataCollect: React.FC = () => {
         console.log('Admin user or no email, showing all tasks');
         setTasks(allTasks);
       }
-      
+
       setLoading(false);
       setRefreshingTasks(false);
     } catch (err) {
@@ -427,10 +429,10 @@ const DataCollect: React.FC = () => {
   const fetchNotes = async (keyword: string) => {
     try {
       setLoading(true);
-      
+
       // Use the real API endpoint for notes data
       const response = await getXhsNotesByKeywordApi(keyword);
-      
+
       // Set notes data from response
       if (response && response.code === 0 && response.data && response.data.records) {
         // Transform the API response to match the expected Note format
@@ -451,14 +453,14 @@ const DataCollect: React.FC = () => {
           collect_time: item.collect_time || '',
           collects: item.collects || item.collect_count || 0
         }));
-        
+
         setNotes(transformedNotes);
       } else {
         // Handle empty or invalid response
         setNotes([]);
         console.warn('Notes API returned invalid data format:', response);
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching notes data:', err);
@@ -472,12 +474,12 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
       setRefreshingComments(true);
-      
+
       // Use the new comments API endpoint with email filtering for non-admin users
       const response = await getXhsCommentsByKeywordApi(keyword, !isAdmin && email ? email : undefined);
-      
+
       console.log(`Comments for ${!isAdmin && email ? `email: ${email}` : 'admin'} and keyword: ${keyword}`);
-      
+
       // Set comments data from response
       if (response && response.code === 0 && response.data && response.data.records) {
         // 将API返回的数据映射到Comment接口
@@ -502,7 +504,7 @@ const DataCollect: React.FC = () => {
         setComments([]);
         console.warn('Comments API returned invalid data format:', response);
       }
-      
+
       setLoading(false);
       setRefreshingComments(false);
     } catch (err) {
@@ -520,29 +522,29 @@ const DataCollect: React.FC = () => {
     const date = new Date(dateString);
     return date.toLocaleString('zh-CN');
   };
-  
+
   // Get current tasks for pagination
   const indexOfLastTask = currentPage * tasksPerPage;
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
   const currentTasks = tasks.slice(indexOfFirstTask, indexOfLastTask);
-  
+
   // Change page for tasks
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-  
+
   // Change page for notes
   const paginateNotes = (pageNumber: number) => setCurrentNotesPage(pageNumber);
-  
+
   // Change page for comments
   const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
-  
+
   // Generate pagination buttons for tasks - No longer used, replaced with inline pagination
   const renderPaginationButtons = () => {
     return null;
   };
 
-  useEffect(()=>{
-    console.log("邮箱",targetEmail)
-  },[targetEmail])
+  useEffect(() => {
+    console.log("邮箱", targetEmail)
+  }, [targetEmail])
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -580,8 +582,8 @@ const DataCollect: React.FC = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`py-2 px-4 font-medium text-sm ${activeTab === tab 
-              ? 'border-b-2 border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' 
+            className={`py-2 px-4 font-medium text-sm ${activeTab === tab
+              ? 'border-b-2 border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]'
               : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
           >
             {tab}
@@ -668,7 +670,7 @@ const DataCollect: React.FC = () => {
                     显示 {indexOfFirstTask + 1} - {Math.min(indexOfLastTask, tasks.length)} 条，共 {tasks.length} 条记录
                   </div>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -698,14 +700,14 @@ const DataCollect: React.FC = () => {
                         let keyword = "";
                         let collectionQuantity = 0;
                         let isCommentTask = false;
-                        
+
                         try {
                           const conf = JSON.parse(task.conf);
                           keyword = conf.keyword || "";
-                          
+
                           // Determine if this is a comments collection task
                           isCommentTask = task.dag_run_id.includes('xhs_comments');
-                          
+
                           // Set the appropriate collection quantity based on task type
                           if (isCommentTask) {
                             collectionQuantity = conf.max_comments || 0;
@@ -716,7 +718,7 @@ const DataCollect: React.FC = () => {
                           // Handle parsing error
                           console.error("Error parsing task configuration:", e);
                         }
-                        
+
                         return (
                           <tr key={task.dag_run_id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -729,15 +731,14 @@ const DataCollect: React.FC = () => {
                               {task.dag_run_id}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                task.state === 'success' ? 'bg-green-100 text-green-800' :
-                                task.state === 'running' ? 'bg-blue-100 text-blue-800' :
-                                task.state === 'failed' ? 'bg-red-100 text-red-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${task.state === 'success' ? 'bg-green-100 text-green-800' :
+                                  task.state === 'running' ? 'bg-blue-100 text-blue-800' :
+                                    task.state === 'failed' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                                }`}>
                                 {task.state === 'success' ? '成功' :
-                                 task.state === 'running' ? '运行中' :
-                                 task.state === 'failed' ? '失败' : task.state}
+                                  task.state === 'running' ? '运行中' :
+                                    task.state === 'failed' ? '失败' : task.state}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -749,75 +750,75 @@ const DataCollect: React.FC = () => {
                           </tr>
                         );
                       })}
-                  </tbody>
-                </table>
-                
-                {/* Pagination for tasks */}
-                {tasks.length > tasksPerPage && (
-                  <div className="flex justify-center mt-4">
-                    <nav className="flex items-center">
-                      <button 
-                        onClick={() => paginate(1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        首页
-                      </button>
-                      <button 
-                        onClick={() => paginate(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        上一页
-                      </button>
-                      
-                      {[...Array(Math.min(5, Math.ceil(tasks.length / tasksPerPage)))].map((_, i) => {
-                        let pageNum: number = 0; // Initialize with default value
-                        const totalPages = Math.ceil(tasks.length / tasksPerPage);
-                        
-                        // Logic to show page numbers centered around current page
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        if (pageNum > 0 && pageNum <= totalPages) {
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => paginate(pageNum)}
-                              className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        }
-                        return null;
-                      })}
-                      
-                      <button 
-                        onClick={() => paginate(currentPage + 1)}
-                        disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        下一页
-                      </button>
-                      <button 
-                        onClick={() => paginate(Math.ceil(tasks.length / tasksPerPage))}
-                        disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        末页
-                      </button>
-                    </nav>
-                  </div>
-                )}
-              </div>
+                    </tbody>
+                  </table>
+
+                  {/* Pagination for tasks */}
+                  {tasks.length > tasksPerPage && (
+                    <div className="flex justify-center mt-4">
+                      <nav className="flex items-center">
+                        <button
+                          onClick={() => paginate(1)}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          首页
+                        </button>
+                        <button
+                          onClick={() => paginate(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          上一页
+                        </button>
+
+                        {[...Array(Math.min(5, Math.ceil(tasks.length / tasksPerPage)))].map((_, i) => {
+                          let pageNum: number = 0; // Initialize with default value
+                          const totalPages = Math.ceil(tasks.length / tasksPerPage);
+
+                          // Logic to show page numbers centered around current page
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          if (pageNum > 0 && pageNum <= totalPages) {
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => paginate(pageNum)}
+                                className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          }
+                          return null;
+                        })}
+
+                        <button
+                          onClick={() => paginate(currentPage + 1)}
+                          disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          下一页
+                        </button>
+                        <button
+                          onClick={() => paginate(Math.ceil(tasks.length / tasksPerPage))}
+                          disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          末页
+                        </button>
+                      </nav>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <p className="text-gray-500">没有找到笔记采集任务记录</p>
@@ -911,18 +912,18 @@ const DataCollect: React.FC = () => {
                 title="刷新笔记列表"
                 disabled={refreshingNotes}
               >
-              {refreshingNotes ? (
-                <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              )}
-            </button>
-          </div>
+                {refreshingNotes ? (
+                  <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+              </button>
+            </div>
             {notes.length > 0 ? (
               <>
                 <div className="flex justify-between items-center mb-2">
@@ -949,66 +950,66 @@ const DataCollect: React.FC = () => {
                       {notes
                         .slice((currentNotesPage - 1) * notesPerPage, currentNotesPage * notesPerPage)
                         .map((note) => (
-                        <tr key={note.id}>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <input 
-                              type="checkbox" 
-                              checked={selectedNotes.includes(note.note_url)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedNotes([...selectedNotes, note.note_url]);
-                                } else {
-                                  setSelectedNotes(selectedNotes.filter(url => url !== note.note_url));
-                                }
-                              }}
-                              className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
-                            />
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                            <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                              {note.note_url}
-                            </a>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
-                          <td className="px-3 py-2 text-sm text-gray-500 max-w-md">
-                            <div className="line-clamp-3 hover:line-clamp-none">
-                              {note.content || '无内容'}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(note.collected_at)}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.last_comments_collected_at ? formatDate(note.last_comments_collected_at) : '未采集'}</td>
-                        </tr>
-                      ))}
+                          <tr key={note.id}>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                              <input
+                                type="checkbox"
+                                checked={selectedNotes.includes(note.note_url)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedNotes([...selectedNotes, note.note_url]);
+                                  } else {
+                                    setSelectedNotes(selectedNotes.filter(url => url !== note.note_url));
+                                  }
+                                }}
+                                className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
+                              />
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                              <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                                {note.note_url}
+                              </a>
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
+                            <td className="px-3 py-2 text-sm text-gray-500 max-w-md">
+                              <div className="line-clamp-3 hover:line-clamp-none">
+                                {note.content || '无内容'}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(note.collected_at)}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.last_comments_collected_at ? formatDate(note.last_comments_collected_at) : '未采集'}</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
-                  
+
                   {/* Pagination for notes */}
                   {notes.length > notesPerPage && (
                     <div className="flex justify-center mt-4">
                       <nav className="flex items-center">
-                        <button 
+                        <button
                           onClick={() => paginateNotes(1)}
                           disabled={currentNotesPage === 1}
                           className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                         >
                           首页
                         </button>
-                        <button 
+                        <button
                           onClick={() => paginateNotes(currentNotesPage - 1)}
                           disabled={currentNotesPage === 1}
                           className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                         >
                           上一页
                         </button>
-                        
+
                         {[...Array(Math.min(5, Math.ceil(notes.length / notesPerPage)))].map((_, i) => {
                           let pageNum: number = 0; // Initialize with default value
                           const totalPages = Math.ceil(notes.length / notesPerPage);
-                          
+
                           // Logic to show page numbers centered around current page
                           if (totalPages <= 5) {
                             pageNum = i + 1;
@@ -1019,7 +1020,7 @@ const DataCollect: React.FC = () => {
                           } else {
                             pageNum = currentNotesPage - 2 + i;
                           }
-                          
+
                           if (pageNum > 0 && pageNum <= totalPages) {
                             return (
                               <button
@@ -1033,15 +1034,15 @@ const DataCollect: React.FC = () => {
                           }
                           return null;
                         })}
-                        
-                        <button 
+
+                        <button
                           onClick={() => paginateNotes(currentNotesPage + 1)}
                           disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
                           className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                         >
                           下一页
                         </button>
-                        <button 
+                        <button
                           onClick={() => paginateNotes(Math.ceil(notes.length / notesPerPage))}
                           disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
                           className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
@@ -1151,50 +1152,50 @@ const DataCollect: React.FC = () => {
                     {comments
                       .slice((currentCommentsPage - 1) * commentsPerPage, currentCommentsPage * commentsPerPage)
                       .map((comment) => (
-                      <tr key={comment.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                            {comment.note_url}
-                          </a>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                          <div className="line-clamp-3 hover:line-clamp-none">
-                            {comment.content || '无内容'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
-                      </tr>
-                    ))}
+                        <tr key={comment.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                              {comment.note_url}
+                            </a>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                            <div className="line-clamp-3 hover:line-clamp-none">
+                              {comment.content || '无内容'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
-                
+
                 {/* Pagination for comments */}
                 {comments.length > 0 && (
                   <div className="flex justify-center mt-4">
                     <nav className="flex items-center">
 
-                      <button 
+                      <button
                         onClick={() => paginateComments(1)}
                         disabled={currentCommentsPage === 1}
                         className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                       >
                         首页
                       </button>
-                      <button 
+                      <button
                         onClick={() => paginateComments(currentCommentsPage - 1)}
                         disabled={currentCommentsPage === 1}
                         className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                       >
                         上一页
                       </button>
-                      
+
                       {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map((_, i) => {
                         let pageNum: number = 0; // Initialize with default value
                         const totalPages = Math.ceil(comments.length / commentsPerPage);
-                        
+
                         // Logic to show page numbers centered around current page
                         if (totalPages <= 5) {
                           pageNum = i + 1;
@@ -1205,7 +1206,7 @@ const DataCollect: React.FC = () => {
                         } else {
                           pageNum = currentCommentsPage - 2 + i;
                         }
-                        
+
                         if (pageNum > 0 && pageNum <= totalPages) {
                           return (
                             <button
@@ -1219,15 +1220,15 @@ const DataCollect: React.FC = () => {
                         }
                         return null;
                       })}
-                      
-                      <button 
+
+                      <button
                         onClick={() => paginateComments(currentCommentsPage + 1)}
                         disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
                         className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                       >
                         下一页
                       </button>
-                      <button 
+                      <button
                         onClick={() => paginateComments(Math.ceil(comments.length / commentsPerPage))}
                         disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
                         className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"

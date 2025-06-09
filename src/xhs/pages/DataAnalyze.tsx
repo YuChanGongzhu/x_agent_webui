@@ -134,7 +134,8 @@ const DataAnalyze: React.FC = () => {
         
         // Extract unique keywords from the filtered data
         const keywordsFromData = [...new Set(intentData.map(item => item.keyword).filter(Boolean))];
-        uniqueKeywords.push(...keywordsFromData);
+        const keywordsFromDataReverse = keywordsFromData.reverse();
+        uniqueKeywords.push(...keywordsFromDataReverse);
         
         // Extract unique intents from the filtered data
         const intentsFromData = [...new Set(intentData.map(item => item.intent).filter(Boolean))];
