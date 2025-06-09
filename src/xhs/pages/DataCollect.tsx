@@ -542,10 +542,6 @@ const DataCollect: React.FC = () => {
     return null;
   };
 
-  useEffect(() => {
-    console.log("邮箱", targetEmail)
-  }, [targetEmail])
-
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="bg-blue-50 p-4 rounded-lg mb-2">
