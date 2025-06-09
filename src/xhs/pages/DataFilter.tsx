@@ -16,7 +16,7 @@ type Comment = XhsComment;
 const DataFilter: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin, email } = useUser(); // Get user info from context
-  
+
   // State for keywords and selected keyword
   const [keywords, setKeywords] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState('');
@@ -53,7 +53,7 @@ const DataFilter: React.FC = () => {
 
       if (response && response.data) {
         const extractedKeywords = response.data;
-        
+
         console.log(`Comments keywords for ${!isAdmin && email ? `email: ${email}` : 'admin'}:`, extractedKeywords);
 
         if (extractedKeywords.length > 0) {
@@ -99,7 +99,7 @@ const DataFilter: React.FC = () => {
       setLoading(true);
       // Filter comments by email for non-admin users
       const response = await getXhsCommentsByKeywordApi(keyword, !isAdmin && email ? email : undefined);
-      
+
       console.log(`Comments for ${!isAdmin && email ? `email: ${email}` : 'admin'} and keyword: ${keyword}`);
 
       if (response && response.data) {
@@ -130,6 +130,13 @@ const DataFilter: React.FC = () => {
 
   // Change page for comments pagination
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('zh-CN');
+  };
 
   // Apply filters to comments
   const applyFilters = () => {
@@ -182,7 +189,7 @@ const DataFilter: React.FC = () => {
     if (filteredComments.length > 0) {
       sessionStorage.setItem('filtered_comments', JSON.stringify(filteredComments));
       setSuccess('数据已传递到分析页面');
-      
+
       // Navigate to the analysis page after a 1-second delay
       setTimeout(() => {
         navigate('/xhs/analyze');
@@ -279,6 +286,8 @@ const DataFilter: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论时间</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -301,6 +310,8 @@ const DataFilter: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{comment.collect_time ? formatDate(comment.collect_time) : '未采集'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(comment.comment_time)}</td>
                     </tr>
                   ))}
               </tbody>

@@ -123,8 +123,8 @@ const DataAnalyze: React.FC = () => {
       
       if (response && response.data) {
         const intentData = response.data.records || [];
-        setCustomerIntents(intentData);
-        setFilteredIntents(intentData);
+        setCustomerIntents([...intentData].reverse());
+        setFilteredIntents([...intentData].reverse());
         
         console.log(`Found ${intentData.length} customer intents for ${!isAdmin && email ? `email: ${email}` : 'admin'}`);
         
@@ -287,7 +287,7 @@ const DataAnalyze: React.FC = () => {
     if (selectedIntent !== '全部') {
       filtered = filtered.filter(item => item.intent === selectedIntent);
     }
-    
+
     setFilteredIntents(filtered);
     // Reset to first page when filters change
     paginate(1);
@@ -604,6 +604,7 @@ const DataAnalyze: React.FC = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">意向</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">是否已回复</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分析时间</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -631,6 +632,7 @@ const DataAnalyze: React.FC = () => {
                           {item.is_reply === 1 ? '已回复' : '未回复'}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(item.analyzed_at)}</td>
                     </tr>
                   ))}
                 </tbody>
