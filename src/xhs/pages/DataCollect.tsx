@@ -3,6 +3,7 @@ import { getAllVariables, getDagRuns, triggerDagRun } from '../../api/airflow';
 import { getKeywordsApi, getXhsNotesByKeywordApi, getXhsCommentsByKeywordApi } from '../../api/mysql';
 import { useUser } from '../../context/UserContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
+import SortUpOrDownButton from '../../components/SortUpOrDownButton';
 
 interface Keyword {
   keyword: string;
@@ -86,8 +87,10 @@ const DataCollect: React.FC = () => {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
+  const [sortNotes, setSortNotes] = useState<Note[]>([]);
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [sortComments, setSortComments] = useState<Comment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   // State for pagination
@@ -455,9 +458,11 @@ const DataCollect: React.FC = () => {
         }));
 
         setNotes(transformedNotes);
+        setSortNotes(transformedNotes)
       } else {
         // Handle empty or invalid response
         setNotes([]);
+        setSortNotes([]);
         console.warn('Notes API returned invalid data format:', response);
       }
 
@@ -466,6 +471,7 @@ const DataCollect: React.FC = () => {
       console.error('Error fetching notes data:', err);
       setError('获取笔记数据失败');
       setNotes([]);
+      setSortNotes([]);
       setLoading(false);
     }
   };
@@ -499,9 +505,11 @@ const DataCollect: React.FC = () => {
           comment_time: record.comment_time || ''
         }));
         setComments(mappedComments);
+        setSortComments(mappedComments);
       } else {
         // Handle empty or invalid response
         setComments([]);
+        setSortComments([]);
         console.warn('Comments API returned invalid data format:', response);
       }
 
@@ -511,6 +519,7 @@ const DataCollect: React.FC = () => {
       console.error('Error fetching comments data:', err);
       setError('获取评论数据失败');
       setComments([]);
+      setSortComments([]);
       setLoading(false);
       setRefreshingComments(false);
     }
@@ -728,9 +737,9 @@ const DataCollect: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${task.state === 'success' ? 'bg-green-100 text-green-800' :
-                                  task.state === 'running' ? 'bg-blue-100 text-blue-800' :
-                                    task.state === 'failed' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-800'
+                                task.state === 'running' ? 'bg-blue-100 text-blue-800' :
+                                  task.state === 'failed' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
                                 }`}>
                                 {task.state === 'success' ? '成功' :
                                   task.state === 'running' ? '运行中' :
@@ -938,8 +947,32 @@ const DataCollect: React.FC = () => {
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
                         <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论数</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论采集时间</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
+                          const sortNotes = [...notes].sort((a, b) => {
+                            return new Date(a.collected_at || 0).getTime() - new Date(b.collected_at || 0).getTime();
+                          })
+                          setNotes(sortNotes);
+                        }} onDown={() => {
+                          const sortNotes = [...notes].sort((a, b) => {
+                            return new Date(b.collected_at || 0).getTime() - new Date(a.collected_at || 0).getTime();
+                          })
+                          setNotes(sortNotes);
+                        }} onReset={() => {
+                          setNotes(sortNotes);
+                        }} /></span></th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论采集时间</span><SortUpOrDownButton onUp={() => {
+                          const sortNotes = [...notes].sort((a, b) => {
+                            return new Date(a.last_comments_collected_at || 0).getTime() - new Date(b.last_comments_collected_at || 0).getTime();
+                          })
+                          setNotes(sortNotes);
+                        }} onDown={() => {
+                          const sortNotes = [...notes].sort((a, b) => {
+                            return new Date(b.last_comments_collected_at || 0).getTime() - new Date(a.last_comments_collected_at || 0).getTime();
+                          })
+                          setNotes(sortNotes);
+                        }} onReset={() => {
+                          setNotes(sortNotes);
+                        }} /></span></th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1142,8 +1175,32 @@ const DataCollect: React.FC = () => {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论时间</th>
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
+                        const sortComments = [...comments].sort((a, b) => {
+                          return new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime();
+                        })
+                        setComments(sortComments);
+                      }} onDown={() => {
+                        const sortComments = [...comments].sort((a, b) => {
+                          return new Date(b.collect_time || 0).getTime() - new Date(a.collect_time || 0).getTime();
+                        })
+                        setComments(sortComments);
+                      }} onReset={() => {
+                        setComments(sortComments);
+                      }} /></span></th>
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论时间</span><SortUpOrDownButton onUp={() => {
+                        const sortComments = [...comments].sort((a, b) => {
+                          return new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime();
+                        })
+                        setComments(sortComments);
+                      }} onDown={() => {
+                        const sortComments = [...comments].sort((a, b) => {
+                          return new Date(b.comment_time || 0).getTime() - new Date(a.comment_time || 0).getTime();
+                        })
+                        setComments(sortComments);
+                      }} onReset={() => {
+                        setComments(sortComments);
+                      }} /></span></th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">

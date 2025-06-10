@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse, getCommentsKeyword } from '../../api/mysql';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
-
+import SortUpOrDownButton from '../../components/SortUpOrDownButton';
 
 
 // Simple spinner component
@@ -24,7 +24,7 @@ const DataFilter: React.FC = () => {
   // State for comments data
   const [originalComments, setOriginalComments] = useState<Comment[]>([]);
   const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
-
+  const [sortFilteredComments, setSortFilteredComments] = useState<Comment[]>([]);
   // State for filter conditions
   const [minLikes, setMinLikes] = useState(0);
   const [minLength, setMinLength] = useState(2);
@@ -67,6 +67,7 @@ const DataFilter: React.FC = () => {
           // Clear comments data when no keywords are found
           setOriginalComments([]);
           setFilteredComments([]);
+          setSortFilteredComments([]);
           setError('未找到关键词');
         }
       } else {
@@ -75,6 +76,7 @@ const DataFilter: React.FC = () => {
         // Clear comments data when no keywords data is found
         setOriginalComments([]);
         setFilteredComments([]);
+        setSortFilteredComments([]);
         setError('未找到关键词数据');
       }
       setLoading(false);
@@ -108,14 +110,17 @@ const DataFilter: React.FC = () => {
         if (extractedComments && extractedComments.length > 0) {
           setOriginalComments(extractedComments);
           setFilteredComments(extractedComments);
+          setSortFilteredComments(extractedComments);
         } else {
           setOriginalComments([]);
           setFilteredComments([]);
+          setSortFilteredComments([]);
           setError(`未找到关键词 "${keyword}" 的评论数据`);
         }
       } else {
         setOriginalComments([]);
         setFilteredComments([]);
+        setSortFilteredComments([]);
         setError('未找到评论数据');
       }
       setLoading(false);
@@ -124,6 +129,7 @@ const DataFilter: React.FC = () => {
       setError('获取评论数据失败');
       setOriginalComments([]);
       setFilteredComments([]);
+      setSortFilteredComments([]);
       setLoading(false);
     }
   };
@@ -173,6 +179,7 @@ const DataFilter: React.FC = () => {
       });
 
       setFilteredComments(filtered);
+      setSortFilteredComments(filtered);
       setLoading(false);
     } catch (err) {
       setError('应用过滤条件时出错');
@@ -286,8 +293,32 @@ const DataFilter: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集时间</th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评论时间</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
+                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                      return new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime();
+                    })
+                    setFilteredComments(sortFilteredComments);
+                  }} onDown={() => {
+                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                      return new Date(b.collect_time || 0).getTime() - new Date(a.collect_time || 0).getTime();
+                    })
+                    setFilteredComments(sortFilteredComments);
+                  }} onReset={() => {
+                    setFilteredComments(sortFilteredComments)
+                  }} /></span></th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论时间</span><SortUpOrDownButton onUp={() => {
+                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                      return new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime();
+                    })
+                    setFilteredComments(sortFilteredComments);
+                  }} onDown={() => {
+                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                      return new Date(b.comment_time || 0).getTime() - new Date(a.comment_time || 0).getTime();
+                    })
+                    setFilteredComments(sortFilteredComments);
+                  }} onReset={() => {
+                    setFilteredComments(sortFilteredComments)
+                  }} /></span></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
