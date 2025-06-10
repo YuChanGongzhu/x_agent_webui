@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAllVariables, getDagRuns, triggerDagRun } from '../../api/airflow';
 import { getKeywordsApi, getXhsNotesByKeywordApi, getXhsCommentsByKeywordApi } from '../../api/mysql';
 import { useUser } from '../../context/UserContext';
+import { useKeyword } from '../../context/KeywordContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
 import SortUpOrDownButton from '../../components/SortUpOrDownButton';
 
@@ -108,6 +109,8 @@ const DataCollect: React.FC = () => {
 
   // 获取用户上下文
   const { isAdmin, email } = useUser();
+  // 获取共享的关键词上下文
+  const { latestKeyword, setLatestKeyword } = useKeyword();
 
   // 获取可用的邮箱列表
   useEffect(() => {
@@ -194,7 +197,15 @@ const DataCollect: React.FC = () => {
           //获取到的关键字列表需要倒序
           const extractedKeywordsReverse = extractedKeywords.reverse();
           setKeywords(extractedKeywordsReverse);
-          setSelectedKeyword(extractedKeywordsReverse[0]);
+          
+          // 使用共享的最新关键词或默认选择第一个
+          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword) 
+            ? latestKeyword 
+            : extractedKeywordsReverse[0];
+          
+          setSelectedKeyword(keywordToSelect);
+          // 更新共享的最新关键词
+          setLatestKeyword(keywordToSelect);
         } else {
           // No keywords found in the response
           setKeywords([]);

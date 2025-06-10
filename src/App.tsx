@@ -6,6 +6,7 @@ import Register from './login/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import ManagementPage from './management/ManagementPage';
 import { UserProvider } from './context/UserContext';
+import { KeywordProvider } from './context/KeywordContext';
 import XHSAutomation from './xhs/XHSAutomation';
 import DataCollect from './xhs/pages/DataCollect';
 import DataFilter from './xhs/pages/DataFilter';
@@ -25,6 +26,7 @@ function App() {
           element={
             <ProtectedRoute>
               <UserProvider>
+                <KeywordProvider>
                   <div className="flex">
                     <NavBar />
                     <div className="flex-1">
@@ -41,6 +43,7 @@ function App() {
                       </Routes>
                     </div>
                   </div>
+                </KeywordProvider>
               </UserProvider>
             </ProtectedRoute>
           }

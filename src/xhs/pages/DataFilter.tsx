@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse, getCommentsKeyword } from '../../api/mysql';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
+import { useKeyword } from '../../context/KeywordContext';
 import SortUpOrDownButton from '../../components/SortUpOrDownButton';
 
 
@@ -16,6 +17,7 @@ type Comment = XhsComment;
 const DataFilter: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin, email } = useUser(); // Get user info from context
+  const { latestKeyword, setLatestKeyword } = useKeyword(); // Get shared keyword context
 
   // State for keywords and selected keyword
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -60,7 +62,15 @@ const DataFilter: React.FC = () => {
           //获取到的关键字列表需要倒序
           const extractedKeywordsReverse = extractedKeywords.reverse();
           setKeywords(extractedKeywordsReverse);
-          setSelectedKeyword(extractedKeywordsReverse[0]);
+          
+          // 使用共享的最新关键词或默认选择第一个
+          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword) 
+            ? latestKeyword 
+            : extractedKeywordsReverse[0];
+            
+          setSelectedKeyword(keywordToSelect);
+          // 更新共享的最新关键词
+          setLatestKeyword(keywordToSelect);
         } else {
           setKeywords([]);
           setSelectedKeyword('');
@@ -217,7 +227,12 @@ const DataFilter: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>
         <select
           value={selectedKeyword}
-          onChange={(e) => setSelectedKeyword(e.target.value)}
+          onChange={(e) => {
+            const newKeyword = e.target.value;
+            setSelectedKeyword(newKeyword);
+            // 更新共享的最新关键词
+            setLatestKeyword(newKeyword);
+          }}
           disabled={loading}
           className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
         >

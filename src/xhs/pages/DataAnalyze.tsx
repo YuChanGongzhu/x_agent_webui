@@ -4,6 +4,7 @@ import { getIntentCustomersApi, CustomerIntent, CustomerIntentResponse } from '.
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
+import { useKeyword } from '../../context/KeywordContext';
 
 interface Comment {
   id: number;
@@ -28,6 +29,7 @@ interface AnalysisTask {
 const DataAnalyze: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin, email } = useUser(); // Get user info from context
+  const { latestKeyword, setLatestKeyword } = useKeyword(); // Get shared keyword context
   // State for filtered comments from previous page
   const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
   
@@ -42,7 +44,7 @@ const DataAnalyze: React.FC = () => {
   const [customerIntents, setCustomerIntents] = useState<CustomerIntent[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [intents, setIntents] = useState<string[]>([]);
-  const [selectedKeyword, setSelectedKeyword] = useState<string>('全部');
+  const [selectedKeyword, setSelectedKeyword] = useState<string>(latestKeyword || '全部');
   const [selectedIntent, setSelectedIntent] = useState<string>('全部');
   const [filteredIntents, setFilteredIntents] = useState<CustomerIntent[]>([]);
   
@@ -569,7 +571,14 @@ const DataAnalyze: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">按关键词筛选</label>
             <select
               value={selectedKeyword}
-              onChange={(e) => setSelectedKeyword(e.target.value)}
+              onChange={(e) => {
+                const newKeyword = e.target.value;
+                setSelectedKeyword(newKeyword);
+                // 更新共享的最新关键词
+                if (newKeyword !== '全部') {
+                  setLatestKeyword(newKeyword);
+                }
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
             >
               {keywords.map((keyword) => (
