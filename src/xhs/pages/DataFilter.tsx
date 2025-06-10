@@ -5,6 +5,7 @@ import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
 import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
+import notifi from '../../utils/notification';
 
 // Simple spinner component
 const Spinner = () => (
@@ -78,7 +79,7 @@ const DataFilter: React.FC = () => {
           setOriginalComments([]);
           setFilteredComments([]);
           setSortFilteredComments([]);
-          setError('未找到关键词');
+          notifi('未找到关键词', 'error');
         }
       } else {
         setKeywords([]);
@@ -87,12 +88,12 @@ const DataFilter: React.FC = () => {
         setOriginalComments([]);
         setFilteredComments([]);
         setSortFilteredComments([]);
-        setError('未找到关键词数据');
+        notifi('未找到关键词数据', 'error');
       }
       setLoading(false);
     } catch (err) {
       console.error('Error fetching keywords:', err);
-      setError('获取关键词失败');
+      notifi('获取关键词失败', 'error');
       setKeywords([]);
       setLoading(false);
     }
@@ -125,18 +126,18 @@ const DataFilter: React.FC = () => {
           setOriginalComments([]);
           setFilteredComments([]);
           setSortFilteredComments([]);
-          setError(`未找到关键词 "${keyword}" 的评论数据`);
+          notifi(`未找到关键词 "${keyword}" 的评论数据`, 'error');
         }
       } else {
         setOriginalComments([]);
         setFilteredComments([]);
         setSortFilteredComments([]);
-        setError('未找到评论数据');
+        notifi('未找到评论数据', 'error');
       }
       setLoading(false);
     } catch (err) {
       console.error('Error fetching comments:', err);
-      setError('获取评论数据失败');
+      notifi('获取评论数据失败', 'error');
       setOriginalComments([]);
       setFilteredComments([]);
       setSortFilteredComments([]);
@@ -192,7 +193,7 @@ const DataFilter: React.FC = () => {
       setSortFilteredComments(filtered);
       setLoading(false);
     } catch (err) {
-      setError('应用过滤条件时出错');
+      notifi('应用过滤条件时出错', 'error');
       setLoading(false);
     }
   };
@@ -205,14 +206,14 @@ const DataFilter: React.FC = () => {
   const handlePassToAnalysis = () => {
     if (filteredComments.length > 0) {
       sessionStorage.setItem('filtered_comments', JSON.stringify(filteredComments));
-      setSuccess('数据已传递到分析页面');
+      notifi('数据已传递到分析页面', 'success');
 
       // Navigate to the analysis page after a 1-second delay
       setTimeout(() => {
         navigate('/xhs/analyze');
       }, 1000); // 1000ms = 1 second
     } else {
-      setError('没有可传递的数据');
+      notifi('没有可传递的数据', 'error');
     }
   };
 
@@ -440,32 +441,6 @@ const DataFilter: React.FC = () => {
               {loading ? <><Spinner /><span className="ml-2">处理中...</span></> : '传递到分析页面'}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Loading spinner shown in appropriate places */}
-
-      {/* Success and Error Messages */}
-      {success && (
-        <div className="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-md">
-          <span className="block sm:inline">{success}</span>
-          <button
-            onClick={() => setSuccess('')}
-            className="absolute top-0 bottom-0 right-0 px-4 py-3"
-          >
-            <span className="text-green-500">×</span>
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md">
-          <span className="block sm:inline">{error}</span>
-          <button
-            onClick={() => setError('')}
-            className="absolute top-0 bottom-0 right-0 px-4 py-3"
-          >
-            <span className="text-red-500">×</span>
-          </button>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { triggerDagRun, getDagRuns } from '../../api/airflow';
+import { triggerDagRun } from '../../api/airflow';
 
+import notifi from '../../utils/notification';
 interface Message {
   id: number;
   content: string;
@@ -18,30 +19,30 @@ const GenerateMsg: React.FC = () => {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) {
-      setError('请输入提示词');
+      notifi('请输入提示词', 'error');
       return;
     }
 
     try {
       setLoading(true);
-      
+
       // Create timestamp for unique dag_run_id
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const dag_run_id = `xhs_content_generator_${timestamp}`;
-      
+
       // Prepare configuration
       const conf = {
         prompt: prompt,
         type: 'text'
       };
-      
+
       // Trigger DAG run using Airflow API
       const response = await triggerDagRun(
-        "xhs_content_generator", 
+        "xhs_content_generator",
         dag_run_id,
         conf
       );
-      
+
       // Create a new message with the DAG run information
       const newMessage: Message = {
         id: Date.now(),
@@ -49,18 +50,18 @@ const GenerateMsg: React.FC = () => {
         type: 'text',
         createdAt: new Date().toISOString()
       };
-      
+
       setGeneratedMessages([newMessage, ...generatedMessages]);
-      setSuccess('内容生成请求已提交！');
+      notifi('内容生成请求已提交！', 'success');
       setPrompt('');
       setLoading(false);
-      
+
       // Optional: Poll for results
       // You could implement a polling mechanism to check for results
       // using getDagRuns and update the message when content is ready
     } catch (err) {
       console.error('Error generating content:', err);
-      setError('内容生成请求失败');
+      notifi('内容生成请求失败', 'error');
       setLoading(false);
     }
   };
@@ -73,7 +74,7 @@ const GenerateMsg: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-6">小红书内容生成</h1>
-      
+
       {/* 生成表单 */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">创建新内容</h2>
@@ -125,30 +126,6 @@ const GenerateMsg: React.FC = () => {
           <p className="text-gray-500">暂无生成内容</p>
         )}
       </div>
-
-      {/* Success and Error Messages */}
-      {success && (
-        <div className="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-md">
-          <span className="block sm:inline">{success}</span>
-          <button
-            onClick={() => setSuccess('')}
-            className="absolute top-0 bottom-0 right-0 px-4 py-3"
-          >
-            <span className="text-green-500">×</span>
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md">
-          <span className="block sm:inline">{error}</span>
-          <button
-            onClick={() => setError('')}
-            className="absolute top-0 bottom-0 right-0 px-4 py-3"
-          >
-            <span className="text-red-500">×</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };

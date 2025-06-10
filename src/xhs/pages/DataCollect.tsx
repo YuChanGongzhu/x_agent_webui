@@ -6,6 +6,7 @@ import { useKeyword } from '../../context/KeywordContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
 import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
+import notifi from '../../utils/notification';
 interface Keyword {
   keyword: string;
 }
@@ -209,18 +210,18 @@ const DataCollect: React.FC = () => {
         } else {
           // No keywords found in the response
           setKeywords([]);
-          setError('未找到关键词');
+          notifi('未找到关键词', 'error');
         }
       } else {
         // No data in the response
         setKeywords([]);
-        setError('未找到关键词数据');
+        notifi('未找到关键词数据', 'error');
       }
       setLoading(false);
       setRefreshingKeywords(false);
     } catch (err) {
       console.error('Error fetching keywords:', err);
-      setError('获取关键词失败');
+      notifi('获取关键词失败', 'error');
       setKeywords([]);
       setLoading(false);
       setRefreshingKeywords(false);
@@ -231,7 +232,7 @@ const DataCollect: React.FC = () => {
   const handleCreateNotesTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) {
-      setError('请输入关键字');
+      notifi('请输入关键字', 'error');
       return;
     }
 
@@ -265,7 +266,7 @@ const DataCollect: React.FC = () => {
       };
 
       setTasks([newTask, ...tasks]);
-      setSuccess(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`);
+      notifi(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`, 'success');
       setLoading(false);
       setKeyword('');
       // 不清空目标邮箱，保持选择状态
@@ -274,7 +275,7 @@ const DataCollect: React.FC = () => {
       fetchRecentTasks();
     } catch (err) {
       console.error('Error creating notes task:', err);
-      setError('创建笔记采集任务失败');
+      notifi('创建笔记采集任务失败', 'error');
       setLoading(false);
     }
   };
@@ -282,7 +283,7 @@ const DataCollect: React.FC = () => {
   // Create comment collection task
   const handleCreateCommentsTask = async () => {
     if (!selectedKeyword) {
-      setError('请选择关键字');
+      notifi('请选择关键字', 'error');
       return;
     }
 
@@ -321,14 +322,14 @@ const DataCollect: React.FC = () => {
       };
 
       setTasks([newTask, ...tasks]);
-      setSuccess(`成功创建笔记评论收集任务，任务ID: ${newTask.dag_run_id}`);
+      notifi(`成功创建笔记评论收集任务，任务ID: ${newTask.dag_run_id}`, 'success');
       setLoading(false);
 
       // Refresh task list
       fetchRecentTasks();
     } catch (err) {
       console.error('Error creating comments task:', err);
-      setError('创建笔记评论收集任务失败');
+      notifi('创建笔记评论收集任务失败', 'error');
       setLoading(false);
     }
   };
@@ -426,7 +427,7 @@ const DataCollect: React.FC = () => {
       setRefreshingTasks(false);
     } catch (err) {
       console.error('Error fetching recent tasks:', err);
-      setError('获取任务列表失败');
+      notifi('获取任务列表失败', 'error');
       setLoading(false);
       setRefreshingTasks(false);
     }
@@ -480,7 +481,7 @@ const DataCollect: React.FC = () => {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching notes data:', err);
-      setError('获取笔记数据失败');
+      notifi('获取笔记数据失败', 'error');
       setNotes([]);
       setSortNotes([]);
       setLoading(false);
@@ -528,7 +529,7 @@ const DataCollect: React.FC = () => {
       setRefreshingComments(false);
     } catch (err) {
       console.error('Error fetching comments data:', err);
-      setError('获取评论数据失败');
+      notifi('获取评论数据失败', 'error');
       setComments([]);
       setSortComments([]);
       setLoading(false);
@@ -1319,30 +1320,6 @@ const DataCollect: React.FC = () => {
           ) : (
             <p className="text-yellow-600">⚠️ 没有找到相关评论数据</p>
           )}
-        </div>
-      )}
-
-      {/* Success and Error Messages */}
-      {success && (
-        <div className="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-md">
-          <span className="block sm:inline">{success}</span>
-          <button
-            onClick={() => setSuccess('')}
-            className="absolute top-0 bottom-0 right-0 px-4 py-3"
-          >
-            <span className="text-green-500">×</span>
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md">
-          <span className="block sm:inline">{error}</span>
-          <button
-            onClick={() => setError('')}
-            className="absolute top-0 bottom-0 right-0 px-4 py-3"
-          >
-            <span className="text-red-500">×</span>
-          </button>
         </div>
       )}
     </div>
