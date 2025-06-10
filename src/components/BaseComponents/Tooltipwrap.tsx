@@ -12,9 +12,12 @@ interface TooltipwrapProps {
 const Tooltipwrap: React.FC<TooltipwrapProps> = ({ width = 200, title = '', children }) => {
 
     return (
-        <Tooltip className={`inline-block truncate w-[${width}px]`} title={title}>
-            {children}
-        </Tooltip>
+        <div className='inline-block truncate' style={{ width: `${width}px` }}>
+            <Tooltip className='inline-block w-full truncate' title={title}>
+                {children}
+            </Tooltip>
+        </div>
+
     );
 };
 
