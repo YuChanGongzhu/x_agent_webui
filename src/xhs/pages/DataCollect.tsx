@@ -5,7 +5,7 @@ import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
 import SortUpOrDownButton from '../../components/SortUpOrDownButton';
-
+import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 interface Keyword {
   keyword: string;
 }
@@ -197,12 +197,12 @@ const DataCollect: React.FC = () => {
           //获取到的关键字列表需要倒序
           const extractedKeywordsReverse = extractedKeywords.reverse();
           setKeywords(extractedKeywordsReverse);
-          
+
           // 使用共享的最新关键词或默认选择第一个
-          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword) 
-            ? latestKeyword 
+          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword)
+            ? latestKeyword
             : extractedKeywordsReverse[0];
-          
+
           setSelectedKeyword(keywordToSelect);
           // 更新共享的最新关键词
           setLatestKeyword(keywordToSelect);
@@ -1006,17 +1006,23 @@ const DataCollect: React.FC = () => {
                               />
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.title}</td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                              <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                                {note.note_url}
-                              </a>
+                              <Tooltipwrap title={note.title}>
+                                {note.title}
+                              </Tooltipwrap>
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                              <Tooltipwrap title={note.note_url}>
+                                <a href={note.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                                  {note.note_url}
+                                </a>
+                              </Tooltipwrap>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.author}</td>
                             <td className="px-3 py-2 text-sm text-gray-500 max-w-md">
-                              <div className="line-clamp-3 hover:line-clamp-none">
+                              <Tooltipwrap title={note.content}>
                                 {note.content || '无内容'}
-                              </div>
+                              </Tooltipwrap>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.likes}</td>
                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{note.comments}</td>
@@ -1221,15 +1227,17 @@ const DataCollect: React.FC = () => {
                         <tr key={comment.id}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                              {comment.note_url}
-                            </a>
+                            <Tooltipwrap title={comment.note_url}>
+                              <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                                {comment.note_url}
+                              </a>
+                            </Tooltipwrap>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
                           <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                            <div className="line-clamp-3 hover:line-clamp-none">
+                            <Tooltipwrap title={comment.content}>
                               {comment.content || '无内容'}
-                            </div>
+                            </Tooltipwrap>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>

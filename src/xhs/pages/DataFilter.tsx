@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
 import SortUpOrDownButton from '../../components/SortUpOrDownButton';
-
+import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 
 // Simple spinner component
 const Spinner = () => (
@@ -62,12 +62,12 @@ const DataFilter: React.FC = () => {
           //获取到的关键字列表需要倒序
           const extractedKeywordsReverse = extractedKeywords.reverse();
           setKeywords(extractedKeywordsReverse);
-          
+
           // 使用共享的最新关键词或默认选择第一个
-          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword) 
-            ? latestKeyword 
+          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword)
+            ? latestKeyword
             : extractedKeywordsReverse[0];
-            
+
           setSelectedKeyword(keywordToSelect);
           // 更新共享的最新关键词
           setLatestKeyword(keywordToSelect);
@@ -344,15 +344,17 @@ const DataFilter: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                          {comment.note_url}
-                        </a>
+                        <Tooltipwrap title={comment.note_url}>
+                          <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                            {comment.note_url}
+                          </a>
+                        </Tooltipwrap>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                        <div className="line-clamp-3 hover:line-clamp-none">
+                        <Tooltipwrap title={comment.content}>
                           {comment.content || '无内容'}
-                        </div>
+                        </Tooltipwrap>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
