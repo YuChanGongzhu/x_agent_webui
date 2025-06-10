@@ -15,7 +15,7 @@ export const CONFIG_TYPE = {
 };
 
 export const getApiKey = (config?: string) => {
-  switch(config) {
+  switch (config) {
     case CONFIG_TYPE.SALES:
       return process.env.REACT_APP_DIFY_API_SALES;
     case CONFIG_TYPE.HEALTH:
@@ -118,17 +118,6 @@ interface ChatFile {
   upload_file_id?: string;
 }
 
-interface ChatRequest {
-  query: string;
-  inputs: Record<string, any>;
-  response_mode: 'blocking' | 'streaming';
-  user: string;
-  conversation_id?: string;
-  mode?: 'advanced-chat';
-  files?: ChatFile[];
-  auto_generate_name?: boolean;
-}
-
 interface Usage {
   prompt_tokens: number;
   prompt_unit_price: string;
@@ -142,59 +131,6 @@ interface Usage {
   total_price: string;
   currency: string;
   latency: number;
-}
-
-interface WorkflowEvent {
-  event: 'workflow_started' | 'workflow_finished' | 'node_started' | 'node_finished';
-  task_id: string;
-  workflow_run_id: string;
-  data: {
-    id: string;
-    workflow_id: string;
-    [key: string]: any; // Other fields vary by event type
-  };
-}
-
-interface MessageEvent {
-  event: 'message';
-  message_id: string;
-  conversation_id: string;
-  answer: string;
-  created_at: number;
-}
-
-interface MessageEndEvent {
-  event: 'message_end';
-  id: string;
-  conversation_id: string;
-  metadata: {
-    usage: Usage;
-    retriever_resources: RetrieverResource[];
-  };
-}
-
-interface TTSEvent {
-  event: 'tts_message' | 'tts_message_end';
-  conversation_id: string;
-  message_id: string;
-  created_at: number;
-  task_id: string;
-  audio: string;
-}
-
-type StreamingEvent = WorkflowEvent | MessageEvent | MessageEndEvent | TTSEvent;
-
-interface BlockingChatResponse {
-  event: 'message';
-  message_id: string;
-  conversation_id: string;
-  mode: string;
-  answer: string;
-  metadata: {
-    usage: Usage;
-    retriever_resources: RetrieverResource[];
-  };
-  created_at: number;
 }
 
 export async function getMessagesApi(params: { user: string; conversation_id: string; last_id?: string; limit?: number }): Promise<MessagesResponse> {
@@ -488,7 +424,7 @@ export async function createDocumentByFileApi(
   try {
     console.log('Creating document with data:', JSON.stringify(data));
     console.log('File:', file.name, file.type, file.size);
-    
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('data', JSON.stringify(data));
@@ -602,7 +538,7 @@ export async function sendChatMessageApi(
       inputs: data.inputs || {},
     };
 
-    console.log(config,'用的配置')
+    console.log(config, '用的配置')
 
     if (requestData.response_mode === 'streaming' && onMessage) {
       const response = await fetch(`${BASE_URL}/chat-messages`, {

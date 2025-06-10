@@ -7,12 +7,6 @@ import { ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 
 const { Title, Text } = Typography;
 
-// 定义设备信息接口
-interface PhoneDevice {
-  id: string;
-  status?: 'online' | 'offline' | 'busy';
-}
-
 interface Device {
   email: string;
   device_ip: string;

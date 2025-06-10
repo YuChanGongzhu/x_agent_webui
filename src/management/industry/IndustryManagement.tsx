@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '../../context/UserContext';
 import * as IndustryService from './industryService';
 import { Industry } from './industryService';
 import { getDatasetsApi, Dataset } from '../../api/dify';
@@ -42,7 +41,6 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   
   // 素材管理相关状态
   const [materialInput, setMaterialInput] = useState('');
-  const [appIdInput, setAppIdInput] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   

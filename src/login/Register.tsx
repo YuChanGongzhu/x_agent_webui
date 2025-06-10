@@ -1,27 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, Typography, message, Select } from 'antd';
-import { UserOutlined, LockOutlined, KeyOutlined, BankOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, KeyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import supabase from '../auth/supabaseConfig';
 
 const { Title } = Typography;
 const { Option } = Select;
-
-// 自定义样式
-const selectStyles = {
-  '.ant-select-with-prefix .ant-select-selector': {
-    paddingLeft: '32px !important',
-  },
-  '.ant-select-with-prefix .ant-select-selection-search-input': {
-    paddingLeft: '0 !important',
-  },
-  '.ant-select-with-prefix .ant-select-selection-item': {
-    paddingLeft: '0 !important',
-  },
-  '.ant-select-with-prefix .ant-select-arrow': {
-    right: '11px',
-  },
-};
 
 interface RegisterFormData {
   email: string;

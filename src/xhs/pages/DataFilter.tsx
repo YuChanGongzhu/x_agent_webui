@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse, getCommentsKeyword } from '../../api/mysql';
+import { getXhsCommentsByKeywordApi, XhsComment, getCommentsKeyword } from '../../api/mysql';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
@@ -39,8 +39,6 @@ const DataFilter: React.FC = () => {
 
   // State for loading and errors
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Fetch keywords when component mounts or when email/admin status changes
   useEffect(() => {

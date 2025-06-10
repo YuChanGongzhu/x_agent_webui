@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Table, Button, Space, message, Modal, Typography, Card, Spin, Badge, Tooltip,
-  Input, Popconfirm, notification
+  Table, Button, Space, message, Typography, Card, Badge,
+  Input, Popconfirm
 } from 'antd';
 import { CopyOutlined, ReloadOutlined, DeleteOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { InvitationCode, InvitationCodeService } from './invitationCodeService';

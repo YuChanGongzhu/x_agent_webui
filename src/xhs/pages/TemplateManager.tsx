@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, message, Tabs, Spin, Checkbox, Tag, Pagination } from 'antd';
-import { DeleteOutlined, EditOutlined, SendOutlined, ImportOutlined, PlusOutlined, CheckSquareOutlined, ReloadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, SendOutlined, ImportOutlined, PlusOutlined, CheckSquareOutlined } from '@ant-design/icons';
 import { 
   getReplyTemplatesApi, 
   createReplyTemplateApi, 
@@ -10,7 +10,6 @@ import {
   ReplyTemplate
 } from '../../api/mysql';
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
-import axios from 'axios';
 import { useUser } from '../../context/UserContext';
 
 const { TextArea } = Input;
@@ -46,7 +45,7 @@ const { TabPane } = Tabs;
 
 const TemplateManager: React.FC = () => {
   // Get user info from context
-  const { email, isAdmin } = useUser();
+  const { email } = useUser();
   
   // 模板状态
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
@@ -63,7 +62,6 @@ const TemplateManager: React.FC = () => {
   const [customerIntents, setCustomerIntents] = useState<CustomerIntent[]>([]); // 新增意向客户数据状态
   const [selectedComments, setSelectedComments] = useState<string[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [maxComments, setMaxComments] = useState(10);
   const [dagRunId, setDagRunId] = useState('');
   const [dagRunStatus, setDagRunStatus] = useState('');
   const [dataSource, setDataSource] = useState<'comments' | 'intents'>('comments'); // 数据来源状态

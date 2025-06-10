@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { getIntentCustomersApi, CustomerIntent, CustomerIntentResponse } from '../../api/mysql';
+import { getIntentCustomersApi, CustomerIntent } from '../../api/mysql';
 import { triggerDagRun, getDagRuns } from '../../api/airflow';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -61,8 +60,6 @@ const DataAnalyze: React.FC = () => {
 
   // State for loading and errors
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Load filtered comments from session storage on component mount
   useEffect(() => {
@@ -176,10 +173,6 @@ const DataAnalyze: React.FC = () => {
 
       // Using the actual API to start an analysis task
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
-      const payload = {
-        profile_sentence: profileSentence,
-        comment_ids: filteredComments.map(c => c.id) // No limit on comments
-      };
 
       // Use the correct DAG ID
       const dagId = 'comments_analyzer';

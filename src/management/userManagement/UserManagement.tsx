@@ -4,7 +4,6 @@ import { UserProfileService } from './userProfileService';
 import { UserProfile } from '../../context/type';
 import { UserData } from '../../context/type';
 import { getDatasetsApi, Dataset } from '../../api/dify';
-import { useUser } from '../../context/UserContext';
 import { Industry } from '../industry/industryService';
 
 interface UserManagementProps {
@@ -18,40 +17,40 @@ interface UserManagementProps {
 }
 
 // 集成用户编辑组件到用户管理页面
-const UserManagement: React.FC<UserManagementProps> = ({ 
-  externalDatasets, 
+const UserManagement: React.FC<UserManagementProps> = ({
+  externalDatasets,
   externalDatasetsLoading,
   externalUsers,
   externalUsersLoading,
   externalUsersError,
   externalRefetchUsers,
   externalIndustries
- }) => {
+}) => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
 
-  
+
+
   // 分页相关状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
-  
+
   // 用户编辑相关状态
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [editModeActive, setEditModeActive] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  
+
   // 素材管理相关状态
   const [materialInput, setMaterialInput] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('自定义');
   const [showMaterialPopup, setShowMaterialPopup] = useState(false);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
-  
+
   // 编辑表单状态
   const [formData, setFormData] = useState<any>({
     display_name: '',
@@ -66,37 +65,34 @@ const UserManagement: React.FC<UserManagementProps> = ({
     material_list: [],
     role: 'user'
   });
-  
+
   const [deviceInput, setDeviceInput] = useState('');
   const [serverInput, setServerInput] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // 使用UserContext获取用户信息
-  const { userProfile } = useUser();
-
   // 搜索功能
   useEffect(() => {
     if (!users.length) return;
-    
-    const results = users.filter(user => 
+
+    const results = users.filter(user =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.display_name && user.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (user.profile?.department && user.profile.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (user.last_sign_in_at && user.last_sign_in_at.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-    
+
     setFilteredUsers(results);
     setTotalPages(Math.ceil(results.length / itemsPerPage));
     setCurrentPage(1); // 重置到第一页
   }, [searchTerm, users]);
-  
+
   // 获取当前页的用户
   const getCurrentPageUsers = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
   };
-  
+
   // 分页导航
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -107,7 +103,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   // 获取素材库数据（如果没有提供外部数据集）
   const fetchDatasets = async () => {
     if (externalDatasets) return; // 如果提供了外部数据集，则不需要获取
-    
+
     try {
       setDatasetsLoading(true);
       const response = await getDatasetsApi({});
@@ -139,7 +135,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     if (!externalDatasets) {
       fetchDatasets();
     }
-    
+
     // 如果有外部用户数据，使用它
     if (externalUsers) {
       setUsers(externalUsers);
@@ -147,32 +143,32 @@ const UserManagement: React.FC<UserManagementProps> = ({
       setTotalPages(Math.ceil(externalUsers.length / itemsPerPage));
       setError(externalUsersError || null);
     }
-    
+
     // 如果无外部用户数据，则自行获取
     if (!externalUsers && !externalUsersLoading) {
       fetchLocalUsers();
     }
-    
+
     // 同步加载状态
     if (externalUsersLoading !== undefined) {
       setLoading(externalUsersLoading);
     }
   }, [externalUsers, externalUsersLoading, externalUsersError, externalDatasets]);
-  
+
   // 本地获取用户数据（当父组件没有提供时使用）
   const fetchLocalUsers = async () => {
     try {
       setLoading(true);
-      
+
       // 从 user_profiles 表获取用户配置信息
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*');
-      
+
       if (profilesError) {
         throw profilesError;
       }
-      
+
       if (profilesData && profilesData.length > 0) {
         // 使用配置信息构建用户列表
         const formattedUsers = profilesData.map(profile => {
@@ -187,7 +183,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
             profile: profile
           };
         });
-        
+
         // 按最后登录时间排序，最新登录的显示在最上面
         const sortedUsers = formattedUsers.sort((a, b) => {
           // 如果没有profile或updated_at，则排在最后
@@ -196,7 +192,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
           // 降序排序，最新的在前面
           return new Date(b.profile.updated_at).getTime() - new Date(a.profile.updated_at).getTime();
         });
-        
+
         setUsers(sortedUsers);
         setFilteredUsers(sortedUsers);
         setTotalPages(Math.ceil(sortedUsers.length / itemsPerPage));
@@ -225,21 +221,21 @@ const UserManagement: React.FC<UserManagementProps> = ({
       await externalRefetchUsers();
       return;
     }
-    
+
     // 否则自行刷新
     setLoading(true);
     setError(null);
-    
+
     try {
       // 从 user_profiles 表获取用户配置信息
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*');
-      
+
       if (profilesError) {
         throw profilesError;
       }
-      
+
       if (profilesData && profilesData.length > 0) {
         // 使用配置信息构建用户列表
         const formattedUsers = profilesData.map(profile => {
@@ -254,7 +250,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
             profile: profile
           };
         });
-        
+
         // 按最后登录时间排序，最新登录的显示在最上面
         const sortedUsers = formattedUsers.sort((a, b) => {
           // 如果没有profile或updated_at，则排在最后
@@ -263,9 +259,9 @@ const UserManagement: React.FC<UserManagementProps> = ({
           // 降序排序，最新的在前面
           return new Date(b.profile.updated_at).getTime() - new Date(a.profile.updated_at).getTime();
         });
-        
+
         setUsers(sortedUsers);
-        setFilteredUsers(sortedUsers.filter(user => 
+        setFilteredUsers(sortedUsers.filter(user =>
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (user.display_name && user.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
           (user.profile?.department && user.profile.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -304,7 +300,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
       role: user.profile?.role || 'user',
       industry: user.profile?.industry || '自定义'
     });
-    
+
     // 设置选择的行业
     setSelectedIndustry(user.profile?.industry || '自定义');
   };
@@ -319,11 +315,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
   // 表单字段变更处理
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     // 特殊处理行业选择
     if (name === 'industry') {
       setSelectedIndustry(value);
-      
+
       // 如果选择了特定行业（非自定义），则自动应用该行业的素材列表
       if (value !== '自定义' && externalIndustries) {
         const selectedIndustryData = externalIndustries.find(industry => industry.name === value);
@@ -337,11 +333,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
         }
       }
     }
-    
+
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' 
-        ? (e.target as HTMLInputElement).checked 
+      [name]: type === 'checkbox'
+        ? (e.target as HTMLInputElement).checked
         : value
     });
   };
@@ -349,18 +345,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
   // 添加设备
   const handleAddDevice = () => {
     if (!deviceInput.trim()) return;
-    
+
     const newDevice = {
       id: `device_${Date.now()}`,
       name: deviceInput,
       added_at: new Date().toISOString()
     };
-    
+
     setFormData({
       ...formData,
       mobile_devices: [...formData.mobile_devices, newDevice]
     });
-    
+
     setDeviceInput('');
   };
 
@@ -375,18 +371,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
   // 添加服务器
   const handleAddServer = () => {
     if (!serverInput.trim()) return;
-    
+
     const newServer = {
       id: `server_${Date.now()}`,
       name: serverInput,
       added_at: new Date().toISOString()
     };
-    
+
     setFormData({
       ...formData,
       servers: [...formData.servers, newServer]
     });
-    
+
     setServerInput('');
   };
 
@@ -397,11 +393,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
       servers: formData.servers.filter((server: any) => server.id !== serverId)
     });
   };
-  
+
   // 添加素材ID (保留兼容旧代码)
   const handleAddMaterial = () => {
     if (!materialInput.trim()) return;
-    
+
     // 确保不添加重复的素材ID
     if (!formData.material_list.includes(materialInput)) {
       setFormData({
@@ -409,24 +405,24 @@ const UserManagement: React.FC<UserManagementProps> = ({
         material_list: [...formData.material_list, materialInput]
       });
     }
-    
+
     setMaterialInput('');
   };
-  
+
   // 添加所有素材库
   const handleAddAllMaterials = () => {
     if (!datasets.length) return;
-    
+
     const allDatasetIds = datasets.map(dataset => dataset.id);
     // 使用Array.from和Set来去重，避免TypeScript的降级迭代错误
     const uniqueList = Array.from(new Set([...formData.material_list, ...allDatasetIds]));
-    
+
     setFormData({
       ...formData,
       material_list: uniqueList
     });
   };
-  
+
   // 清空所有选择
   const handleClearAllMaterials = () => {
     setFormData({
@@ -434,13 +430,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
       material_list: []
     });
   };
-  
+
   // 获取数据集名称
   const getDatasetNameById = (id: string): string => {
     const dataset = datasets.find(ds => ds.id === id);
     return dataset ? dataset.name : id;
   };
-  
+
   // 移除素材ID
   const handleRemoveMaterial = (materialId: string) => {
     setFormData({
@@ -453,7 +449,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    
+
     setSaveLoading(true);
     setFormError(null);
 
@@ -476,7 +472,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
       // 更新用户配置
       const updatedProfile = await UserProfileService.updateUserProfile(
-        selectedUser.id, 
+        selectedUser.id,
         profileData
       );
 
@@ -491,10 +487,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
       };
 
       // 更新用户列表
-      const updatedUsers = users.map(user => 
+      const updatedUsers = users.map(user =>
         user.id === updatedUser.id ? updatedUser : user
       );
-      
+
       // 按最后登录时间排序
       const sortedUsers = updatedUsers.sort((a, b) => {
         // 如果没有profile或updated_at，则排在最后
@@ -503,19 +499,19 @@ const UserManagement: React.FC<UserManagementProps> = ({
         // 降序排序，最新的在前面
         return new Date(b.profile.updated_at).getTime() - new Date(a.profile.updated_at).getTime();
       });
-      
+
       setUsers(sortedUsers);
-      setFilteredUsers(sortedUsers.filter(user => 
+      setFilteredUsers(sortedUsers.filter(user =>
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (user.display_name && user.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (user.profile?.department && user.profile.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (user.last_sign_in_at && user.last_sign_in_at.toLowerCase().includes(searchTerm.toLowerCase()))
       ));
-      
+
       // 显示成功提示
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      
+
       // 退出编辑模式
       setEditModeActive(false);
       setSelectedUser(null);
@@ -530,7 +526,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   // 渲染分页控件
   const renderPagination = () => {
     if (totalPages <= 1) return null;
-    
+
     return (
       <div className="flex justify-center mt-4">
         <nav className="inline-flex rounded-md shadow">
@@ -541,21 +537,20 @@ const UserManagement: React.FC<UserManagementProps> = ({
           >
             上一页
           </button>
-          
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <button
               key={page}
               onClick={() => goToPage(page)}
-              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                currentPage === page
+              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${currentPage === page
                   ? 'bg-primary bg-opacity-10 text-primary'
                   : 'text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               {page}
             </button>
           ))}
-          
+
           <button
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage === totalPages}
@@ -588,7 +583,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
           {error}
         </div>
       )}
-      
+
       {saveSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4 fixed top-4 right-4 z-50 shadow-md">
           用户信息已成功保存
@@ -650,8 +645,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getCurrentPageUsers().map(user => (
-                    <tr 
-                      key={user.id} 
+                    <tr
+                      key={user.id}
                       className={`hover:bg-gray-50 ${selectedUser?.id === user.id ? 'bg-primary bg-opacity-5' : ''}`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -691,11 +686,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.profile?.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-800' 
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.profile?.role === 'admin'
+                            ? 'bg-purple-100 text-purple-800'
                             : 'bg-green-100 text-green-800'
-                        }`}>
+                          }`}>
                           {user.profile?.role === 'admin' ? '管理员' : '普通用户'}
                         </span>
                       </td>
@@ -726,13 +720,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
         {editModeActive && selectedUser && (
           <div className="md:w-2/5 bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">编辑用户信息</h2>
-            
+
             {formError && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
                 {formError}
               </div>
             )}
-            
+
             <form onSubmit={handleSaveUser}>
               <div className="grid grid-cols-1 gap-4 mb-4">
                 <div>
@@ -746,7 +740,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     电子邮箱
@@ -760,7 +754,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     placeholder="user@example.com"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     显示名称
@@ -773,7 +767,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     手机号码
@@ -786,7 +780,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     部门
@@ -799,7 +793,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     职位
@@ -812,7 +806,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     角色
@@ -827,7 +821,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     <option value="admin">管理员</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     行业标签
@@ -851,7 +845,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     </p>
                   )}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     状态
@@ -867,7 +861,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   </select>
                 </div>
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   个人简介
@@ -978,7 +972,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <p className="text-sm text-gray-500">未添加任何服务器</p>
                 )}
               </div>
-              
+
               {/* 素材库管理 */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
@@ -995,7 +989,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     </button>
                   )}
                 </div>
-                
+
                 {/* 素材库弹窗 */}
                 {showMaterialPopup && selectedIndustry === '自定义' && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1012,7 +1006,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                           </svg>
                         </button>
                       </div>
-                      
+
                       <div className="p-4 overflow-y-auto max-h-[60vh]">
                         {datasetsLoading ? (
                           <div className="text-center py-8">加载中...</div>
@@ -1023,8 +1017,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             {datasets.map(dataset => {
                               const isSelected = formData.material_list.includes(dataset.id);
                               return (
-                                <div 
-                                  key={dataset.id} 
+                                <div
+                                  key={dataset.id}
                                   className={`p-3 rounded-md cursor-pointer border flex items-center ${isSelected ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
                                   onClick={() => {
                                     // 如果已选中，则移除
@@ -1056,7 +1050,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="bg-gray-50 p-4 border-t border-gray-200 flex justify-between">
                         <div className="space-x-2">
                           <button
@@ -1118,7 +1112,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       </div>
                     )}
                   </div>
-                  
+
                   {datasetsLoading ? (
                     <p className="text-sm text-gray-500">加载素材库中...</p>
                   ) : formData.material_list.length > 0 ? (
@@ -1144,7 +1138,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"

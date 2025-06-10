@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllVariables, getDagRuns, triggerDagRun } from '../../api/airflow';
+import { getDagRuns, triggerDagRun } from '../../api/airflow';
 import { getKeywordsApi, getXhsNotesByKeywordApi, getXhsCommentsByKeywordApi } from '../../api/mysql';
 import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
@@ -7,9 +7,6 @@ import { UserProfileService } from '../../management/userManagement/userProfileS
 import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
-interface Keyword {
-  keyword: string;
-}
 
 interface Note {
   id: number;
@@ -105,8 +102,6 @@ const DataCollect: React.FC = () => {
 
   // State for loading and errors
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // 获取用户上下文
   const { isAdmin, email } = useUser();
@@ -557,11 +552,6 @@ const DataCollect: React.FC = () => {
 
   // Change page for comments
   const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
-
-  // Generate pagination buttons for tasks - No longer used, replaced with inline pagination
-  const renderPaginationButtons = () => {
-    return null;
-  };
 
   return (
     <div className="container mx-auto px-4 py-6">

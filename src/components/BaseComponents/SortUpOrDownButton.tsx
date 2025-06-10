@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 

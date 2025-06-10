@@ -13,8 +13,6 @@ const GenerateMsg: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [generatedMessages, setGeneratedMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
