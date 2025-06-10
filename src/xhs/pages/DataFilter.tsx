@@ -3,7 +3,7 @@ import { getXhsCommentsByKeywordApi, XhsComment, KeywordsResponse, getCommentsKe
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
-import SortUpOrDownButton from '../../components/SortUpOrDownButton';
+import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 
 // Simple spinner component

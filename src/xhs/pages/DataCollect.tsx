@@ -4,7 +4,7 @@ import { getKeywordsApi, getXhsNotesByKeywordApi, getXhsCommentsByKeywordApi } f
 import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
-import SortUpOrDownButton from '../../components/SortUpOrDownButton';
+import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 interface Keyword {
   keyword: string;
