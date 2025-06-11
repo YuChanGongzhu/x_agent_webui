@@ -34,10 +34,10 @@
     "web-vitals": "^2.1.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "yarn install && react-scripts start",
+    "build": "yarn install && react-scripts build",
+    "test": "yarn install && react-scripts test",
+    "eject": "yarn install && react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
