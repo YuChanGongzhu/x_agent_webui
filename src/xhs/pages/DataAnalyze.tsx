@@ -622,7 +622,9 @@ const DataAnalyze: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.id}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
                             <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                              <div className="line-clamp-3 hover:line-clamp-none">{item.content}</div>
+                              <Tooltipwrap title={item.content}>
+                                {item.content}
+                              </Tooltipwrap>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.intent === '高意向' ? 'bg-green-100 text-green-800' :
