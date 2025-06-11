@@ -601,7 +601,7 @@ const DataAnalyze: React.FC = () => {
             <>
               <p className="mb-2">找到 {filteredIntents.length} 条意向客户数据</p>
               <div className="w-full h-full">
-                <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[11vw]' : 'h-[22vw]'} overflow-y-auto overflow-x-auto w-full`}>
+                <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[8vw]' : 'h-[22vw]'} overflow-y-auto overflow-x-auto w-full`}>
                   <table className="w-full h-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
