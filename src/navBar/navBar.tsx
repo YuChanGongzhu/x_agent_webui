@@ -236,7 +236,7 @@ const NavBar: React.FC = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-start">
-          <div className="bg-[rgba(248,213,126,1)] h-screen w-[85vw] shadow-lg overflow-y-auto flex flex-col transition-all duration-300 ease-in-out">
+          <div className="bg-[rgba(248,213,126,1)]  w-[85vw] shadow-lg overflow-y-auto flex flex-col transition-all duration-300 ease-in-out">
             {/* Mobile Menu Header with Close Button */}
             <div className="flex items-center justify-between p-4 border-b border-white/20">
               <div className="flex items-center space-x-2">
@@ -329,7 +329,7 @@ const NavBar: React.FC = () => {
       )}
 
       {/* Desktop Navigation */}
-      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] ${isCollapsed ? 'w-[100px]' : 'w-[200px]'} rounded-lg shadow-lg h-screen flex-col transition-all duration-300 text-base text-black h-[calc(100vh-16px)] m-[8px] p-2`}>
+      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] ${isCollapsed ? 'w-[100px]' : 'w-[200px]'} rounded-lg shadow-lg  flex-col transition-all duration-300 text-base text-black h-[calc(100vh-16px)] m-[8px] p-2`}>
         {/* Logo Section */}
         <div className="flex items-center justify-between mb-2 px-2">
           <div className="flex items-center space-x-2">
