@@ -27,20 +27,22 @@ function App() {
             <ProtectedRoute>
               <UserProvider>
                 <KeywordProvider>
-                  <div className="flex">
+                  <div className="flex w-full h-full">
                     <NavBar />
                     <div className="flex-1">
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/manage" element={<ManagementPage />} />
-                        <Route path="/xhs" element={<XHSAutomation />} />
-                        <Route path="/xhs/collect" element={<DataCollect />} />
-                        <Route path="/xhs/filter" element={<DataFilter />} />
-                        <Route path="/xhs/analyze" element={<DataAnalyze />} />
-                        <Route path="/xhs/generate" element={<GenerateMsg />} />
-                        <Route path="/xhs/templates" element={<TemplateManager />} />
-                        <Route path="/devices" element={<DeviceManagement />} />
-                      </Routes>
+                      <div className="w-full h-full">
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/manage" element={<ManagementPage />} />
+                          <Route path="/xhs" element={<XHSAutomation />} />
+                          <Route path="/xhs/collect" element={<DataCollect />} />
+                          <Route path="/xhs/filter" element={<DataFilter />} />
+                          <Route path="/xhs/analyze" element={<DataAnalyze />} />
+                          <Route path="/xhs/generate" element={<GenerateMsg />} />
+                          <Route path="/xhs/templates" element={<TemplateManager />} />
+                          <Route path="/devices" element={<DeviceManagement />} />
+                        </Routes>
+                      </div>
                     </div>
                   </div>
                 </KeywordProvider>

@@ -296,74 +296,75 @@ const DataFilter: React.FC = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
-                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
-                      return new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime();
-                    })
-                    setFilteredComments(sortFilteredComments);
-                  }} onDown={() => {
-                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
-                      return new Date(b.collect_time || 0).getTime() - new Date(a.collect_time || 0).getTime();
-                    })
-                    setFilteredComments(sortFilteredComments);
-                  }} onReset={() => {
-                    setFilteredComments(sortFilteredComments)
-                  }} /></span></th>
-                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论时间</span><SortUpOrDownButton onUp={() => {
-                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
-                      return new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime();
-                    })
-                    setFilteredComments(sortFilteredComments);
-                  }} onDown={() => {
-                    const sortFilteredComments = [...filteredComments].sort((a, b) => {
-                      return new Date(b.comment_time || 0).getTime() - new Date(a.comment_time || 0).getTime();
-                    })
-                    setFilteredComments(sortFilteredComments);
-                  }} onReset={() => {
-                    setFilteredComments(sortFilteredComments)
-                  }} /></span></th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredComments
-                  .slice((currentPage - 1) * commentsPerPage, currentPage * commentsPerPage)
-                  .map((comment) => (
-                    <tr key={comment.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <Tooltipwrap title={comment.note_url}>
-                          <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                            {comment.note_url}
-                          </a>
-                        </Tooltipwrap>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                        <Tooltipwrap title={comment.content}>
-                          {comment.content || '无内容'}
-                        </Tooltipwrap>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{comment.collect_time ? formatDate(comment.collect_time) : '未采集'}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(comment.comment_time)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-
+          <div className="w-full h-full">
+            <div className="h-[17vw] overflow-y-auto overflow-x-auto w-full">
+              <table className="w-full h-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记ID</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
+                      const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                        return new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime();
+                      })
+                      setFilteredComments(sortFilteredComments);
+                    }} onDown={() => {
+                      const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                        return new Date(b.collect_time || 0).getTime() - new Date(a.collect_time || 0).getTime();
+                      })
+                      setFilteredComments(sortFilteredComments);
+                    }} onReset={() => {
+                      setFilteredComments(sortFilteredComments)
+                    }} /></span></th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论时间</span><SortUpOrDownButton onUp={() => {
+                      const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                        return new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime();
+                      })
+                      setFilteredComments(sortFilteredComments);
+                    }} onDown={() => {
+                      const sortFilteredComments = [...filteredComments].sort((a, b) => {
+                        return new Date(b.comment_time || 0).getTime() - new Date(a.comment_time || 0).getTime();
+                      })
+                      setFilteredComments(sortFilteredComments);
+                    }} onReset={() => {
+                      setFilteredComments(sortFilteredComments)
+                    }} /></span></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredComments
+                    .slice((currentPage - 1) * commentsPerPage, currentPage * commentsPerPage)
+                    .map((comment) => (
+                      <tr key={comment.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.note_id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <Tooltipwrap title={comment.note_url}>
+                            <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                              {comment.note_url}
+                            </a>
+                          </Tooltipwrap>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                          <Tooltipwrap title={comment.content}>
+                            {comment.content || '无内容'}
+                          </Tooltipwrap>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{comment.collect_time ? formatDate(comment.collect_time) : '未采集'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(comment.comment_time)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
             {/* Pagination for comments */}
             {filteredComments.length > commentsPerPage && (
               <div className="flex justify-center mt-4">

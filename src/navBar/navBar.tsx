@@ -39,11 +39,11 @@ interface NavItemWithIcons extends NavItem {
 // 菜单项配置
 const initialMenuItems: NavItemWithIcons[] = [
   { name: '系统管理', icon: systemSVG, activeIcon: systemActiveSVG, url: '/manage', adminOnly: true },
-  { 
-    name: '智能获客', 
-    icon: xhsSVG, 
-    activeIcon: xhsActiveSVG, 
-    url: '/xhs', 
+  {
+    name: '智能获客',
+    icon: xhsSVG,
+    activeIcon: xhsActiveSVG,
+    url: '/xhs',
     adminOnly: false,
     subItems: [
       // { name: '自动化任务', url: '/xhs' },
@@ -60,7 +60,7 @@ const initialMenuItems: NavItemWithIcons[] = [
 
 const NavBar: React.FC = () => {
   const [menuItems, setMenuItems] = useState<NavItemWithIcons[]>(initialMenuItems);
-  
+
   // Combine all navigation items for route matching
   const allNavItems: NavItemWithIcons[] = [
     ...menuItems
@@ -68,10 +68,10 @@ const NavBar: React.FC = () => {
 
   const findSelectedNavItem = (path: string) => {
     const currentPath = path.endsWith('/') ? path.slice(0, -1) : path;
-    
+
     // Find a matching item in all navigation categories
-    const matchingItem = allNavItems.find(item => 
-      currentPath === item.url || 
+    const matchingItem = allNavItems.find(item =>
+      currentPath === item.url ||
       (currentPath.startsWith(item.url) && item.url !== '/dashboard') ||
       (item.subItems?.some(subItem => currentPath === subItem.url))
     );
@@ -86,18 +86,18 @@ const NavBar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   // 使用UserContext获取用户信息和管理员状态
   const { userProfile, isAdmin } = useUser();
-  const [userData, setUserData] = useState<{displayName: string | null; email: string | null}>({
+  const [userData, setUserData] = useState<{ displayName: string | null; email: string | null }>({
     displayName: null,
     email: null
   });
 
   useEffect(() => {
     setSelected(findSelectedNavItem(location.pathname));
-    
+
     // Update expanded state based on current path
-    setMenuItems(prevItems => 
+    setMenuItems(prevItems =>
       prevItems.map((item: NavItemWithIcons) => {
-        const shouldExpand = item.subItems?.some((subItem: SubNavItem) => 
+        const shouldExpand = item.subItems?.some((subItem: SubNavItem) =>
           location.pathname === subItem.url || location.pathname.startsWith(subItem.url + '/')
         );
         return shouldExpand ? { ...item, expanded: true } : item;
@@ -157,13 +157,13 @@ const NavBar: React.FC = () => {
 
   const handleClick = (item: NavItem) => {
     setSelected(item.name);
-    
+
     // Toggle expanded state if item has subitems
     if (item.subItems && item.subItems.length > 0) {
-      setMenuItems(prevItems => 
-        prevItems.map((menuItem: NavItemWithIcons) => 
-          menuItem.name === item.name 
-            ? { ...menuItem, expanded: !menuItem.expanded } 
+      setMenuItems(prevItems =>
+        prevItems.map((menuItem: NavItemWithIcons) =>
+          menuItem.name === item.name
+            ? { ...menuItem, expanded: !menuItem.expanded }
             : menuItem
         )
       );
@@ -175,7 +175,7 @@ const NavBar: React.FC = () => {
       navigate(item.url);
     }
   };
-  
+
   // 处理用户退出登录
   const handleLogout = async () => {
     try {
@@ -203,7 +203,7 @@ const NavBar: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-  
+
   // 监听窗口大小变化，当从手机尺寸变为桌面尺寸时关闭移动菜单
   useEffect(() => {
     const handleResize = () => {
@@ -211,7 +211,7 @@ const NavBar: React.FC = () => {
         setIsMobileMenuOpen(false);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -222,7 +222,7 @@ const NavBar: React.FC = () => {
     <>
       {/* Mobile Hamburger Menu with horizontal nav bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[rgba(248,213,126,1)] shadow-md flex items-center justify-between h-14">
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(true)}
           className="text-black hover:text-gray-800 p-4"
           aria-label="Open navigation menu"
@@ -243,7 +243,7 @@ const NavBar: React.FC = () => {
                 <img src={lucyaiLogo} alt="LUCYAI" className="w-8 h-8" />
                 <span className="text-2xl font-semibold text-black">LUCYAI</span>
               </div>
-              <button 
+              <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-black/70 hover:text-black"
                 aria-label="Close navigation menu"
@@ -280,8 +280,8 @@ const NavBar: React.FC = () => {
             {/* Mobile User Profile Section */}
             <div className="mt-auto pt-4 border-t border-white/20 relative p-2">
               <div className="flex items-center px-2">
-                <div 
-                  className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.3)] rounded-lg p-2 w-full" 
+                <div
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.3)] rounded-lg p-2 w-full"
                   onClick={() => setShowLogoutDialog(!showLogoutDialog)}
                   title="点击显示选项"
                 >
@@ -294,7 +294,7 @@ const NavBar: React.FC = () => {
                     <div className="text-sm font-medium truncate text-black">
                       {userData.displayName || userData.email?.split('@')[0] || '用户'}
                     </div>
-                    <div 
+                    <div
                       className="text-xs text-black/70 truncate"
                       title={userData.email || '账号'}
                     >
@@ -305,7 +305,7 @@ const NavBar: React.FC = () => {
               </div>
 
               {showLogoutDialog && (
-                <div 
+                <div
                   ref={dialogRef}
                   className="absolute bottom-full left-0 mb-2 w-full bg-white rounded-lg shadow-lg py-2 border border-gray-200"
                 >
@@ -327,16 +327,16 @@ const NavBar: React.FC = () => {
           </div>
         </div>
       )}
-      
+
       {/* Desktop Navigation */}
-      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] p-2 ${isCollapsed ? 'w-[4.5vw]' : 'w-[10vw]'} rounded-lg shadow-lg h-screen flex-col transition-all duration-300 text-base text-black`}>
+      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] ${isCollapsed ? 'w-[100px]' : 'w-[200px]'} rounded-lg shadow-lg h-screen flex-col transition-all duration-300 text-base text-black h-[calc(100vh-16px)] m-[8px] p-2`}>
         {/* Logo Section */}
         <div className="flex items-center justify-between mb-2 px-2">
           <div className="flex items-center space-x-2">
             <img src={lucyaiLogo} alt="LUCYAI" className="w-8 h-8" />
             {!isCollapsed && <span className="text-2xl font-semibold text-black">LUCYAI</span>}
           </div>
-          <button 
+          <button
             onClick={toggleCollapse}
             className="text-black/70 hover:text-black"
           >
@@ -371,24 +371,24 @@ const NavBar: React.FC = () => {
                       )}
                     </div>
                     {!isCollapsed && item.subItems && item.subItems.length > 0 && (
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        strokeWidth="1.5" 
-                        stroke="currentColor" 
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
                         className={`w-4 h-4 transition-transform ${item.expanded ? 'rotate-90' : ''}`}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
                     )}
                   </div>
-                  
+
                   {/* Sub-navigation items */}
                   {!isCollapsed && item.expanded && item.subItems && (
                     <div className="ml-8 mt-1 space-y-1">
                       {item.subItems.map((subItem: SubNavItem) => (
-                        <div 
+                        <div
                           key={subItem.name}
                           className={`flex items-center space-x-3 cursor-pointer p-2 rounded-lg w-full
                             ${location.pathname === subItem.url ? 'bg-white/40 text-black font-medium' : 'text-black/80 hover:bg-white/30'}`}
@@ -410,8 +410,8 @@ const NavBar: React.FC = () => {
         {/* User Profile Section */}
         <div className="mt-auto pt-4 border-t border-white/20 relative">
           <div className="flex items-center justify-between px-2">
-            <div 
-              className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.3)] rounded-lg p-1 w-full" 
+            <div
+              className="flex items-center space-x-2 cursor-pointer hover:bg-[rgba(255,255,255,0.3)] rounded-lg p-1 w-full"
               onClick={() => setShowLogoutDialog(!showLogoutDialog)}
               title="点击显示选项"
             >
@@ -425,7 +425,7 @@ const NavBar: React.FC = () => {
                   <div className="text-sm font-medium truncate text-black">
                     {userData.displayName || userData.email?.split('@')[0] || '用户'}
                   </div>
-                  <div 
+                  <div
                     className="text-xs text-black/70 truncate"
                     title={userData.email || '账号'}
                   >
@@ -437,7 +437,7 @@ const NavBar: React.FC = () => {
           </div>
 
           {showLogoutDialog && !isCollapsed && (
-            <div 
+            <div
               ref={dialogRef}
               className="absolute bottom-full left-0 mb-2 w-30 bg-white rounded-lg shadow-lg py-2 border border-gray-200"
             >

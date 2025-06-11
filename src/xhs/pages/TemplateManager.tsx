@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, message, Tabs, Spin, Checkbox, Tag, Pagination } from 'antd';
 import { DeleteOutlined, EditOutlined, SendOutlined, ImportOutlined, PlusOutlined, CheckSquareOutlined } from '@ant-design/icons';
-import { 
-  getReplyTemplatesApi, 
-  createReplyTemplateApi, 
-  updateReplyTemplateApi, 
+import {
+  getReplyTemplatesApi,
+  createReplyTemplateApi,
+  updateReplyTemplateApi,
   deleteReplyTemplateApi,
   getXhsCommentsApi,
   ReplyTemplate
@@ -46,7 +46,7 @@ const { TabPane } = Tabs;
 const TemplateManager: React.FC = () => {
   // Get user info from context
   const { email } = useUser();
-  
+
   // 模板状态
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -115,7 +115,7 @@ const TemplateManager: React.FC = () => {
       fetchTemplates();
     }
   }, [email]); // 依赖于email变化
-  
+
   // 分页变化时获取模板和评论
   useEffect(() => {
     if (email) {
@@ -132,16 +132,16 @@ const TemplateManager: React.FC = () => {
         message.error('用户邮箱不能为空，无法获取模板');
         return;
       }
-      
+
       setLoading(true);
       const response = await getReplyTemplatesApi({
         page: currentPage,
         page_size: pageSize,
         email: email // 使用当前用户的邮箱
       });
-      
+
       console.log(`Fetching templates for user: ${email}`);
-      
+
       setTemplates(response.data?.records || []);
       setTotalTemplates(response.data?.total || 0);
     } catch (error) {
@@ -156,10 +156,10 @@ const TemplateManager: React.FC = () => {
   const fetchComments = async () => {
     try {
       setCommentsLoading(true);
-      
+
       // 使用getXhsCommentsApi获取评论数据
       const response = await getXhsCommentsApi(100); // 只传递limit参数
-      
+
       if (response && response.data && response.data.records) {
         // 将API返回的评论数据转换为组件需要的格式
         const formattedComments: Comment[] = response.data.records.map((comment: any) => ({
@@ -170,7 +170,7 @@ const TemplateManager: React.FC = () => {
           note_title: comment.note_title || '',
           sent: comment.is_sent === 1 // 将is_sent转换为布尔值
         }));
-        
+
         // 只保留未发送的评论
         const unsentComments = formattedComments.filter(comment => !comment.sent);
         setComments(unsentComments);
@@ -192,16 +192,16 @@ const TemplateManager: React.FC = () => {
       message.error('用户邮箱不能为空，无法创建模板');
       return;
     }
-    
+
     try {
       setLoading(true);
       const response = await createReplyTemplateApi({
         content: templateContent,
         email: email // 使用当前用户的邮箱
       });
-      
+
       console.log(`Adding template for user: ${email}`);
-      
+
       if (response.code === 0) {
         message.success('添加模板成功');
         setTemplateContent('');
@@ -221,22 +221,22 @@ const TemplateManager: React.FC = () => {
   // 处理模板更新
   const handleUpdateTemplate = async () => {
     if (!editingTemplate) return;
-    
+
     // 确保有email才能更新模板
     if (!email) {
       message.error('用户邮箱不能为空，无法更新模板');
       return;
     }
-    
+
     try {
       setLoading(true);
       const response = await updateReplyTemplateApi(editingTemplate.id, {
         content: templateContent,
         email: email // 使用当前用户的邮箱
       });
-      
+
       console.log(`Updating template ${editingTemplate.id} for user: ${email}`);
-      
+
       if (response.code === 0) {
         message.success('更新模板成功');
         setTemplateContent('');
@@ -261,13 +261,13 @@ const TemplateManager: React.FC = () => {
       message.error('用户邮箱不能为空，无法删除模板');
       return;
     }
-    
+
     try {
       setLoading(true);
       const response = await deleteReplyTemplateApi(id, email);
-      
+
       console.log(`Deleting template ${id} for user: ${email}`);
-      
+
       if (response.code === 0) {
         message.success('删除模板成功');
         fetchTemplates(); // 刷新模板列表
@@ -299,24 +299,24 @@ const TemplateManager: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const newDagRunId = `xhs_comments_template_replier_${timestamp}`;
-      
+
       // 从 localStorage 中获取目标邮箱
       const targetEmail = localStorage.getItem('xhs_target_email') || '';
-      
+
       const conf = {
-        comment_ids: selectedComments, 
+        comment_ids: selectedComments,
         email: targetEmail
       };
-      
+
       const response = await triggerDagRun(
-        "xhs_comments_template_replier", 
+        "xhs_comments_template_replier",
         newDagRunId,
         conf
       );
-      
+
       if (response && response.dag_run_id) {
         setDagRunId(response.dag_run_id);
         setDagRunStatus('running');
@@ -341,15 +341,15 @@ const TemplateManager: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       const response = await getDagRuns("xhs_comments_template_replier", 10, "-start_date");
-      
+
       if (response && response.dag_runs) {
         const dagRun = response.dag_runs.find((run: any) => run.dag_run_id === dagRunId);
-        
+
         if (dagRun) {
           setDagRunStatus(dagRun.state);
-          
+
           if (dagRun.state === 'success') {
             message.success('触达任务已完成');
             fetchComments(); // 刷新评论以更新发送状态
@@ -392,19 +392,19 @@ const TemplateManager: React.FC = () => {
       width: 120,
       render: (_: any, record: ReplyTemplate) => (
         <>
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
+          <Button
+            type="text"
+            icon={<EditOutlined />}
             onClick={() => {
               setEditingTemplate(record);
               setTemplateContent(record.content);
               setIsModalVisible(true);
             }}
           />
-          <Button 
-            type="text" 
-            danger 
-            icon={<DeleteOutlined />} 
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
             onClick={() => handleDeleteTemplate(record.id)}
           />
         </>
@@ -476,8 +476,8 @@ const TemplateManager: React.FC = () => {
       render: (intent: string) => (
         <Tag color={
           intent === '高意向' ? 'green' :
-          intent === '中意向' ? 'orange' :
-          'default'
+            intent === '中意向' ? 'orange' :
+              'default'
         }>
           {intent}
         </Tag>
@@ -499,12 +499,12 @@ const TemplateManager: React.FC = () => {
     <div className="container mx-auto px-4 py-6">
       <Tabs defaultActiveKey="templates">
         <TabPane tab="编辑模板" key="templates">
-          <Card 
-            title="回复模板管理" 
+          <Card
+            title="回复模板管理"
             extra={
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />} 
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
                 onClick={() => {
                   setEditingTemplate(null);
                   setTemplateContent('');
@@ -516,9 +516,9 @@ const TemplateManager: React.FC = () => {
             }
           >
             <Spin spinning={loading}>
-              <Table 
-                dataSource={templates} 
-                columns={templateColumns} 
+              <Table
+                dataSource={templates}
+                columns={templateColumns}
                 rowKey="id"
                 pagination={false}
               />
@@ -580,8 +580,8 @@ const TemplateManager: React.FC = () => {
               <div className="mb-4 flex items-center">
                 {selectedComments.length > 0 && (
                   <Tag color="blue" className="mr-4">
-                    {dataSource === 'intents' ? 
-                      `来自意向客户分析: ${customerIntents.length} 条数据` : 
+                    {dataSource === 'intents' ?
+                      `来自意向客户分析: ${customerIntents.length} 条数据` :
                       `选中评论: ${selectedComments.length} 条`}
                   </Tag>
                 )}
@@ -644,9 +644,10 @@ const TemplateManager: React.FC = () => {
               <div className="mb-2">
                 已选择 {selectedComments.length} 条{dataSource === 'intents' ? '意向客户' : '评论'}
               </div>
-              
+
               {dataSource === 'intents' ? (
                 <Table
+                  className="h-[35vw] overflow-y-auto overflow-x-auto w-full"
                   dataSource={customerIntents}
                   columns={intentColumns}
                   rowKey="id"
@@ -673,6 +674,7 @@ const TemplateManager: React.FC = () => {
                 />
               ) : (
                 <Table
+                  className="h-[35vw] overflow-y-auto overflow-x-auto w-full"
                   dataSource={comments.filter(comment => selectedComments.includes(comment.comment_id))}
                   columns={commentColumns}
                   rowKey="comment_id"
