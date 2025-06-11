@@ -207,6 +207,7 @@ const DataAnalyze: React.FC = () => {
       setAnalysisStatus('running');
       notifi('已提交分析任务，任务ID: ' + newTask.dag_run_id, 'success');
       setLoading(false);
+      setActiveTab('intents')
     } catch (err) {
       console.error('Error starting analysis task:', err);
       notifi('提交分析任务失败', 'error');
@@ -508,7 +509,7 @@ const DataAnalyze: React.FC = () => {
       ) : null}
 
       {/* Analysis Task Status */}
-      {analysisTask && (
+      {analysisTask && activeTab === 'intents' && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">分析任务状态</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -600,7 +601,7 @@ const DataAnalyze: React.FC = () => {
             <>
               <p className="mb-2">找到 {filteredIntents.length} 条意向客户数据</p>
               <div className="w-full h-full">
-                <div className="h-[22vw] overflow-y-auto overflow-x-auto w-full">
+                <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[11vw]' : 'h-[22vw]'} overflow-y-auto overflow-x-auto w-full`}>
                   <table className="w-full h-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>

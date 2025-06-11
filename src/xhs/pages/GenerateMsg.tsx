@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { triggerDagRun } from '../../api/airflow';
 
 import notifi from '../../utils/notification';
+import { getVariable } from '../../api/airflow';
+import BaseCollapse from '../../components/BaseComponents/BaseCollapse';
+import BaseList from '../../components/BaseComponents/BaseList';
+import BaseListUserItem from '../../components/BaseComponents/BaseListUserItem';
+import { SendOutlined } from '@ant-design/icons';
+
 interface Message {
   id: number;
   content: string;
@@ -9,10 +15,22 @@ interface Message {
   createdAt: string;
 }
 
+const VARIABLE_NAME = 'XHS_DEVICES_MSG_LIST';
+
 const GenerateMsg: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [generatedMessages, setGeneratedMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deviceMsgList, setDeviceMsgList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDeviceMsgList = async () => {
+      const variable = await getVariable(VARIABLE_NAME);
+      console.log('deviceMsgList', JSON.parse(variable.value));
+      setDeviceMsgList(JSON.parse(variable.value).filter((device: any) => device.unreplied_users.length > 0));
+    };
+    fetchDeviceMsgList();
+  }, []);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +116,7 @@ const GenerateMsg: React.FC = () => {
       </div>
 
       {/* 已生成内容列表 */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">已生成内容</h2>
         {generatedMessages.length > 0 ? (
           <div className="space-y-4">
@@ -123,6 +141,21 @@ const GenerateMsg: React.FC = () => {
         ) : (
           <p className="text-gray-500">暂无生成内容</p>
         )}
+      </div>
+
+      {/* 设备列表 */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-lg font-semibold mb-4">设备列表</h2>
+        <div className="w-full h-[34vh] overflow-y-auto">
+          <BaseCollapse allActive={true} items={deviceMsgList.map((device, idx) => ({
+            style: {
+              display: 'block'
+            },
+            key: device.device_id,
+            label: device.device_id,
+            children: device.unreplied_users.length > 0 ? <BaseList dataSource={device.unreplied_users} renderItem={(item) => <BaseListUserItem editConfig={[{ editIcon: <SendOutlined style={{ transform: 'translate(-2px, -2px) rotate(315deg)' }} />, editText: '发送', editFn: () => { console.log('发送') } }]} item={item} />} /> : <div>暂无未回复用户</div>,
+          }))} />
+        </div>
       </div>
     </div>
   );
