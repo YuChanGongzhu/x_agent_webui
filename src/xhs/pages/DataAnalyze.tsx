@@ -345,10 +345,6 @@ const DataAnalyze: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="bg-blue-50 p-4 rounded-lg mb-6">
-        <p className="text-blue-700">本页面用于分析和分类小红书评论数据。</p>
-      </div>
-
       {/* Tabs Navigation */}
       <div className="mb-6">
         <div className="border-b border-gray-200">

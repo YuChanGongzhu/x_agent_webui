@@ -217,10 +217,6 @@ const DataFilter: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="bg-blue-50 p-4 rounded-lg mb-6">
-        <p className="text-blue-700">本页面用于过滤和处理小红书评论数据。</p>
-      </div>
-
       {/* Keyword Selection */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-2">
         <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>

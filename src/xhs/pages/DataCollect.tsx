@@ -555,10 +555,6 @@ const DataCollect: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="bg-blue-50 p-4 rounded-lg mb-2">
-        <p className="text-blue-700">本页面用于从小红书收集数据并创建数据采集任务</p>
-      </div>
-
       {/* 目标邮箱选择 - 全局可用 */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
         <div className="flex items-center">

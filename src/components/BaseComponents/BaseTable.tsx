@@ -7,7 +7,7 @@ import { TablePaginationConfig } from 'antd/es/table';
 
 interface BaseTableProps {
     tableConfig: TableProps<any>;
-    cardConfig: CardProps;
+    cardConfig?: CardProps;
     paginationConfig?: TablePaginationConfig;
     className?: string;
     style?: React.CSSProperties;
