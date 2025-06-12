@@ -14,7 +14,7 @@ const InvitationCodeManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Fetch invitation codes from Supabase
   const fetchInvitationCodes = async () => {
     try {
@@ -27,7 +27,7 @@ const InvitationCodeManagement: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Generate new invitation code
   const handleGenerateInvitationCode = async () => {
     try {
@@ -41,7 +41,7 @@ const InvitationCodeManagement: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Delete invitation code
   const handleDeleteInvitationCode = async (id: number) => {
     try {
@@ -55,14 +55,14 @@ const InvitationCodeManagement: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Batch delete invitation codes
   const handleBatchDeleteInvitationCodes = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要删除的邀请码');
       return;
     }
-    
+
     try {
       setLoading(true);
       await InvitationCodeService.deleteMultipleInvitationCodes(selectedRowKeys as number[]);
@@ -81,7 +81,7 @@ const InvitationCodeManagement: React.FC = () => {
       message.warning('请先选择要发送的邀请码');
       return;
     }
-    
+
     try {
       setLoading(true);
       await InvitationCodeService.batchSendInvitationCodes(selectedRowKeys as number[]);
@@ -94,7 +94,7 @@ const InvitationCodeManagement: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Copy invitation code to clipboard
   const copyInvitationCode = (code: string) => {
     navigator.clipboard.writeText(code)
@@ -106,19 +106,19 @@ const InvitationCodeManagement: React.FC = () => {
         console.error('复制失败:', err);
       });
   };
-  
+
   // Batch copy invitation codes to clipboard
   const batchCopyInvitationCodes = () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要复制的邀请码');
       return;
     }
-    
+
     const selectedCodes = codes
       .filter(code => selectedRowKeys.includes(code.id))
       .map(code => code.invitation_code)
       .join('\n');
-      
+
     navigator.clipboard.writeText(selectedCodes)
       .then(() => {
         message.success(`已复制 ${selectedRowKeys.length} 个邀请码到剪贴板`);
@@ -128,11 +128,11 @@ const InvitationCodeManagement: React.FC = () => {
         console.error('批量复制失败:', err);
       });
   };
-  
+
   useEffect(() => {
     fetchInvitationCodes();
   }, [searchQuery]);
-  
+
   const columns = [
     {
       title: '邀请码',
@@ -141,9 +141,9 @@ const InvitationCodeManagement: React.FC = () => {
       render: (text: string) => (
         <Space>
           {text}
-          <Button 
-            type="text" 
-            icon={<CopyOutlined />} 
+          <Button
+            type="text"
+            icon={<CopyOutlined />}
             onClick={() => copyInvitationCode(text)}
             size="small"
           />
@@ -157,7 +157,7 @@ const InvitationCodeManagement: React.FC = () => {
       render: (status: number) => {
         let badgeStatus: 'success' | 'processing' | 'default';
         let text: string;
-        
+
         if (status === 1) {
           badgeStatus = 'success';
           text = '可用';
@@ -168,7 +168,7 @@ const InvitationCodeManagement: React.FC = () => {
           badgeStatus = 'default';
           text = '已使用';
         }
-        
+
         return <Badge status={badgeStatus} text={text} />;
       },
     },
@@ -201,8 +201,8 @@ const InvitationCodeManagement: React.FC = () => {
             okText="确定"
             cancelText="取消"
           >
-            <Button 
-              danger 
+            <Button
+              danger
               icon={<DeleteOutlined />}
               disabled={record.status !== 1}
               size="small"
@@ -214,7 +214,7 @@ const InvitationCodeManagement: React.FC = () => {
       ),
     },
   ];
-  
+
   const rowSelection = {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[]) => {
@@ -224,19 +224,19 @@ const InvitationCodeManagement: React.FC = () => {
       disabled: record.status !== 1,
     }),
   };
-  
+
   return (
     <Card title={<Title level={4}>邀请码管理</Title>}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <Space>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
             onClick={handleGenerateInvitationCode}
           >
             生成邀请码
           </Button>
-          <Button 
+          <Button
             type="primary"
             icon={<SendOutlined />}
             onClick={handleBatchSendInvitationCodes}
@@ -245,8 +245,8 @@ const InvitationCodeManagement: React.FC = () => {
           >
             批量发送邀请码
           </Button>
-          <Button 
-            icon={<ReloadOutlined />} 
+          <Button
+            icon={<ReloadOutlined />}
             onClick={() => fetchInvitationCodes()}
           >
             刷新邀请码
@@ -258,16 +258,16 @@ const InvitationCodeManagement: React.FC = () => {
             cancelText="取消"
             disabled={selectedRowKeys.length === 0}
           >
-            <Button 
-              danger 
-              icon={<DeleteOutlined />} 
+            <Button
+              danger
+              icon={<DeleteOutlined />}
               disabled={selectedRowKeys.length === 0}
             >
               删除邀请码
             </Button>
           </Popconfirm>
-          <Button 
-            icon={<CopyOutlined />} 
+          <Button
+            icon={<CopyOutlined />}
             onClick={batchCopyInvitationCodes}
             disabled={selectedRowKeys.length === 0}
           >
@@ -280,8 +280,9 @@ const InvitationCodeManagement: React.FC = () => {
             style={{ width: 250 }}
           />
         </Space>
-        
+
         <Table
+          className="h-[66vh] overflow-y-auto"
           rowSelection={rowSelection}
           columns={columns}
           dataSource={codes}

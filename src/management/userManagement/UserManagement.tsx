@@ -543,8 +543,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
               key={page}
               onClick={() => goToPage(page)}
               className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${currentPage === page
-                  ? 'bg-primary bg-opacity-10 text-primary'
-                  : 'text-gray-700 hover:bg-gray-50'
+                ? 'bg-primary bg-opacity-10 text-primary'
+                : 'text-gray-700 hover:bg-gray-50'
                 }`}
             >
               {page}
@@ -619,7 +619,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               没有找到用户记录
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto h-[60vh] overflow-y-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -687,8 +687,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.profile?.role === 'admin'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-green-100 text-green-800'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-green-100 text-green-800'
                           }`}>
                           {user.profile?.role === 'admin' ? '管理员' : '普通用户'}
                         </span>
@@ -718,7 +718,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
         {/* 侧边编辑表单部分 */}
         {editModeActive && selectedUser && (
-          <div className="md:w-2/5 bg-white rounded-lg shadow-md p-6">
+          <div className="md:w-2/5 bg-white rounded-lg shadow-md p-6 h-[66vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4">编辑用户信息</h2>
 
             {formError && (
