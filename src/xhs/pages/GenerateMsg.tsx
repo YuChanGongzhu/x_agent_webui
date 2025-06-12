@@ -88,7 +88,7 @@ const GenerateMsg: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 h-screen">
       <h1 className="text-2xl font-bold mb-6">小红书内容生成</h1>
 
       {/* 生成表单 */}

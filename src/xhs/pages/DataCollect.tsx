@@ -554,7 +554,7 @@ const DataCollect: React.FC = () => {
   const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 h-screen">
       {/* 目标邮箱选择 - 全局可用 */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
         <div className="flex items-center">

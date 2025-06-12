@@ -15,12 +15,12 @@ const ManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('users');
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
-  
+
   // 用户数据状态
   const [users, setUsers] = useState<UserData[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
-  
+
   // 行业数据状态
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [industriesLoading, setIndustriesLoading] = useState(false);
@@ -45,16 +45,16 @@ const ManagementPage: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setUsersLoading(true);
-      
+
       // 从 user_profiles 表获取用户配置信息
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*');
-      
+
       if (profilesError) {
         throw profilesError;
       }
-      
+
       if (profilesData && profilesData.length > 0) {
         // 使用配置信息构建用户列表
         const formattedUsers = profilesData.map(profile => {
@@ -69,7 +69,7 @@ const ManagementPage: React.FC = () => {
             profile: profile
           };
         });
-        
+
         // 按最后登录时间排序，最新登录的显示在最上面
         const sortedUsers = formattedUsers.sort((a, b) => {
           // 如果没有profile或updated_at，则排在最后
@@ -78,7 +78,7 @@ const ManagementPage: React.FC = () => {
           // 降序排序，最新的在前面
           return new Date(b.profile.updated_at).getTime() - new Date(a.profile.updated_at).getTime();
         });
-        
+
         setUsers(sortedUsers);
         setUsersError(null);
       } else {
@@ -93,19 +93,19 @@ const ManagementPage: React.FC = () => {
       setUsersLoading(false);
     }
   };
-  
+
   // 获取行业数据
   const fetchIndustries = async () => {
     try {
       setIndustriesLoading(true);
       const industriesData = await IndustryService.getAllIndustries();
-      
+
       if (industriesData && industriesData.length > 0) {
         // 按名称排序
-        const sortedIndustries = industriesData.sort((a, b) => 
+        const sortedIndustries = industriesData.sort((a, b) =>
           a.name.localeCompare(b.name, 'zh-CN')
         );
-        
+
         setIndustries(sortedIndustries);
         setIndustriesError(null);
       } else {
@@ -129,39 +129,36 @@ const ManagementPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 h-screen">
       <h1 className="text-2xl font-bold mb-6">系统管理</h1>
-      
+
       {/* 选项卡导航 */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'users'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             用户管理
           </button>
           <button
             onClick={() => setActiveTab('industry')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'industry'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'industry'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             行业管理
           </button>
           <button
             onClick={() => setActiveTab('invitation')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'invitation'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'invitation'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             邀请码管理
           </button>
@@ -171,8 +168,8 @@ const ManagementPage: React.FC = () => {
       {/* 内容区域 */}
       <div className="mt-6">
         {activeTab === 'users' && (
-          <UserManagement 
-            externalDatasets={datasets} 
+          <UserManagement
+            externalDatasets={datasets}
             externalDatasetsLoading={datasetsLoading}
             externalUsers={users}
             externalUsersLoading={usersLoading}
@@ -182,8 +179,8 @@ const ManagementPage: React.FC = () => {
           />
         )}
         {activeTab === 'industry' && (
-          <IndustryManagement 
-            externalDatasets={datasets} 
+          <IndustryManagement
+            externalDatasets={datasets}
             externalDatasetsLoading={datasetsLoading}
             externalIndustries={industries}
             externalIndustriesLoading={industriesLoading}
