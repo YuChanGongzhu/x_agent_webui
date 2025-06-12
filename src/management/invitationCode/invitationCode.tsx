@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Table, Button, Space, message, Typography, Card, Badge,
-  Input, Popconfirm
+  Input, Popconfirm, Pagination
 } from 'antd';
 import { CopyOutlined, ReloadOutlined, DeleteOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons';
 import { InvitationCode, InvitationCodeService } from './invitationCodeService';
+import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import BaseTable from '../../components/BaseComponents/BaseTable';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -14,6 +16,7 @@ const InvitationCodeManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch invitation codes from Supabase
   const fetchInvitationCodes = async () => {
@@ -226,72 +229,73 @@ const InvitationCodeManagement: React.FC = () => {
   };
 
   return (
-    <Card title={<Title level={4}>邀请码管理</Title>}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <Space>
+    <>
+      <BaseTable tableConfig={{
+        rowSelection: rowSelection,
+        columns: columns,
+        dataSource: codes,
+        rowKey: 'id',
+        loading: loading,
+      }} cardConfig={{
+        title: <Title level={4}>邀请码管理</Title>,
+      }}
+        paginationConfig={{
+          pageSize: 10,
+        }}
+        tableScrollHeight="66vh"
+      >
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleGenerateInvitationCode}
+        >
+          生成邀请码
+        </Button>
+        <Button
+          type="primary"
+          icon={<SendOutlined />}
+          onClick={handleBatchSendInvitationCodes}
+          disabled={selectedRowKeys.length === 0}
+          style={{ background: '#52c41a', borderColor: '#52c41a' }}
+        >
+          批量发送邀请码
+        </Button>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => fetchInvitationCodes()}
+        >
+          刷新邀请码
+        </Button>
+        <Popconfirm
+          title="确定要删除选中的邀请码吗？"
+          onConfirm={handleBatchDeleteInvitationCodes}
+          okText="确定"
+          cancelText="取消"
+          disabled={selectedRowKeys.length === 0}
+        >
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleGenerateInvitationCode}
-          >
-            生成邀请码
-          </Button>
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={handleBatchSendInvitationCodes}
+            danger
+            icon={<DeleteOutlined />}
             disabled={selectedRowKeys.length === 0}
-            style={{ background: '#52c41a', borderColor: '#52c41a' }}
           >
-            批量发送邀请码
+            删除邀请码
           </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => fetchInvitationCodes()}
-          >
-            刷新邀请码
-          </Button>
-          <Popconfirm
-            title="确定要删除选中的邀请码吗？"
-            onConfirm={handleBatchDeleteInvitationCodes}
-            okText="确定"
-            cancelText="取消"
-            disabled={selectedRowKeys.length === 0}
-          >
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              disabled={selectedRowKeys.length === 0}
-            >
-              删除邀请码
-            </Button>
-          </Popconfirm>
-          <Button
-            icon={<CopyOutlined />}
-            onClick={batchCopyInvitationCodes}
-            disabled={selectedRowKeys.length === 0}
-          >
-            批量复制邀请码
-          </Button>
-          <Search
-            placeholder="搜索邀请码或关联用户"
-            allowClear
-            onSearch={(value: string) => setSearchQuery(value)}
-            style={{ width: 250 }}
-          />
-        </Space>
-
-        <Table
-          className="h-[66vh] overflow-y-auto"
-          rowSelection={rowSelection}
-          columns={columns}
-          dataSource={codes}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
+        </Popconfirm>
+        <Button
+          icon={<CopyOutlined />}
+          onClick={batchCopyInvitationCodes}
+          disabled={selectedRowKeys.length === 0}
+        >
+          批量复制邀请码
+        </Button>
+        <Search
+          placeholder="搜索邀请码或关联用户"
+          allowClear
+          onSearch={(value: string) => setSearchQuery(value)}
+          style={{ width: 250 }}
         />
-      </Space>
-    </Card>
+      </BaseTable>
+    </>
   );
 };
 
