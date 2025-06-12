@@ -12,10 +12,12 @@ interface BaseTableProps {
     className?: string;
     style?: React.CSSProperties;
     children?: React.ReactNode;
+    footer?: React.ReactNode;
     tableScrollHeight?: string;
+    needPagination?: boolean;
 }
 
-const BaseTable = ({ tableConfig, cardConfig, children, paginationConfig, className, style, tableScrollHeight }: BaseTableProps) => {
+const BaseTable = ({ tableConfig, cardConfig, children, paginationConfig, className, style, tableScrollHeight, footer, needPagination = true }: BaseTableProps) => {
     const [currentPage, setCurrentPage] = useState(1);
     const dataSource = tableConfig.dataSource;
     const total = dataSource?.length || 0;
@@ -60,15 +62,16 @@ const BaseTable = ({ tableConfig, cardConfig, children, paginationConfig, classN
     return <>
         <Card style={{ width: '100%' }} {...cardConfig}>
             <Space direction="vertical" style={{ width: '100%' }} size="large">
-                <Space>
+                <div style={{ width: '100%' }}>
                     {children}
-                </Space>
-                <div className="relative" style={{ height: tableScrollHeight ? tableScrollHeight : '66vh' }}>
-                    <Table {...tableConfig} scroll={{ x: 'max-content', y: `calc(${tableScrollHeight ? tableScrollHeight : '66vh'} - 7rem)` }} pagination={{ ...defaultPaginationConfig, className: 'absolute opacity-0', ...paginationConfig }} />
-                    <div className="absolute w-full left-0 bottom-0">
-                        <Pagination {...{ ...defaultPaginationConfig, ...paginationConfig }} />
-                    </div>
                 </div>
+                <div className="relative" style={{ height: tableScrollHeight ? tableScrollHeight : '66vh' }}>
+                    <Table {...tableConfig} scroll={{ x: 'max-content', y: needPagination ? `calc(${tableScrollHeight} - 7rem)` : `calc(${tableScrollHeight} - 4rem)` }} pagination={needPagination ? { ...defaultPaginationConfig, className: 'absolute opacity-0', ...paginationConfig } : false} />
+                    {needPagination && <div className="absolute w-full left-0 bottom-0">
+                        <Pagination {...{ ...defaultPaginationConfig, ...paginationConfig }} />
+                    </div>}
+                </div>
+                {footer}
             </Space>
         </Card>
     </>

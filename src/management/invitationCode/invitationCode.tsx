@@ -244,56 +244,58 @@ const InvitationCodeManagement: React.FC = () => {
         }}
         tableScrollHeight="66vh"
       >
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleGenerateInvitationCode}
-        >
-          生成邀请码
-        </Button>
-        <Button
-          type="primary"
-          icon={<SendOutlined />}
-          onClick={handleBatchSendInvitationCodes}
-          disabled={selectedRowKeys.length === 0}
-          style={{ background: '#52c41a', borderColor: '#52c41a' }}
-        >
-          批量发送邀请码
-        </Button>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => fetchInvitationCodes()}
-        >
-          刷新邀请码
-        </Button>
-        <Popconfirm
-          title="确定要删除选中的邀请码吗？"
-          onConfirm={handleBatchDeleteInvitationCodes}
-          okText="确定"
-          cancelText="取消"
-          disabled={selectedRowKeys.length === 0}
-        >
+        <Space>
           <Button
-            danger
-            icon={<DeleteOutlined />}
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleGenerateInvitationCode}
+          >
+            生成邀请码
+          </Button>
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            onClick={handleBatchSendInvitationCodes}
+            disabled={selectedRowKeys.length === 0}
+            style={{ background: '#52c41a', borderColor: '#52c41a' }}
+          >
+            批量发送邀请码
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchInvitationCodes()}
+          >
+            刷新邀请码
+          </Button>
+          <Popconfirm
+            title="确定要删除选中的邀请码吗？"
+            onConfirm={handleBatchDeleteInvitationCodes}
+            okText="确定"
+            cancelText="取消"
             disabled={selectedRowKeys.length === 0}
           >
-            删除邀请码
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              disabled={selectedRowKeys.length === 0}
+            >
+              删除邀请码
+            </Button>
+          </Popconfirm>
+          <Button
+            icon={<CopyOutlined />}
+            onClick={batchCopyInvitationCodes}
+            disabled={selectedRowKeys.length === 0}
+          >
+            批量复制邀请码
           </Button>
-        </Popconfirm>
-        <Button
-          icon={<CopyOutlined />}
-          onClick={batchCopyInvitationCodes}
-          disabled={selectedRowKeys.length === 0}
-        >
-          批量复制邀请码
-        </Button>
-        <Search
-          placeholder="搜索邀请码或关联用户"
-          allowClear
-          onSearch={(value: string) => setSearchQuery(value)}
-          style={{ width: 250 }}
-        />
+          <Search
+            placeholder="搜索邀请码或关联用户"
+            allowClear
+            onSearch={(value: string) => setSearchQuery(value)}
+            style={{ width: 250 }}
+          />
+        </Space>
       </BaseTable>
     </>
   );
