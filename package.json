@@ -37,7 +37,8 @@
     "start": "yarn install && react-scripts start",
     "build": "yarn install && react-scripts build",
     "test": "yarn install && react-scripts test",
-    "eject": "yarn install && react-scripts eject"
+    "eject": "yarn install && react-scripts eject",
+    "update": "node javascript/demo.js"
   },
   "eslintConfig": {
     "extends": [
@@ -64,6 +65,7 @@
     "daisyui": "^4.12.23",
     "http-proxy-middleware": "^3.0.0",
     "postcss": "^8.5.2",
+    "ssh2": "^1.16.0",
     "tailwindcss": "3"
   }
 }
