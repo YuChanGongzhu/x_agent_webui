@@ -558,7 +558,7 @@ const DataCollect: React.FC = () => {
     <div>
       {/* 目标邮箱选择 - 全局可用 */}
       <div className="p-6">
-        <BaseSelect autoFocus defaultOpen size='large' className="w-full" defaultValue={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
+        <BaseSelect size='large' className="w-full" defaultValue={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
           <h2 className="text-lg font-semibold mb-4">目标邮箱</h2>
         </BaseSelect>
         {/* <select
