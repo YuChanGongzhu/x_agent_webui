@@ -7,6 +7,7 @@ import { UserProfileService } from '../../management/userManagement/userProfileS
 import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
+import BaseSelect from '../../components/BaseComponents/BaseSelect';
 
 interface Note {
   id: number;
@@ -556,13 +557,11 @@ const DataCollect: React.FC = () => {
   return (
     <div>
       {/* 目标邮箱选择 - 全局可用 */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-        <div className="flex items-center">
-          <div className="w-1/4">
-            <label className="block text-sm font-medium text-gray-700">目标邮箱</label>
-          </div>
-          <div className="w-3/4">
-            <select
+      <div className="p-6">
+        <BaseSelect autoFocus defaultOpen size='large' className="w-full" defaultValue={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
+          <h2 className="text-lg font-semibold mb-4">目标邮箱</h2>
+        </BaseSelect>
+        {/* <select
               value={targetEmail}
               onChange={(e) => setTargetEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
@@ -574,9 +573,7 @@ const DataCollect: React.FC = () => {
                   <option key={email} value={email}>{email}</option>
                 ))
               )}
-            </select>
-          </div>
-        </div>
+            </select> */}
       </div>
 
       {/* Tab Navigation */}
@@ -675,7 +672,7 @@ const DataCollect: React.FC = () => {
                 </div>
 
                 <div className="w-full h-full">
-                  <div className="h-[20vw] overflow-y-auto overflow-x-auto w-full">
+                  <div className="h-[18vw] overflow-y-auto overflow-x-auto w-full">
                     <table className="w-full h-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -1172,7 +1169,7 @@ const DataCollect: React.FC = () => {
             <>
               <p className="mb-2">原始评论数量: {comments.length}</p>
               <div className="w-full h-full">
-                <div className="h-[16vw] overflow-y-auto overflow-x-auto w-full">
+                <div className="h-[14vw] overflow-y-auto overflow-x-auto w-full">
                   <table className="w-full h-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>

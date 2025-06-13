@@ -14,42 +14,46 @@ import DataAnalyze from './xhs/pages/DataAnalyze';
 import GenerateMsg from './xhs/pages/GenerateMsg';
 import TemplateManager from './xhs/pages/TemplateManager';
 import DeviceManagement from './devices/DeviceManagement';
+import { ConfigProvider } from 'antd';
+import config from './themeConfig/config';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <UserProvider>
-                <KeywordProvider>
-                  <div className="flex w-full h-full">
-                    <NavBar />
-                    <main className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4" style={{ margin: '1rem', height: 'calc(100vh - 2rem)' }}>
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/manage" element={<ManagementPage />} />
-                        <Route path="/xhs" element={<XHSAutomation />} />
-                        <Route path="/xhs/collect" element={<DataCollect />} />
-                        <Route path="/xhs/filter" element={<DataFilter />} />
-                        <Route path="/xhs/analyze" element={<DataAnalyze />} />
-                        <Route path="/xhs/generate" element={<GenerateMsg />} />
-                        <Route path="/xhs/templates" element={<TemplateManager />} />
-                        <Route path="/devices" element={<DeviceManagement />} />
-                      </Routes>
-                    </main>
-                  </div>
-                </KeywordProvider>
-              </UserProvider>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <ConfigProvider theme={config}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <UserProvider>
+                  <KeywordProvider>
+                    <div className="flex w-full h-full">
+                      <NavBar />
+                      <main className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4" style={{ margin: '1rem', height: 'calc(100vh - 2rem)' }}>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/manage" element={<ManagementPage />} />
+                          <Route path="/xhs" element={<XHSAutomation />} />
+                          <Route path="/xhs/collect" element={<DataCollect />} />
+                          <Route path="/xhs/filter" element={<DataFilter />} />
+                          <Route path="/xhs/analyze" element={<DataAnalyze />} />
+                          <Route path="/xhs/generate" element={<GenerateMsg />} />
+                          <Route path="/xhs/templates" element={<TemplateManager />} />
+                          <Route path="/devices" element={<DeviceManagement />} />
+                        </Routes>
+                      </main>
+                    </div>
+                  </KeywordProvider>
+                </UserProvider>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }
 
