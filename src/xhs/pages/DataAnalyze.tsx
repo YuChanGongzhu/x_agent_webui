@@ -6,6 +6,7 @@ import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
 import notifi from '../../utils/notification';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
+import BaseSelect from '../../components/BaseComponents/BaseSelect';
 interface Comment {
   id: number;
   note_id: number;
@@ -560,37 +561,17 @@ const DataAnalyze: React.FC = () => {
           <p className="mb-4 text-gray-600">本部分展示已分析的意向客户数据，可通过关键词和意向类型进行筛选</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
+            <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
+              setSelectedKeyword(value);
+              if (value !== '全部') {
+                setLatestKeyword(value);
+              }
+            }} >
               <label className="block text-sm font-medium text-gray-700 mb-1">按关键词筛选</label>
-              <select
-                value={selectedKeyword}
-                onChange={(e) => {
-                  const newKeyword = e.target.value;
-                  setSelectedKeyword(newKeyword);
-                  // 更新共享的最新关键词
-                  if (newKeyword !== '全部') {
-                    setLatestKeyword(newKeyword);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-              >
-                {keywords.map((keyword) => (
-                  <option key={keyword} value={keyword}>{keyword}</option>
-                ))}
-              </select>
-            </div>
-            <div>
+            </BaseSelect>
+            <BaseSelect size='large' className="w-full" value={selectedIntent} showSearch options={intents.map((intent) => ({ label: intent, value: intent }))} onChange={(value) => setSelectedIntent(value)} >
               <label className="block text-sm font-medium text-gray-700 mb-1">按意向类型筛选</label>
-              <select
-                value={selectedIntent}
-                onChange={(e) => setSelectedIntent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-              >
-                {intents.map((intent) => (
-                  <option key={intent} value={intent}>{intent}</option>
-                ))}
-              </select>
-            </div>
+            </BaseSelect>
           </div>
 
           {filteredIntents.length > 0 ? (

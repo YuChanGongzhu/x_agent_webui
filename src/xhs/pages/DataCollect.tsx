@@ -8,6 +8,7 @@ import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButt
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
+import BaseInput from '../../components/BaseComponents/BaseInput';
 
 interface Note {
   id: number;
@@ -558,7 +559,7 @@ const DataCollect: React.FC = () => {
     <div>
       {/* 目标邮箱选择 - 全局可用 */}
       <div className="p-6">
-        <BaseSelect size='large' className="w-full" defaultValue={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
+        <BaseSelect size='large' className="w-full" value={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
           <h2 className="text-lg font-semibold mb-4">目标邮箱</h2>
         </BaseSelect>
         {/* <select
@@ -599,28 +600,15 @@ const DataCollect: React.FC = () => {
             <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
             <form onSubmit={handleCreateNotesTask} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+                <BaseInput size='large' className="w-full" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键字">
                   <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
-                  <input
-                    type="text"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-                    placeholder="输入关键字"
-                  />
-                </div>
-                <div>
-                  <input type="hidden" value={targetEmail} />
+                </BaseInput>
+                <BaseInput type='number' size='large' className="w-full" value={maxNotes} onChange={(e) => setMaxNotes(parseInt(e.target.value))} min={1} max={1000}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
-                  <input
-                    type="number"
-                    value={maxNotes}
-                    onChange={(e) => setMaxNotes(parseInt(e.target.value))}
-                    min={1}
-                    max={1000}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-                  />
-                </div>
+                </BaseInput>
+                <BaseInput type='hidden' size='large' className="w-full absolute" value={targetEmail} >
+                  {/* <label className="block text-sm font-medium text-gray-700 mb-1">目标邮箱</label> */}
+                </BaseInput>
                 <div className="flex items-end">
                   <button
                     type="submit"
@@ -861,19 +849,9 @@ const DataCollect: React.FC = () => {
                 刷新关键词
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <select
-                  value={selectedKeyword}
-                  onChange={(e) => setSelectedKeyword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-                >
-                  {keywords.map((kw) => (
-                    <option key={kw} value={kw}>{kw}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <BaseSelect size='large' className="w-full" selectClassName="w-1/2" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => setSelectedKeyword(value)} >
+              <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
+            </BaseSelect>
           </div>
 
           {/* Display Collected Notes */}
@@ -1098,8 +1076,27 @@ const DataCollect: React.FC = () => {
         <>
           {/* Keyword Selection and Comment Collection */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => setSelectedKeyword(value)} >
+                  <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
+                </BaseSelect>
+                <BaseInput size='large' type='number' className="w-full" value={maxComments} onChange={(e) => setMaxComments(parseInt(e.target.value))} min={1} max={1000}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
+                </BaseInput>
+                <div className="flex items-end">
+                  <button
+                    onClick={handleCreateCommentsTask}
+                    disabled={loading || !selectedKeyword}
+                    className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)] w-full"
+                  >
+                    {loading ? '处理中...' : '创建笔记评论收集任务'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            {/* 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
                 <select
@@ -1112,25 +1109,8 @@ const DataCollect: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
-                <input
-                  type="number"
-                  value={maxComments}
-                  onChange={(e) => setMaxComments(parseInt(e.target.value))}
-                  min={1}
-                  max={1000}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleCreateCommentsTask}
-              disabled={loading || !selectedKeyword}
-              className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)]"
-            >
-              {loading ? '处理中...' : '创建笔记评论收集任务'}
-            </button>
+              
+            </div> */}
           </div>
         </>
       )}

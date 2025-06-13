@@ -6,6 +6,7 @@ import { useKeyword } from '../../context/KeywordContext';
 import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButton';
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
+import BaseSelect from '../../components/BaseComponents/BaseSelect';
 
 // Simple spinner component
 const Spinner = () => (
@@ -219,24 +220,12 @@ const DataFilter: React.FC = () => {
     <div>
       {/* Keyword Selection */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-2">
-        <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>
-        <select
-          value={selectedKeyword}
-          onChange={(e) => {
-            const newKeyword = e.target.value;
-            setSelectedKeyword(newKeyword);
-            // 更新共享的最新关键词
-            setLatestKeyword(newKeyword);
-          }}
-          disabled={loading}
-          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-        >
-          {keywords.map((keyword) => (
-            <option key={keyword} value={keyword}>
-              {keyword}
-            </option>
-          ))}
-        </select>
+        <BaseSelect disabled={loading} size='large' className="w-1/2" showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} value={selectedKeyword} onChange={(value) => {
+          setSelectedKeyword(value);
+          setLatestKeyword(value);
+        }}>
+          <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>
+        </BaseSelect>
       </div>
 
       {/* Filter Conditions */}
