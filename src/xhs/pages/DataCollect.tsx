@@ -660,7 +660,7 @@ const DataCollect: React.FC = () => {
                 </div>
 
                 <div className="w-full h-full">
-                  <div className="h-[18vw] overflow-y-auto overflow-x-auto w-full">
+                  <div className="h-[38vh] overflow-y-auto overflow-x-auto w-full">
                     <table className="w-full h-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -910,7 +910,7 @@ const DataCollect: React.FC = () => {
                   <p>已选择: {selectedNotes.length} 条笔记</p>
                 </div>
                 <div className="w-full h-full">
-                  <div className="h-[20vw] overflow-y-auto overflow-x-auto w-full">
+                  <div className="h-[40vh] overflow-y-auto overflow-x-auto w-full">
                     <table className="w-full h-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -1147,7 +1147,7 @@ const DataCollect: React.FC = () => {
             <>
               <p className="mb-2">原始评论数量: {comments.length}</p>
               <div className="w-full h-full">
-                <div className="h-[14vw] overflow-y-auto overflow-x-auto w-full">
+                <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
                   <table className="w-full h-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>

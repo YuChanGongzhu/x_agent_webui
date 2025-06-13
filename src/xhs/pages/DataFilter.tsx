@@ -298,7 +298,7 @@ const DataFilter: React.FC = () => {
           </div>
 
           <div className="w-full h-full">
-            <div className="h-[17vw] overflow-y-auto overflow-x-auto w-full">
+            <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
               <table className="w-full h-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
