@@ -88,7 +88,7 @@ const GenerateMsg: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 h-screen">
+    <div>
       <h1 className="text-2xl font-bold mb-6">小红书内容生成</h1>
 
       {/* 生成表单 */}
@@ -144,9 +144,9 @@ const GenerateMsg: React.FC = () => {
       </div>
 
       {/* 设备列表 */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-6 max-h-[40vh] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">设备列表</h2>
-        <div className="w-full h-[34vh] overflow-y-auto">
+        <div className="w-full overflow-y-auto">
           <BaseCollapse allActive={true} items={deviceMsgList.map((device, idx) => ({
             style: {
               display: 'block'

@@ -129,7 +129,7 @@ const ManagementPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-6 h-screen">
+    <div>
       <h1 className="text-2xl font-bold mb-6">系统管理</h1>
 
       {/* 选项卡导航 */}

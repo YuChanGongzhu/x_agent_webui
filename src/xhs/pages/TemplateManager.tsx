@@ -496,7 +496,7 @@ const TemplateManager: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-6 h-screen">
+    <div>
       <Tabs defaultActiveKey="templates">
         <TabPane tab="编辑模板" key="templates">
           <Card
@@ -647,7 +647,7 @@ const TemplateManager: React.FC = () => {
 
               {dataSource === 'intents' ? (
                 <Table
-                  className="h-[35vw] overflow-y-auto overflow-x-auto w-full"
+                  className="h-[34vw] overflow-y-auto overflow-x-auto w-full"
                   dataSource={customerIntents}
                   columns={intentColumns}
                   rowKey="id"
@@ -674,7 +674,7 @@ const TemplateManager: React.FC = () => {
                 />
               ) : (
                 <Table
-                  className="h-[35vw] overflow-y-auto overflow-x-auto w-full"
+                  className="h-[34vw] overflow-y-auto overflow-x-auto w-full"
                   dataSource={comments.filter(comment => selectedComments.includes(comment.comment_id))}
                   columns={commentColumns}
                   rowKey="comment_id"

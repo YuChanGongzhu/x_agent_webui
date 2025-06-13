@@ -329,7 +329,7 @@ const NavBar: React.FC = () => {
       )}
 
       {/* Desktop Navigation */}
-      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] ${isCollapsed ? 'w-[100px]' : 'w-[200px]'} rounded-lg shadow-lg  flex-col transition-all duration-300 text-base text-black h-[calc(100vh-16px)] m-[8px] p-2`}>
+      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] ${isCollapsed ? 'w-[100px]' : 'w-[200px]'} rounded-lg shadow-lg  flex-col transition-all duration-300 text-base text-black my-4 ml-3 p-2`}>
         {/* Logo Section */}
         <div className="flex items-center justify-between mb-2 px-2">
           <div className="flex items-center space-x-2">

@@ -242,7 +242,7 @@ const InvitationCodeManagement: React.FC = () => {
         paginationConfig={{
           pageSize: 10,
         }}
-        tableScrollHeight="66vh"
+        tableScrollHeight="60vh"
       >
         <Space>
           <Button

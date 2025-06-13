@@ -528,7 +528,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     if (totalPages <= 1) return null;
 
     return (
-      <div className="flex justify-center mt-4">
+      <div className="flex justify-center m-2">
         <nav className="inline-flex rounded-md shadow">
           <button
             onClick={() => goToPage(currentPage - 1)}
@@ -566,7 +566,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
 
   return (
-    <div className="p-6">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">用户管理</h1>
         <button

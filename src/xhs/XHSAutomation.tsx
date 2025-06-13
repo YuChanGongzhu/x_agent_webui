@@ -64,7 +64,7 @@ const XHSAutomation: React.FC = () => {
   // 创建新任务
   const handleCreateTask = () => {
     if (!newTaskName.trim() || !selectedDevice || !selectedAccount) return;
-    
+
     const newTask: Task = {
       id: `task_${Date.now()}`,
       name: newTaskName,
@@ -74,7 +74,7 @@ const XHSAutomation: React.FC = () => {
       device: selectedDevice,
       account: selectedAccount
     };
-    
+
     setTasks([newTask, ...tasks]);
     setNewTaskName('');
     setSelectedDevice('');
@@ -83,14 +83,14 @@ const XHSAutomation: React.FC = () => {
 
   // 停止任务
   const handleStopTask = (taskId: string) => {
-    setTasks(tasks.map(task => 
+    setTasks(tasks.map(task =>
       task.id === taskId ? { ...task, status: 'stopped' } : task
     ));
   };
 
   // 继续任务
   const handleResumeTask = (taskId: string) => {
-    setTasks(tasks.map(task => 
+    setTasks(tasks.map(task =>
       task.id === taskId ? { ...task, status: 'running' } : task
     ));
   };
@@ -123,9 +123,9 @@ const XHSAutomation: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 h-screen">
+    <div>
       <h1 className="text-2xl font-bold mb-6">小红书自动化</h1>
-      
+
       {/* 创建新任务部分 */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">创建新任务</h2>
@@ -177,11 +177,11 @@ const XHSAutomation: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* 任务列表部分 */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-lg font-semibold mb-4">任务列表</h2>
-        
+
         {loading ? (
           <div className="flex justify-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
@@ -236,8 +236,8 @@ const XHSAutomation: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div 
-                            className="bg-primary h-2.5 rounded-full" 
+                          <div
+                            className="bg-primary h-2.5 rounded-full"
                             style={{ width: `${task.progress}%` }}
                           ></div>
                         </div>
@@ -252,21 +252,21 @@ const XHSAutomation: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
                           {task.status === 'running' ? (
-                            <button 
+                            <button
                               onClick={() => handleStopTask(task.id)}
                               className="text-yellow-600 hover:text-yellow-900"
                             >
                               停止
                             </button>
                           ) : task.status === 'stopped' ? (
-                            <button 
+                            <button
                               onClick={() => handleResumeTask(task.id)}
                               className="text-blue-600 hover:text-blue-900"
                             >
                               继续
                             </button>
                           ) : null}
-                          <button 
+                          <button
                             onClick={() => handleDeleteTask(task.id)}
                             className="text-red-600 hover:text-red-900"
                           >

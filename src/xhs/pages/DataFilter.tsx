@@ -216,7 +216,7 @@ const DataFilter: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 h-screen">
+    <div>
       {/* Keyword Selection */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-2">
         <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>

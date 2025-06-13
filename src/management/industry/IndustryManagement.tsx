@@ -415,7 +415,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   };
 
   return (
-    <div className="p-6">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">行业管理</h1>
         <div className="flex space-x-2">
