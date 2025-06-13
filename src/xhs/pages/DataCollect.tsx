@@ -1075,25 +1075,23 @@ const DataCollect: React.FC = () => {
       {activeTab === '评论' && (
         <>
           {/* Keyword Selection and Comment Collection */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => setSelectedKeyword(value)} >
-                  <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
-                </BaseSelect>
-                <BaseInput size='large' type='number' className="w-full" value={maxComments} onChange={(e) => setMaxComments(parseInt(e.target.value))} min={1} max={1000}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
-                </BaseInput>
-                <div className="flex items-end">
-                  <button
-                    onClick={handleCreateCommentsTask}
-                    disabled={loading || !selectedKeyword}
-                    className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)] w-full"
-                  >
-                    {loading ? '处理中...' : '创建笔记评论收集任务'}
-                  </button>
-                </div>
+          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
+            <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => setSelectedKeyword(value)} >
+                <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
+              </BaseSelect>
+              <BaseInput size='large' type='number' className="w-full" value={maxComments} onChange={(e) => setMaxComments(parseInt(e.target.value))} min={1} max={1000}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
+              </BaseInput>
+              <div className="flex items-end">
+                <button
+                  onClick={handleCreateCommentsTask}
+                  disabled={loading || !selectedKeyword}
+                  className="px-4 py-2 bg-[rgba(248,213,126,1)] text-white rounded-md hover:bg-[rgba(248,213,126,0.8)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(248,213,126,1)] w-full"
+                >
+                  {loading ? '处理中...' : '创建笔记评论收集任务'}
+                </button>
               </div>
             </div>
             {/* 

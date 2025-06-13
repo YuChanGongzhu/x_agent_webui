@@ -7,7 +7,7 @@ import SortUpOrDownButton from '../../components/BaseComponents/SortUpOrDownButt
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
-
+import BaseInput from '../../components/BaseComponents/BaseInput';
 // Simple spinner component
 const Spinner = () => (
   <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[rgba(248,213,126,1)]"></div>
@@ -31,7 +31,7 @@ const DataFilter: React.FC = () => {
   const [sortFilteredComments, setSortFilteredComments] = useState<Comment[]>([]);
   // State for filter conditions
   const [minLikes, setMinLikes] = useState(0);
-  const [minLength, setMinLength] = useState(2);
+  const [minLength, setMinLength] = useState(1);
   const [filterKeywords, setFilterKeywords] = useState('');
 
   // State for pagination
@@ -164,7 +164,7 @@ const DataFilter: React.FC = () => {
       let filtered = [...originalComments];
 
       if (minLikes > 0) {
-        filtered = filtered.filter(comment => comment.like_count >= minLikes);
+        filtered = filtered.filter(comment => comment.likes >= minLikes);
       }
 
       if (minLength > 0) {
@@ -233,8 +233,24 @@ const DataFilter: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+            <BaseInput size='large' type='number' className="w-full" value={minLikes} onChange={(e) => setMinLikes(parseInt(e.target.value))} onBlur={() => {
+              if (!minLikes) {
+                setMinLikes(0)
+              }
+            }} min={0}>
               <label className="block text-sm font-medium text-gray-700 mb-1">最小点赞数</label>
+            </BaseInput>
+            <BaseInput size='large' type='number' className="w-full" value={minLength} onChange={(e) => setMinLength(parseInt(e.target.value))} onBlur={() => {
+              if (!minLength) {
+                setMinLength(1)
+              }
+            }} min={1}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">最小评论长度</label>
+            </BaseInput>
+            <BaseInput size='large' type='text' className="w-full" value={filterKeywords} onChange={(e) => setFilterKeywords(e.target.value)} placeholder="例如：优惠,折扣,价格">
+              <label className="block text-sm font-medium text-gray-700 mb-1">筛选关键词（用逗号分隔）</label>
+            </BaseInput>
+            {/* <div>
               <input
                 type="number"
                 value={minLikes}
@@ -265,7 +281,7 @@ const DataFilter: React.FC = () => {
                 disabled={loading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
               />
-            </div>
+            </div> */}
           </div>
         </div>
       )}
