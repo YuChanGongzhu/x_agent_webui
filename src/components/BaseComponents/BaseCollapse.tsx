@@ -11,7 +11,7 @@ interface BaseCollapseProps extends CollapseProps {
 const BaseCollapse: React.FC<BaseCollapseProps> = ({ children, allActive, ...props }) => {
     if (allActive) {
         const defaultActiveKey = props?.items?.map((item) => item.key as string) || [];
-        const newProps = { ...props, defaultActiveKey: defaultActiveKey };
+        const newProps = { ...props, activeKey: defaultActiveKey };
         console.log('newProps', newProps);
         return (
             <Collapse {...newProps} >

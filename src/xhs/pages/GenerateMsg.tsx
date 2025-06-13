@@ -88,11 +88,11 @@ const GenerateMsg: React.FC = () => {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">小红书内容生成</h1>
+    <div className='flex flex-col h-full'>
+      <h1 className="text-2xl font-bold mb-6">私信管理</h1>
 
       {/* 生成表单 */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      {/* <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">创建新内容</h2>
         <form onSubmit={handleGenerate}>
           <div className="mb-4">
@@ -113,10 +113,10 @@ const GenerateMsg: React.FC = () => {
             {loading ? '生成中...' : '生成内容'}
           </button>
         </form>
-      </div>
+      </div> */}
 
       {/* 已生成内容列表 */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      {/* <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">已生成内容</h2>
         {generatedMessages.length > 0 ? (
           <div className="space-y-4">
@@ -141,12 +141,12 @@ const GenerateMsg: React.FC = () => {
         ) : (
           <p className="text-gray-500">暂无生成内容</p>
         )}
-      </div>
+      </div> */}
 
       {/* 设备列表 */}
-      <div className="bg-white rounded-lg shadow-md p-6 max-h-[40vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold mb-4">设备列表</h2>
-        <div className="w-full overflow-y-auto">
+      <div className="flex-1 bg-white rounded-lg shadow-lg p-4 overflow-y-auto">
+        <h2 className="text-lg font-semibold leading-4 mb-4">设备列表</h2>
+        <div className="w-full overflow-y-auto h-[calc(100%-2rem)]">
           <BaseCollapse allActive={true} items={deviceMsgList.map((device, idx) => ({
             style: {
               display: 'block'
