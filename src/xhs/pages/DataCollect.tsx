@@ -832,7 +832,7 @@ const DataCollect: React.FC = () => {
                     setRefreshingKeywords(false);
                   }
                 }}
-                className={`flex items-center px-3 py-1 rounded text-[rgba(248,213,126,1)] border border-[rgba(248,213,126,1)] hover:bg-[rgba(248,213,126,1)] hover:text-white transition disabled:opacity-70 disabled:cursor-not-allowed ml-2`}
+                className={`flex items-center px-3 rounded text-[rgba(248,213,126,1)] border border-[rgba(248,213,126,1)] hover:bg-[rgba(248,213,126,1)] hover:text-white transition disabled:opacity-70 disabled:cursor-not-allowed ml-2`}
                 disabled={refreshingKeywords}
                 title="刷新关键词列表"
               >
