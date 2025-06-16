@@ -26,7 +26,7 @@ interface SubNavItem {
 interface NavItem {
   name: string;
   icon: string;
-  url: string;
+  url?: string;
   adminOnly?: boolean;
   subItems?: SubNavItem[];
   expanded?: boolean;
@@ -39,11 +39,11 @@ interface NavItemWithIcons extends NavItem {
 // 菜单项配置
 const initialMenuItems: NavItemWithIcons[] = [
   { name: '系统管理', icon: systemSVG, activeIcon: systemActiveSVG, url: '/manage', adminOnly: true },
+  { name: '设备管理', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/devices', adminOnly: false },
   {
     name: '智能获客',
     icon: xhsSVG,
     activeIcon: xhsActiveSVG,
-    url: '/xhs',
     adminOnly: false,
     subItems: [
       // { name: '自动化任务', url: '/xhs' },
@@ -55,7 +55,6 @@ const initialMenuItems: NavItemWithIcons[] = [
     ],
     expanded: false
   },
-  { name: '设备管理', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/devices', adminOnly: false },
 ];
 
 const NavBar: React.FC = () => {
@@ -68,11 +67,10 @@ const NavBar: React.FC = () => {
 
   const findSelectedNavItem = (path: string) => {
     const currentPath = path.endsWith('/') ? path.slice(0, -1) : path;
-
     // Find a matching item in all navigation categories
     const matchingItem = allNavItems.find(item =>
       currentPath === item.url ||
-      (currentPath.startsWith(item.url) && item.url !== '/dashboard') ||
+      (item.url && currentPath.startsWith(item.url) && item.url !== '/dashboard') ||
       (item.subItems?.some(subItem => currentPath === subItem.url))
     );
     return matchingItem ? matchingItem.name : '系统管理';
@@ -157,22 +155,22 @@ const NavBar: React.FC = () => {
 
   const handleClick = (item: NavItem) => {
     setSelected(item.name);
-
     // Toggle expanded state if item has subitems
     if (item.subItems && item.subItems.length > 0) {
-      setMenuItems(prevItems =>
-        prevItems.map((menuItem: NavItemWithIcons) =>
-          menuItem.name === item.name
-            ? { ...menuItem, expanded: !menuItem.expanded }
-            : menuItem
-        )
+      const currentPath = location.pathname;
+      const newMenuItems = menuItems.map((menuItem: NavItemWithIcons) =>
+        menuItem.name === item.name
+          ? { ...menuItem, expanded: !menuItem.expanded }
+          : menuItem
       );
-      // Only navigate if clicking on an already expanded item or an item with no subitems
-      if (!(item as NavItemWithIcons).expanded) {
-        navigate(item.url);
+      setMenuItems(newMenuItems);
+      if (item.subItems.some(subItem => currentPath === subItem.url)) {
+        return;
+      } else {
+        navigate(item.subItems[0].url);
       }
     } else {
-      navigate(item.url);
+      navigate(item.url || '/');
     }
   };
 
@@ -393,6 +391,7 @@ const NavBar: React.FC = () => {
                           className={`flex items-center space-x-3 cursor-pointer p-2 rounded-lg w-full
                             ${location.pathname === subItem.url ? 'bg-white/40 text-black font-medium' : 'text-black/80 hover:bg-white/30'}`}
                           onClick={(e) => {
+                            console.log('触发了')
                             e.stopPropagation();
                             navigate(subItem.url);
                           }}

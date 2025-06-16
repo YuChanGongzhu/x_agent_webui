@@ -36,7 +36,7 @@ function App() {
                         <Routes>
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           <Route path="/manage" element={<ManagementPage />} />
-                          <Route path="/xhs" element={<XHSAutomation />} />
+                          {/* <Route path="/xhs" element={<XHSAutomation />} /> */}
                           <Route path="/xhs/collect" element={<DataCollect />} />
                           <Route path="/xhs/filter" element={<DataFilter />} />
                           <Route path="/xhs/analyze" element={<DataAnalyze />} />
