@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getXhsCommentsByKeywordApi, XhsComment, getCommentsKeyword } from '../../api/mysql';
+import { getXhsCommentsByKeywordApi, XhsComment, getKeywordsApi, getCommentsKeyword } from '../../api/mysql';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useKeyword } from '../../context/KeywordContext';
@@ -8,6 +8,7 @@ import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
+import { Button } from 'antd';
 // Simple spinner component
 const Spinner = () => (
   <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[rgba(248,213,126,1)]"></div>
@@ -17,6 +18,7 @@ const Spinner = () => (
 type Comment = XhsComment;
 
 const DataFilter: React.FC = () => {
+  console.log('渲染了')
   const navigate = useNavigate();
   const { isAdmin, email } = useUser(); // Get user info from context
   const { latestKeyword, setLatestKeyword } = useKeyword(); // Get shared keyword context
@@ -51,7 +53,7 @@ const DataFilter: React.FC = () => {
     try {
       setLoading(true);
       // Filter keywords by email for non-admin users
-      const response = await getCommentsKeyword(!isAdmin && email ? email : undefined);
+      const response = await getKeywordsApi(!isAdmin && email ? email : undefined);
 
       if (response && response.data) {
         const extractedKeywords = response.data;
@@ -64,10 +66,7 @@ const DataFilter: React.FC = () => {
           setKeywords(extractedKeywordsReverse);
 
           // 使用共享的最新关键词或默认选择第一个
-          const keywordToSelect = latestKeyword && extractedKeywordsReverse.includes(latestKeyword)
-            ? latestKeyword
-            : extractedKeywordsReverse[0];
-
+          const keywordToSelect = latestKeyword
           setSelectedKeyword(keywordToSelect);
           // 更新共享的最新关键词
           setLatestKeyword(keywordToSelect);
@@ -229,7 +228,7 @@ const DataFilter: React.FC = () => {
       </div>
 
       {/* Filter Conditions */}
-      {originalComments.length > 0 && (
+      {originalComments.length > 0 ? (<>
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -250,44 +249,8 @@ const DataFilter: React.FC = () => {
             <BaseInput size='large' type='text' className="w-full" value={filterKeywords} onChange={(e) => setFilterKeywords(e.target.value)} placeholder="例如：优惠,折扣,价格">
               <label className="block text-sm font-medium text-gray-700 mb-1">筛选关键词（用逗号分隔）</label>
             </BaseInput>
-            {/* <div>
-              <input
-                type="number"
-                value={minLikes}
-                onChange={(e) => setMinLikes(parseInt(e.target.value) || 0)}
-                min={0}
-                disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">最小评论长度</label>
-              <input
-                type="number"
-                value={minLength}
-                onChange={(e) => setMinLength(parseInt(e.target.value) || 2)}
-                min={2}
-                disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">筛选关键词（用逗号分隔）</label>
-              <input
-                type="text"
-                value={filterKeywords}
-                onChange={(e) => setFilterKeywords(e.target.value)}
-                placeholder="例如：优惠,折扣,价格"
-                disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-              />
-            </div> */}
           </div>
         </div>
-      )}
-
-      {/* Display Original and Filtered Comments */}
-      {originalComments.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">评论数据 {loading && <Spinner />}</h2>
@@ -442,6 +405,13 @@ const DataFilter: React.FC = () => {
             </button>
           </div>
         </div>
+      </>
+      ) : (<>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
+          <h2 className="text-lg font-semibold mb-4">未找到关键词“ {selectedKeyword} ”的评论数据，请先采集数据</h2>
+          <Button type="primary" onClick={() => navigate(`/xhs/collect?keyword=${selectedKeyword}&&tab=评论`)}>去采集数据</Button>
+        </div>
+      </>
       )}
     </div>
   );

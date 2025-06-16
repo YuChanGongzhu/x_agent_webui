@@ -172,6 +172,16 @@ const DataCollect: React.FC = () => {
   useEffect(() => {
     fetchKeywords();
     fetchRecentTasks();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyword = urlParams.get('keyword');
+    const tab = urlParams.get('tab');
+    if (keyword) {
+      setSelectedKeyword(keyword);
+    }
+    if (tab) {
+      setActiveTab(tab as TabType);
+    }
   }, []);
 
   // Fetch keywords from API
