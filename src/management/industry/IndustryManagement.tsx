@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import * as IndustryService from './industryService';
 import { Industry } from './industryService';
 import { getDatasetsApi, Dataset } from '../../api/dify';
+import { Button } from 'antd';
+import { ReloadOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import BaseInput from '../../components/BaseComponents/BaseInput';
 
 interface IndustryManagementProps {
   externalDatasets?: Dataset[];
@@ -12,25 +15,25 @@ interface IndustryManagementProps {
   externalRefetchIndustries?: () => Promise<void>;
 }
 
-const IndustryManagement: React.FC<IndustryManagementProps> = ({ 
-  externalDatasets, 
+const IndustryManagement: React.FC<IndustryManagementProps> = ({
+  externalDatasets,
   externalDatasetsLoading,
   externalIndustries,
   externalIndustriesLoading,
   externalIndustriesError,
   externalRefetchIndustries
- }) => {
+}) => {
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [filteredIndustries, setFilteredIndustries] = useState<Industry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // 分页相关状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
-  
+
   // 行业编辑相关状态
   const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
   const [editModeActive, setEditModeActive] = useState(false);
@@ -38,16 +41,16 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   const [createMode, setCreateMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [industryToDelete, setIndustryToDelete] = useState<Industry | null>(null);
-  
+
   // 素材管理相关状态
   const [materialInput, setMaterialInput] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  
+
   // 素材库数据
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
-  
+
   // 编辑表单状态
   const [formData, setFormData] = useState<{
     name: string;
@@ -58,27 +61,27 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
     material_list: [],
     app_id: ''
   });
-  
+
   // 搜索功能
   useEffect(() => {
     if (!industries.length) return;
-    
-    const results = industries.filter(industry => 
+
+    const results = industries.filter(industry =>
       industry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (industry.app_id && industry.app_id.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-    
+
     setFilteredIndustries(results);
     setTotalPages(Math.ceil(results.length / itemsPerPage));
     setCurrentPage(1); // 重置到第一页
   }, [searchTerm, industries]);
-  
+
   // 获取当前页的行业
   const getCurrentPageIndustries = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredIndustries.slice(startIndex, startIndex + itemsPerPage);
   };
-  
+
   // 分页导航
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -92,13 +95,13 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
     if (!externalDatasets) {
       fetchDatasets();
     }
-    
+
     // 如果无外部行业数据，则自行获取
     if (!externalIndustries) {
       fetchLocalIndustries();
     }
   }, [externalDatasets, externalIndustries]);
-  
+
   // 使用外部行业数据（如果提供）
   useEffect(() => {
     if (externalIndustries) {
@@ -108,18 +111,18 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
       setError(externalIndustriesError || null);
     }
   }, [externalIndustries, externalIndustriesError]);
-  
+
   // 同步加载状态
   useEffect(() => {
     if (externalIndustriesLoading !== undefined) {
       setLoading(externalIndustriesLoading);
     }
   }, [externalIndustriesLoading]);
-  
+
   // 获取素材库列表（如果没有提供外部数据集）
   const fetchDatasets = async () => {
     if (externalDatasets) return; // 如果提供了外部数据集，则不需要获取
-    
+
     try {
       setDatasetsLoading(true);
       const response = await getDatasetsApi({});
@@ -132,7 +135,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
       setDatasetsLoading(false);
     }
   };
-  
+
   // 使用外部数据集（如果提供）
   useEffect(() => {
     if (externalDatasets) {
@@ -152,13 +155,13 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
     try {
       setLoading(true);
       const industriesData = await IndustryService.getAllIndustries();
-      
+
       if (industriesData && industriesData.length > 0) {
         // 按名称排序
-        const sortedIndustries = industriesData.sort((a, b) => 
+        const sortedIndustries = industriesData.sort((a, b) =>
           a.name.localeCompare(b.name, 'zh-CN')
         );
-        
+
         setIndustries(sortedIndustries);
         setFilteredIndustries(sortedIndustries);
         setTotalPages(Math.ceil(sortedIndustries.length / itemsPerPage));
@@ -178,7 +181,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
       setLoading(false);
     }
   };
-  
+
   // 刷新行业列表（优先使用父组件提供的刷新函数）
   const fetchIndustries = async () => {
     // 如果有外部刷新函数，使用它
@@ -186,7 +189,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
       await externalRefetchIndustries();
       return;
     }
-    
+
     // 否则自行刷新
     await fetchLocalIndustries();
   };
@@ -237,7 +240,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   // 添加素材ID
   const handleAddMaterial = () => {
     if (!materialInput.trim()) return;
-    
+
     // 确保不添加重复的素材ID
     if (!formData.material_list.includes(materialInput)) {
       setFormData({
@@ -245,7 +248,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
         material_list: [...formData.material_list, materialInput]
       });
     }
-    
+
     setMaterialInput('');
   };
 
@@ -260,18 +263,18 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   // 保存行业表单
   const handleSaveIndustry = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       setFormError('行业名称不能为空');
       return;
     }
-    
+
     setSaveLoading(true);
     setFormError(null);
 
     try {
       let updatedIndustry: Industry;
-      
+
       if (createMode) {
         // 创建新行业
         updatedIndustry = await IndustryService.createIndustry(
@@ -279,7 +282,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
           formData.material_list,
           formData.app_id || undefined
         );
-        
+
         // 更新行业列表
         setIndustries(prevIndustries => {
           const newIndustries = [...prevIndustries, updatedIndustry];
@@ -295,31 +298,31 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
             app_id: formData.app_id || null
           }
         );
-        
+
         // 更新行业列表
         setIndustries(prevIndustries => {
-          const updatedIndustries = prevIndustries.map(industry => 
+          const updatedIndustries = prevIndustries.map(industry =>
             industry.id === updatedIndustry.id ? updatedIndustry : industry
           );
           return updatedIndustries.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
         });
       }
-      
+
       // 更新过滤后的行业列表
       setFilteredIndustries(prevFiltered => {
-        const updatedFiltered = searchTerm 
-          ? industries.filter(industry => 
-              industry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (industry.app_id && industry.app_id.toLowerCase().includes(searchTerm.toLowerCase()))
-            )
+        const updatedFiltered = searchTerm
+          ? industries.filter(industry =>
+            industry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (industry.app_id && industry.app_id.toLowerCase().includes(searchTerm.toLowerCase()))
+          )
           : industries;
         return updatedFiltered;
       });
-      
+
       // 显示成功提示
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      
+
       // 退出编辑模式
       setEditModeActive(false);
       setSelectedIndustry(null);
@@ -341,21 +344,21 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   // 确认删除行业
   const confirmDeleteIndustry = async () => {
     if (!industryToDelete) return;
-    
+
     try {
       setLoading(true);
       await IndustryService.deleteIndustry(industryToDelete.id);
-      
+
       // 更新行业列表
-      setIndustries(prevIndustries => 
+      setIndustries(prevIndustries =>
         prevIndustries.filter(i => i.id !== industryToDelete.id)
       );
-      
+
       // 更新过滤后的行业列表
-      setFilteredIndustries(prevFiltered => 
+      setFilteredIndustries(prevFiltered =>
         prevFiltered.filter(i => i.id !== industryToDelete.id)
       );
-      
+
       setError(null);
     } catch (err: any) {
       console.error('删除行业失败:', err);
@@ -376,7 +379,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
   // 渲染分页控件
   const renderPagination = () => {
     if (totalPages <= 1) return null;
-    
+
     return (
       <div className="flex justify-center mt-4">
         <nav className="inline-flex rounded-md shadow">
@@ -387,21 +390,20 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
           >
             上一页
           </button>
-          
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <button
               key={page}
               onClick={() => goToPage(page)}
-              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                currentPage === page
-                  ? 'bg-primary bg-opacity-10 text-primary'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${currentPage === page
+                ? 'bg-primary bg-opacity-10 text-primary'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {page}
             </button>
           ))}
-          
+
           <button
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage === totalPages}
@@ -419,20 +421,8 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">行业管理</h1>
         <div className="flex space-x-2">
-          <button
-            onClick={fetchIndustries}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors disabled:opacity-50"
-          >
-            {loading ? '刷新中...' : '刷新列表'}
-          </button>
-          <button
-            onClick={handleCreateIndustry}
-            disabled={loading}
-            className="px-4 py-2 bg-primary text-white rounded-md shadow hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition-colors disabled:opacity-50"
-          >
-            创建行业
-          </button>
+          <Button className='w-32' type="primary" disabled={loading} onClick={handleCreateIndustry} icon={<PlusOutlined />}>创建行业</Button>
+          <Button className='w-32' type="default" disabled={loading} onClick={fetchIndustries} icon={<ReloadOutlined />}>{loading ? '刷新中...' : '刷新列表'}</Button>
         </div>
       </div>
 
@@ -441,7 +431,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
           {error}
         </div>
       )}
-      
+
       {saveSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4 fixed top-4 right-4 z-50 shadow-md">
           行业信息已成功保存
@@ -450,18 +440,13 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
 
       <div className="mb-4">
         <div className="relative">
-          <input
-            type="text"
+          <BaseInput
+            prefix={<SearchOutlined className='text-gray-400' />}
+            size='large'
             placeholder="搜索行业（名称或应用ID）"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary pl-10"
           />
-          <div className="absolute left-3 top-2.5 text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
         </div>
       </div>
 
@@ -535,23 +520,23 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
               </table>
             </div>
           )}
-          
+
           {renderPagination()}
         </div>
-        
+
         {/* 行业编辑表单 */}
         {editModeActive && (
           <div className="bg-white rounded-lg shadow-md p-6 md:w-2/5">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               {createMode ? '创建新行业' : '编辑行业'}
             </h2>
-            
+
             {formError && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
                 {formError}
               </div>
             )}
-            
+
             <form onSubmit={handleSaveIndustry}>
               <div className="mb-4">
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -567,7 +552,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <label htmlFor="app_id" className="block text-sm font-medium text-gray-700 mb-1">
                   应用ID
@@ -581,7 +566,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   可访问素材库
@@ -600,8 +585,8 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
                         {datasets.map(dataset => {
                           const isSelected = formData.material_list.includes(dataset.id);
                           return (
-                            <div 
-                              key={dataset.id} 
+                            <div
+                              key={dataset.id}
                               className={`p-2 rounded-md cursor-pointer border flex items-center ${isSelected ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
                               onClick={() => {
                                 // 如果已选中，则移除
@@ -667,7 +652,7 @@ const IndustryManagement: React.FC<IndustryManagementProps> = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"

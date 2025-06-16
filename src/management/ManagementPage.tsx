@@ -7,6 +7,9 @@ import { supabase } from '../auth/supabaseConfig';
 import * as IndustryService from './industry/industryService';
 import { UserData } from '../context/type';
 import { Industry } from './industry/industryService';
+import { Tabs } from 'antd';
+
+const { TabPane } = Tabs;
 
 // Tab类型定义
 type TabType = 'users' | 'industry' | 'invitation';
@@ -25,6 +28,10 @@ const ManagementPage: React.FC = () => {
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [industriesLoading, setIndustriesLoading] = useState(false);
   const [industriesError, setIndustriesError] = useState<string | null>(null);
+
+  const changeTab = (key: string) => {
+    setActiveTab(key as TabType);
+  };
 
   // 获取素材库数据（只获取一次，两个组件共用）
   const fetchDatasets = async () => {
@@ -131,43 +138,8 @@ const ManagementPage: React.FC = () => {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">系统管理</h1>
-
-      {/* 选项卡导航 */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-          >
-            用户管理
-          </button>
-          <button
-            onClick={() => setActiveTab('industry')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'industry'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-          >
-            行业管理
-          </button>
-          <button
-            onClick={() => setActiveTab('invitation')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'invitation'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-          >
-            邀请码管理
-          </button>
-        </nav>
-      </div>
-
-      {/* 内容区域 */}
-      <div className="mt-6">
-        {activeTab === 'users' && (
+      <Tabs defaultActiveKey="systemManagement">
+        <TabPane tab="用户管理" key="users">
           <UserManagement
             externalDatasets={datasets}
             externalDatasetsLoading={datasetsLoading}
@@ -177,8 +149,8 @@ const ManagementPage: React.FC = () => {
             externalRefetchUsers={fetchUsers}
             externalIndustries={industries}
           />
-        )}
-        {activeTab === 'industry' && (
+        </TabPane>
+        <TabPane tab="行业管理" key="industry">
           <IndustryManagement
             externalDatasets={datasets}
             externalDatasetsLoading={datasetsLoading}
@@ -187,11 +159,11 @@ const ManagementPage: React.FC = () => {
             externalIndustriesError={industriesError}
             externalRefetchIndustries={fetchIndustries}
           />
-        )}
-        {activeTab === 'invitation' && (
+        </TabPane>
+        <TabPane tab="邀请码管理" key="invitation">
           <InvitationCodeManagement />
-        )}
-      </div>
+        </TabPane>
+      </Tabs>
     </div>
   );
 };

@@ -5,6 +5,8 @@ import { useIsAdmin } from '../context/userHooks';
 import { useUserEmail } from '../context/userHooks';
 import { ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
+import notifi from '../utils/notification';
+
 const { Title, Text } = Typography;
 
 interface Device {
@@ -50,7 +52,7 @@ const DeviceManagement: React.FC = () => {
       setDevices(deviceList);
     } catch (error) {
       console.error('获取设备列表失败:', error);
-      message.error('获取设备列表失败，请稍后重试');
+      notifi('获取设备列表失败，请稍后重试', 'error');
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ const DeviceManagement: React.FC = () => {
   // 过滤设备列表，根据用户权限显示
   useEffect(() => {
     if (isLoadingAdmin || isLoadingEmail) return;
-    
+
     if (isAdmin) {
       // 管理员可以查看所有设备
       setFilteredDevices(devices);
@@ -79,19 +81,19 @@ const DeviceManagement: React.FC = () => {
 
   // 存储当前运行的DAG ID
   const [currentDagRunId, setCurrentDagRunId] = useState<string | null>(null);
-  
+
   // 检查DAG运行状态的函数
   const checkDagRunStatus = async (dagRunId: string) => {
     try {
       const response = await getDagRunDetail('update_device_list', dagRunId);
       console.log('DAG运行状态:', response);
-      
+
       // 根据DAG状态更新refreshing
       if (response && response.state) {
         // 如果DAG状态为'running'或'queued'，则继续刷新状态
         if (['running', 'queued'].includes(response.state)) {
           setRefreshing(true);
-          
+
           // 继续轮询检查状态
           setTimeout(() => {
             checkDagRunStatus(dagRunId);
@@ -101,12 +103,12 @@ const DeviceManagement: React.FC = () => {
           setRefreshing(false);
           fetchDevices(); // 获取最新设备列表
           setCurrentDagRunId(null);
-          
+
           // 根据状态显示相应消息
           if (response.state === 'success') {
-            message.success('设备列表已成功刷新');
+            notifi('设备列表已成功刷新', 'success');
           } else if (response.state === 'failed') {
-            message.error('设备列表刷新失败');
+            notifi('设备列表刷新失败', 'error');
           }
         }
       }
@@ -122,15 +124,15 @@ const DeviceManagement: React.FC = () => {
     try {
       setRefreshing(true);
       const response = await triggerDagRun('update_device_list');
-      
+
       if (response && response.dag_run_id) {
-        message.success('设备刷新任务已触发，请稍后查看更新结果');
+        notifi('设备刷新任务已触发，请稍后查看更新结果', 'success');
         setCurrentDagRunId(response.dag_run_id);
-        
+
         // 开始轮询检查DAG状态
         checkDagRunStatus(response.dag_run_id);
       } else {
-        message.warning('设备刷新任务触发成功，但未返回DAG运行ID');
+        notifi('设备刷新任务触发成功，但未返回DAG运行ID', 'warning');
         // 退回到原有逻辑
         setTimeout(() => {
           fetchDevices();
@@ -139,7 +141,7 @@ const DeviceManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('刷新设备列表失败:', error);
-      message.error('刷新设备列表失败');
+      notifi('刷新设备列表失败', 'error');
       setRefreshing(false);
     }
   };
@@ -149,22 +151,22 @@ const DeviceManagement: React.FC = () => {
     try {
       // 如果不是管理员，只能添加自己的设备
       if (!isAdmin && formData.email !== userEmail) {
-        message.error('您只能添加使用自己邮箱的设备');
+        notifi('您只能添加使用自己邮箱的设备', 'error');
         return;
       }
 
       // 获取当前的设备列表
       const response = await getVariable(VARIABLE_NAME);
       const currentDevices = JSON.parse(response.value) as Device[];
-      
+
       // 检查是否已存在相同IP和端口的设备
-      if (currentDevices.some(device => 
+      if (currentDevices.some(device =>
         device.device_ip === formData.device_ip && device.port === formData.port
       )) {
-        message.error('该IP地址和端口的设备已存在，请检查后重试');
+        notifi('该IP地址和端口的设备已存在，请检查后重试', 'error');
         return;
       }
-      
+
       // 创建新设备对象
       const newDevice: Device = {
         ...formData,
@@ -174,20 +176,20 @@ const DeviceManagement: React.FC = () => {
         phone_device_num: 0,
         update_time: new Date().toISOString().replace('T', ' ').substring(0, 19)
       };
-      
+
       // 更新设备列表
       const updatedDevices = [...currentDevices, newDevice];
       await setVariable(VARIABLE_NAME, JSON.stringify(updatedDevices));
-      
+
       // 刷新设备列表并关闭模态框
-      message.success('设备添加成功');
+      notifi('设备添加成功', 'success');
       fetchDevices();
       setIsAddModalVisible(false);
       deviceForm.resetFields();
-      
+
     } catch (error) {
       console.error('添加设备失败:', error);
-      message.error('添加设备失败，请稍后重试');
+      notifi('添加设备失败，请稍后重试', 'error');
     }
   };
 
@@ -196,42 +198,42 @@ const DeviceManagement: React.FC = () => {
     try {
       // 如果不是管理员，只能删除自己的设备
       if (!isAdmin && deviceEmail !== userEmail) {
-        message.error('您只能删除自己的设备');
+        notifi('您只能删除自己的设备', 'error');
         return;
       }
 
       // 获取当前的设备列表
       const response = await getVariable(VARIABLE_NAME);
       const currentDevices = JSON.parse(response.value) as Device[];
-      
+
       // 需要获取要删除的设备的完整信息（包括IP和端口）
       // 在表格中我们只有IP和邮箱，需要找到完全匹配的记录
-      const deviceToDelete = currentDevices.find(device => 
+      const deviceToDelete = currentDevices.find(device =>
         device.device_ip === deviceIp && device.email === deviceEmail
       );
-      
+
       if (!deviceToDelete) {
-        message.error('未找到要删除的设备');
+        notifi('未找到要删除的设备', 'error');
         return;
       }
-      
+
       // 过滤掉要删除的特定设备（匹配IP和端口）
-      const updatedDevices = currentDevices.filter(device => 
-        !(device.device_ip === deviceIp && 
-          device.port === deviceToDelete.port && 
+      const updatedDevices = currentDevices.filter(device =>
+        !(device.device_ip === deviceIp &&
+          device.port === deviceToDelete.port &&
           device.email === deviceEmail)
       );
-      
+
       // 更新Airflow变量
       await setVariable(VARIABLE_NAME, JSON.stringify(updatedDevices));
-      
+
       // 刷新设备列表
-      message.success('设备删除成功');
+      notifi('设备删除成功', 'success');
       fetchDevices();
-      
+
     } catch (error) {
       console.error('删除设备失败:', error);
-      message.error('删除设备失败，请稍后重试');
+      notifi('删除设备失败，请稍后重试', 'error');
     }
   };
 
@@ -356,9 +358,9 @@ const DeviceManagement: React.FC = () => {
           okText="确定"
           cancelText="取消"
         >
-          <Button 
-            danger 
-            type="text" 
+          <Button
+            danger
+            type="text"
             icon={<DeleteOutlined />}
             title="删除设备"
           />
@@ -385,24 +387,26 @@ const DeviceManagement: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <Card 
-        title={<Title level={4}>设备管理</Title>} 
+      <Card
+        title={<Title level={4}>设备管理</Title>}
         extra={
           <Space>
-            <Button 
-              type="primary" 
+            <Button
+              className='w-32'
+              type="primary"
               onClick={showAddModal}
               icon={<PlusOutlined />}
             >
               添加设备
             </Button>
             <Tooltip title="刷新将触发Airflow DAG，更新设备状态信息">
-              <Button 
-                onClick={handleRefreshDevices} 
-                loading={refreshing}
-                icon={<ReloadOutlined spin={refreshing} />}
+              <Button
+                className='w-32'
+                onClick={handleRefreshDevices}
+                disabled={refreshing}
+                icon={<ReloadOutlined />}
               >
-                刷新设备状态
+                {refreshing ? '刷新中...' : '刷新设备状态'}
               </Button>
             </Tooltip>
           </Space>
@@ -415,9 +419,9 @@ const DeviceManagement: React.FC = () => {
               <p>暂无设备数据，请添加新设备</p>
             </div>
           ) : (
-            <Table 
-              columns={columns} 
-              dataSource={filteredDevices.map(device => ({ ...device, key: `${device.device_ip}:${device.port}` }))} 
+            <Table
+              columns={columns}
+              dataSource={filteredDevices.map(device => ({ ...device, key: `${device.device_ip}:${device.port}` }))}
               pagination={false}
               bordered
               size="middle"
@@ -450,12 +454,12 @@ const DeviceManagement: React.FC = () => {
             label="邮箱"
             rules={[{ required: true, message: '请输入邮箱' }]}
           >
-            <Input 
-              placeholder="请输入邮箱" 
-              disabled={!isAdmin && userEmail !== null} 
+            <Input
+              placeholder="请输入邮箱"
+              disabled={!isAdmin && userEmail !== null}
             />
           </Form.Item>
-          
+
           <Form.Item
             name="device_ip"
             label="设备IP"
@@ -463,7 +467,7 @@ const DeviceManagement: React.FC = () => {
           >
             <Input placeholder="请输入设备IP" />
           </Form.Item>
-          
+
           <Form.Item
             name="username"
             label="用户名"
@@ -471,7 +475,7 @@ const DeviceManagement: React.FC = () => {
           >
             <Input placeholder="请输入用户名" />
           </Form.Item>
-          
+
           <Form.Item
             name="password"
             label="密码"
@@ -479,7 +483,7 @@ const DeviceManagement: React.FC = () => {
           >
             <Input.Password placeholder="请输入密码" />
           </Form.Item>
-          
+
           <Form.Item
             name="port"
             label="端口"
@@ -487,7 +491,7 @@ const DeviceManagement: React.FC = () => {
           >
             <InputNumber min={1} max={65535} style={{ width: '100%' }} placeholder="请输入端口号" />
           </Form.Item>
-          
+
           <Form.Item>
             <div className="flex justify-end">
               <Space>

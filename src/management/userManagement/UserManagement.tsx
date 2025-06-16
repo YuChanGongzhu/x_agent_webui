@@ -5,6 +5,9 @@ import { UserProfile } from '../../context/type';
 import { UserData } from '../../context/type';
 import { getDatasetsApi, Dataset } from '../../api/dify';
 import { Industry } from '../industry/industryService';
+import { Button } from 'antd';
+import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import BaseInput from '../../components/BaseComponents/BaseInput';
 
 interface UserManagementProps {
   externalDatasets?: Dataset[];
@@ -569,13 +572,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">用户管理</h1>
-        <button
-          onClick={refreshUsers}
-          disabled={loading}
-          className="px-4 py-2 bg-primary text-white rounded-md shadow hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition-colors disabled:opacity-50"
-        >
-          {loading ? '刷新中...' : '刷新用户列表'}
-        </button>
+        <Button className='w-32' type="default" disabled={loading} onClick={refreshUsers} icon={<ReloadOutlined />}>{loading ? '刷新中...' : '刷新用户列表'}</Button>
       </div>
 
       {error && (
@@ -592,18 +589,19 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
       <div className="mb-4">
         <div className="relative">
-          <input
-            type="text"
+          <BaseInput
+            prefix={<SearchOutlined className='text-gray-400' />}
+            size='large'
             placeholder="搜索用户（邮箱、名称、部门或登录时间）"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary pl-10"
           />
-          <div className="absolute left-3 top-2.5 text-gray-400">
+
+          {/* <div className="absolute left-3 top-2.5 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-          </div>
+          </div> */}
         </div>
       </div>
 
