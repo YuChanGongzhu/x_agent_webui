@@ -577,62 +577,66 @@ const TemplateManager: React.FC = () => {
         <TabPane tab="触达用户" key="outreach">
           <Card title="用户触达管理">
             <Spin spinning={commentsLoading}>
-              <div className="mb-4 flex items-center">
-                {selectedComments.length > 0 && (
-                  <Tag color="blue" className="mr-4">
-                    {dataSource === 'intents' ?
-                      `来自意向客户分析: ${customerIntents.length} 条数据` :
-                      `选中评论: ${selectedComments.length} 条`}
-                  </Tag>
-                )}
-                <Button
-                  type="primary"
-                  icon={<SendOutlined />}
-                  className="mr-4"
-                  onClick={handleReachOut}
-                  disabled={selectedComments.length === 0 || loading}
-                >
-                  触达选中用户
-                </Button>
-                {dagRunId && (
+              <div className="mb-4 flex items-center justify-between">
+                <div>
                   <Button
+                    type="primary"
+                    icon={<SendOutlined />}
                     className="mr-4"
-                    onClick={checkDagRunStatus}
-                    disabled={loading}
+                    onClick={handleReachOut}
+                    disabled={selectedComments.length === 0 || loading}
                   >
-                    检查任务状态
+                    触达选中用户
                   </Button>
-                )}
-                {dagRunStatus && (
-                  <span className="mr-4">
-                    当前任务状态: <strong>{dagRunStatus}</strong>
-                  </span>
-                )}
-                <Button
-                  icon={selectedComments.length === 0 ? <CheckSquareOutlined /> : <DeleteOutlined />}
-                  onClick={() => {
-                    if (selectedComments.length > 0) {
-                      setSelectedComments([]);
-                    } else {
-                      if (dataSource === 'intents') {
-                        const allCommentIds = customerIntents
-                          .map(intent => intent.comment_id)
-                          .filter(id => id);
-                        setSelectedComments(allCommentIds);
+                  {dagRunId && (
+                    <Button
+                      className="mr-4"
+                      onClick={checkDagRunStatus}
+                      disabled={loading}
+                    >
+                      检查任务状态
+                    </Button>
+                  )}
+                  {dagRunStatus && (
+                    <span className="mr-4">
+                      当前任务状态: <strong>{dagRunStatus}</strong>
+                    </span>
+                  )}
+                  <Button
+                    icon={selectedComments.length === 0 ? <CheckSquareOutlined /> : <DeleteOutlined />}
+                    onClick={() => {
+                      if (selectedComments.length > 0) {
+                        setSelectedComments([]);
                       } else {
-                        const allCommentIds = comments
-                          .map(comment => comment.comment_id)
-                          .filter(id => id);
-                        setSelectedComments(allCommentIds);
+                        if (dataSource === 'intents') {
+                          const allCommentIds = customerIntents
+                            .map(intent => intent.comment_id)
+                            .filter(id => id);
+                          setSelectedComments(allCommentIds);
+                        } else {
+                          const allCommentIds = comments
+                            .map(comment => comment.comment_id)
+                            .filter(id => id);
+                          setSelectedComments(allCommentIds);
+                        }
                       }
-                    }
-                  }}
-                >
-                  {selectedComments.length > 0 ? '取消全选' : '全选'}
-                </Button>
+                    }}
+                  >
+                    {selectedComments.length > 0 ? '取消全选' : '全选'}
+                  </Button>
+                </div>
+                <div>
+                  {selectedComments.length > 0 && (
+                    <Tag color="blue" className="mr-4">
+                      {dataSource === 'intents' ?
+                        `来自意向客户分析: ${customerIntents.length} 条数据` :
+                        `选中评论: ${selectedComments.length} 条`}
+                    </Tag>
+                  )}
+                </div>
               </div>
 
-              <div className="mb-2">
+              <div className="text-sm text-gray-500 mb-2">
                 已选择 {selectedComments.length} 条{dataSource === 'intents' ? '意向客户' : '评论'}
               </div>
 
@@ -666,7 +670,7 @@ const TemplateManager: React.FC = () => {
               ) : (
                 <Table
                   className="h-[34vw] overflow-y-auto overflow-x-auto w-full"
-                  dataSource={comments.filter(comment => selectedComments.includes(comment.comment_id))}
+                  dataSource={comments}
                   columns={commentColumns}
                   rowKey="comment_id"
                   pagination={{
