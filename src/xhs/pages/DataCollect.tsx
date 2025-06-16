@@ -275,7 +275,7 @@ const DataCollect: React.FC = () => {
         start_date: response.start_date || new Date().toISOString(),
         end_date: response.end_date || '',
         note: response.note || '',
-        conf: JSON.stringify(conf) 
+        conf: JSON.stringify(conf)
       };
 
       setTasks([newTask, ...tasks]);
@@ -590,7 +590,7 @@ const DataCollect: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
             <form onSubmit={handleCreateNotesTask} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <BaseInput size='large' className="w-full" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键字">
                   <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
                 </BaseInput>
@@ -601,7 +601,7 @@ const DataCollect: React.FC = () => {
                   {/* <label className="block text-sm font-medium text-gray-700 mb-1">目标邮箱</label> */}
                 </BaseInput>
                 <BaseSelect size='large' className="w-full" value={noteType} showSearch options={["图文", "视频"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setNoteType(value)}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">笔记类型</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">笔记类型</label>
                 </BaseSelect>
                 <div className="flex items-end">
                   <button
@@ -714,8 +714,8 @@ const DataCollect: React.FC = () => {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {collectionQuantity} {isCommentTask ? '评论' : '笔记'}
                               </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {noteType?noteType:'图文'}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {noteType ? noteType : '图文'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {task.dag_run_id}
@@ -968,7 +968,7 @@ const DataCollect: React.FC = () => {
                                 />
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.note_type?note.note_type:'图文'}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.note_type ? note.note_type : '图文'}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                                 <Tooltipwrap title={note.title}>
                                   {note.title}
