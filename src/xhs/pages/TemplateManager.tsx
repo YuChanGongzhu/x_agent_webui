@@ -609,15 +609,6 @@ const TemplateManager: React.FC = () => {
                   </span>
                 )}
                 <Button
-                  icon={<ImportOutlined />}
-                  onClick={() => {
-                    setSelectedComments([]);
-                    window.location.href = '/data-analyze';
-                  }}
-                >
-                  选择意向客户
-                </Button>
-                <Button
                   icon={selectedComments.length === 0 ? <CheckSquareOutlined /> : <DeleteOutlined />}
                   onClick={() => {
                     if (selectedComments.length > 0) {

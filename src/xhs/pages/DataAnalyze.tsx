@@ -9,7 +9,7 @@ import TooltipIcon from '../../components/BaseComponents/TooltipIcon'
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
-import { Button } from 'antd';
+import { Button, Space } from 'antd';
 
 import { XhsComment } from '../../api/mysql';
 type Comment = XhsComment;
@@ -52,6 +52,7 @@ const DataAnalyze: React.FC = () => {
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [refreshingTasks, setRefreshingTasks] = useState(false);
 
   // State for tab navigation
   const [activeTab, setActiveTab] = useState<'comments' | 'intents'>('comments');
@@ -482,9 +483,9 @@ const DataAnalyze: React.FC = () => {
 
   return (
     <div>
-      {/* Keyword Selection */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-2">
-        <BaseSelect disabled={loading} size='large' className="w-1/2" showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} value={selectedKeyword} onChange={(value) => {
+      <div className='p-6'>
+        {/* Keyword Selection */}
+        <BaseSelect disabled={loading} size='large' className='w-full' showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} value={selectedKeyword} onChange={(value) => {
           setSelectedKeyword(value);
           setLatestKeyword(value);
         }}>
@@ -494,28 +495,50 @@ const DataAnalyze: React.FC = () => {
       {
         originalComments.length > 0 ? (<>
           {/* Tabs Navigation */}
-          <div className="mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex">
-                <button
-                  onClick={() => setActiveTab('comments')}
-                  className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'comments' ? 'border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                >
-                  评论数据
-                </button>
-                <button
-                  onClick={() => setActiveTab('intents')}
-                  className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'intents' ? 'border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                >
-                  意向客户
-                </button>
-              </nav>
-            </div>
+          <div className="flex border-b border-gray-200 mb-2">
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'comments' ? 'border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            >
+              评论数据
+            </button>
+            <button
+              onClick={() => setActiveTab('intents')}
+              className={`py-2 px-4 text-center border-b-2 font-medium text-sm ${activeTab === 'intents' ? 'border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            >
+              意向客户
+            </button>
           </div>
           {/* Comments Tab Content */}
           {activeTab === 'comments' && <>
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
+                <button
+                  onClick={async () => {
+                    setRefreshingTasks(true);
+                    try {
+                      await fetchComments(selectedKeyword);
+                    } finally {
+                      setRefreshingTasks(false);
+                    }
+                  }}
+                  className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  title="刷新任务列表"
+                  disabled={refreshingTasks}
+                >
+                  {refreshingTasks ? (
+                    <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <BaseInput size='large' type='number' className="w-full" value={minLikes} onChange={(e) => setMinLikes(parseInt(e.target.value))} onBlur={() => {
                   if (!minLikes) {
@@ -710,7 +733,33 @@ const DataAnalyze: React.FC = () => {
           {/* Customer Intent Data - Only show in Intents Tab */}
           {activeTab === 'intents' && (
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">意向客户数据 <TooltipIcon tooltipProps={{ title: "意向客户数据为分析后的数据，可能存在误差，请谨慎使用" }} /></h2>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-semibold mb-4">意向客户数据 <TooltipIcon tooltipProps={{ title: "意向客户数据为分析后的数据，可能存在误差，请谨慎使用" }} /></h2>
+                <button
+                  onClick={async () => {
+                    setRefreshingTasks(true);
+                    try {
+                      await fetchCustomerIntents();
+                    } finally {
+                      setRefreshingTasks(false);
+                    }
+                  }}
+                  className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  title="刷新任务列表"
+                  disabled={refreshingTasks}
+                >
+                  {refreshingTasks ? (
+                    <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={uniqueKeywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
                   setSelectedKeyword(value);
@@ -867,8 +916,11 @@ const DataAnalyze: React.FC = () => {
           )}
         </>) : (<>
           <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
-            <h2 className="text-lg font-semibold mb-4">未找到关键词“ {selectedKeyword} ”的评论数据，请先采集数据</h2>
-            <Button type="primary" onClick={() => navigate(`/xhs/collect?keyword=${selectedKeyword}&&tab=评论`)}>去采集数据</Button>
+            <h2 className="text-lg font-semibold mb-4">未找到关键词“ {selectedKeyword} ”的评论数据，请先采集/刷新数据</h2>
+            <Space>
+              <Button className='w-24' type="primary" onClick={() => navigate(`/xhs/collect?keyword=${selectedKeyword}&&tab=评论`)}>采集数据</Button>
+              <Button className='w-24' type="default" disabled={loading} onClick={() => fetchComments(selectedKeyword)}>刷新数据</Button>
+            </Space>
           </div>
         </>)
       }

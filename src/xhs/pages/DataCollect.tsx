@@ -9,6 +9,9 @@ import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
+import { Tabs } from 'antd';
+
+const { TabPane } = Tabs;
 
 interface Note {
   id: number;
@@ -577,39 +580,12 @@ const DataCollect: React.FC = () => {
         <BaseSelect size='large' className="w-full" value={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
           <h2 className="text-lg font-semibold mb-4">目标邮箱</h2>
         </BaseSelect>
-        {/* <select
-              value={targetEmail}
-              onChange={(e) => setTargetEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-            >
-              {availableEmails.length === 0 ? (
-                <option value="">无可用邮箱</option>
-              ) : (
-                availableEmails.map((email) => (
-                  <option key={email} value={email}>{email}</option>
-                ))
-              )}
-            </select> */}
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 mb-2">
-        {(['任务', '笔记', '评论'] as TabType[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`py-2 px-4 font-medium text-sm ${activeTab === tab
-              ? 'border-b-2 border-[rgba(248,213,126,1)] text-[rgba(248,213,126,1)]'
-              : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Task Tab Content */}
-      {activeTab === '任务' && (
-        <>
+      <Tabs defaultActiveKey="collect">
+        <TabPane tab="任务" key="tasks">
+          {/* Task Tab Content */}
           {/* Create Notes Collection Task */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
@@ -639,7 +615,6 @@ const DataCollect: React.FC = () => {
               </div>
             </form>
           </div>
-
           {/* Recent Tasks */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <div className="flex justify-between items-center mb-2">
@@ -678,7 +653,7 @@ const DataCollect: React.FC = () => {
                 </div>
 
                 <div className="w-full h-full">
-                  <div className="h-[38vh] overflow-y-auto overflow-x-auto w-full">
+                  <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
                     <table className="w-full h-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
@@ -839,12 +814,9 @@ const DataCollect: React.FC = () => {
               <p className="text-gray-500">没有找到笔记采集任务记录</p>
             )}
           </div>
-        </>
-      )}
-
-      {/* Notes Tab Content */}
-      {activeTab === '笔记' && (
-        <>
+        </TabPane>
+        <TabPane tab="笔记" key="notes">
+          {/* Notes Tab Content */}
           {/* Keyword Selection */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <div className="flex justify-between items-center mb-4">
@@ -882,7 +854,7 @@ const DataCollect: React.FC = () => {
 
           {/* Display Collected Notes */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-semibold">已采集的笔记</h2>
                 <div className="flex items-center">
@@ -931,9 +903,8 @@ const DataCollect: React.FC = () => {
             </div>
             {notes.length > 0 ? (
               <>
-                <div className="flex justify-between items-center mb-2">
-                  <p>原始笔记数量: {notes.length}</p>
-                  <p>已选择: {selectedNotes.length} 条笔记</p>
+                <div className="text-sm text-gray-500 mb-2">
+                  原始笔记数量: {notes.length}
                 </div>
                 <div className="w-full h-full">
                   <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
@@ -1096,12 +1067,9 @@ const DataCollect: React.FC = () => {
               <p className="text-yellow-600">⚠️ 没有找到相关笔记数据</p>
             )}
           </div>
-        </>
-      )}
-
-      {/* Comments Tab Content */}
-      {activeTab === '评论' && (
-        <>
+        </TabPane>
+        <TabPane tab="评论" key="comments">
+          {/* Comments Tab Content */}
           {/* Keyword Selection and Comment Collection */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
@@ -1122,200 +1090,186 @@ const DataCollect: React.FC = () => {
                 </button>
               </div>
             </div>
-            {/* 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
-                <select
-                  value={selectedKeyword}
-                  onChange={(e) => setSelectedKeyword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-                >
-                  {keywords.map((kw) => (
-                    <option key={kw} value={kw}>{kw}</option>
-                  ))}
-                </select>
-              </div>
-              
-            </div> */}
           </div>
-        </>
-      )}
-
-      {/* Display Collected Comments - Only shown in the Comments tab */}
-      {activeTab === '评论' && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">已采集的评论</h2>
-            <button
-              onClick={async () => {
-                setRefreshingComments(true);
-                try {
-                  await fetchComments(selectedKeyword);
-                } finally {
-                  setRefreshingComments(false);
-                }
-              }}
-              className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingComments ? 'opacity-70 cursor-not-allowed' : ''}`}
-              title="刷新评论列表"
-              disabled={refreshingComments}
-            >
-              {refreshingComments ? (
-                <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              )}
-            </button>
-          </div>
-          {comments.length > 0 ? (
-            <>
-              <p className="mb-2">原始评论数量: {comments.length}</p>
-              <div className="w-full h-full">
-                <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
-                  <table className="w-full h-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
-                          const sortComments = [...comments].sort((a, b) => {
-                            return new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime();
-                          })
-                          setComments(sortComments);
-                        }} onDown={() => {
-                          const sortComments = [...comments].sort((a, b) => {
-                            return new Date(b.collect_time || 0).getTime() - new Date(a.collect_time || 0).getTime();
-                          })
-                          setComments(sortComments);
-                        }} onReset={() => {
-                          setComments(sortComments);
-                        }} /></span></th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论时间</span><SortUpOrDownButton onUp={() => {
-                          const sortComments = [...comments].sort((a, b) => {
-                            return new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime();
-                          })
-                          setComments(sortComments);
-                        }} onDown={() => {
-                          const sortComments = [...comments].sort((a, b) => {
-                            return new Date(b.comment_time || 0).getTime() - new Date(a.comment_time || 0).getTime();
-                          })
-                          setComments(sortComments);
-                        }} onReset={() => {
-                          setComments(sortComments);
-                        }} /></span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {comments
-                        .slice((currentCommentsPage - 1) * commentsPerPage, currentCommentsPage * commentsPerPage)
-                        .map((comment) => (
-                          <tr key={comment.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <Tooltipwrap title={comment.note_url}>
-                                <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                                  {comment.note_url}
-                                </a>
-                              </Tooltipwrap>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
-                            <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                              <Tooltipwrap title={comment.content}>
-                                {comment.content || '无内容'}
-                              </Tooltipwrap>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{comment.collect_time ? formatDate(comment.collect_time) : '未采集'}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(comment.comment_time)}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Pagination for comments */}
-                {comments.length > 0 && (
-                  <div className="flex justify-center mt-4">
-                    <nav className="flex items-center">
-
-                      <button
-                        onClick={() => paginateComments(1)}
-                        disabled={currentCommentsPage === 1}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        首页
-                      </button>
-                      <button
-                        onClick={() => paginateComments(currentCommentsPage - 1)}
-                        disabled={currentCommentsPage === 1}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        上一页
-                      </button>
-
-                      {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map((_, i) => {
-                        let pageNum: number = 0; // Initialize with default value
-                        const totalPages = Math.ceil(comments.length / commentsPerPage);
-
-                        // Logic to show page numbers centered around current page
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentCommentsPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentCommentsPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentCommentsPage - 2 + i;
-                        }
-
-                        if (pageNum > 0 && pageNum <= totalPages) {
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => paginateComments(pageNum)}
-                              className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        }
-                        return null;
-                      })}
-
-                      <button
-                        onClick={() => paginateComments(currentCommentsPage + 1)}
-                        disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        下一页
-                      </button>
-                      <button
-                        onClick={() => paginateComments(Math.ceil(comments.length / commentsPerPage))}
-                        disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
-                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                      >
-                        末页
-                      </button>
-                    </nav>
-                  </div>
+          {/* Display Collected Comments - Only shown in the Comments tab */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-semibold">已采集的评论</h2>
+              <button
+                onClick={async () => {
+                  setRefreshingComments(true);
+                  try {
+                    await fetchComments(selectedKeyword);
+                  } finally {
+                    setRefreshingComments(false);
+                  }
+                }}
+                className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingComments ? 'opacity-70 cursor-not-allowed' : ''}`}
+                title="刷新评论列表"
+                disabled={refreshingComments}
+              >
+                {refreshingComments ? (
+                  <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                 )}
-              </div>
-            </>
-          ) : (
-            <p className="text-yellow-600">⚠️ 没有找到相关评论数据</p>
-          )}
-        </div>
-      )}
-    </div>
+              </button>
+            </div>
+            {comments.length > 0 ? (
+              <>
+                <div className="text-sm text-gray-500 mb-2">
+                  原始评论数量: {comments.length}
+                </div>
+                <div className="w-full h-full">
+                  <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
+                    <table className="w-full h-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>采集时间</span><SortUpOrDownButton onUp={() => {
+                            const sortComments = [...comments].sort((a, b) => {
+                              return new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime();
+                            })
+                            setComments(sortComments);
+                          }} onDown={() => {
+                            const sortComments = [...comments].sort((a, b) => {
+                              return new Date(b.collect_time || 0).getTime() - new Date(a.collect_time || 0).getTime();
+                            })
+                            setComments(sortComments);
+                          }} onReset={() => {
+                            setComments(sortComments);
+                          }} /></span></th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><span className="inline-flex items-center"><span>评论时间</span><SortUpOrDownButton onUp={() => {
+                            const sortComments = [...comments].sort((a, b) => {
+                              return new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime();
+                            })
+                            setComments(sortComments);
+                          }} onDown={() => {
+                            const sortComments = [...comments].sort((a, b) => {
+                              return new Date(b.comment_time || 0).getTime() - new Date(a.comment_time || 0).getTime();
+                            })
+                            setComments(sortComments);
+                          }} onReset={() => {
+                            setComments(sortComments);
+                          }} /></span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {comments
+                          .slice((currentCommentsPage - 1) * commentsPerPage, currentCommentsPage * commentsPerPage)
+                          .map((comment) => (
+                            <tr key={comment.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <Tooltipwrap title={comment.note_url}>
+                                  <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                                    {comment.note_url}
+                                  </a>
+                                </Tooltipwrap>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                                <Tooltipwrap title={comment.content}>
+                                  {comment.content || '无内容'}
+                                </Tooltipwrap>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{comment.collect_time ? formatDate(comment.collect_time) : '未采集'}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(comment.comment_time)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Pagination for comments */}
+                  {comments.length > 0 && (
+                    <div className="flex justify-center mt-4">
+                      <nav className="flex items-center">
+
+                        <button
+                          onClick={() => paginateComments(1)}
+                          disabled={currentCommentsPage === 1}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          首页
+                        </button>
+                        <button
+                          onClick={() => paginateComments(currentCommentsPage - 1)}
+                          disabled={currentCommentsPage === 1}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          上一页
+                        </button>
+
+                        {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map((_, i) => {
+                          let pageNum: number = 0; // Initialize with default value
+                          const totalPages = Math.ceil(comments.length / commentsPerPage);
+
+                          // Logic to show page numbers centered around current page
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentCommentsPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentCommentsPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentCommentsPage - 2 + i;
+                          }
+
+                          if (pageNum > 0 && pageNum <= totalPages) {
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => paginateComments(pageNum)}
+                                className={`px-3 py-1 mx-1 rounded ${currentCommentsPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          }
+                          return null;
+                        })}
+
+                        <button
+                          onClick={() => paginateComments(currentCommentsPage + 1)}
+                          disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          下一页
+                        </button>
+                        <button
+                          onClick={() => paginateComments(Math.ceil(comments.length / commentsPerPage))}
+                          disabled={currentCommentsPage === Math.ceil(comments.length / commentsPerPage)}
+                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                        >
+                          末页
+                        </button>
+                      </nav>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-yellow-600">⚠️ 没有找到相关评论数据</p>
+            )}
+          </div>
+
+        </TabPane>
+      </Tabs >
+    </div >
   );
 };
+
 
 export default DataCollect;

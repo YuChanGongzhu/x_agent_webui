@@ -386,7 +386,7 @@ const DeviceManagement: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="w-full">
       <Card
         title={<Title level={4}>设备管理</Title>}
         extra={
