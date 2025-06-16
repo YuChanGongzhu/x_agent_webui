@@ -38,7 +38,7 @@ function App() {
                           <Route path="/manage" element={<ManagementPage />} />
                           {/* <Route path="/xhs" element={<XHSAutomation />} /> */}
                           <Route path="/xhs/collect" element={<DataCollect />} />
-                          <Route path="/xhs/filter" element={<DataFilter />} />
+                          {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
                           <Route path="/xhs/analyze" element={<DataAnalyze />} />
                           <Route path="/xhs/generate" element={<GenerateMsg />} />
                           <Route path="/xhs/templates" element={<TemplateManager />} />

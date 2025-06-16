@@ -48,7 +48,7 @@ const initialMenuItems: NavItemWithIcons[] = [
     subItems: [
       // { name: '自动化任务', url: '/xhs' },
       { name: '数据采集', url: '/xhs/collect' },
-      { name: '数据筛选', url: '/xhs/filter' },
+      // { name: '数据筛选', url: '/xhs/filter' },
       { name: '数据分析', url: '/xhs/analyze' },
       { name: '触达用户', url: '/xhs/templates' },
       { name: '私信管理', url: '/xhs/generate' },
