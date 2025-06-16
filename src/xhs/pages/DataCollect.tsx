@@ -26,6 +26,7 @@ interface Note {
   note_time?: string;
   collect_time?: string;
   collects?: number;
+  note_type?: string;
 }
 
 interface Comment {
@@ -69,6 +70,7 @@ const DataCollect: React.FC = () => {
   // State for form inputs
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(10);
+  const [noteType, setNoteType] = useState('图文');
   const [maxComments, setMaxComments] = useState(10);
   // 使用localStorage存储目标邮箱，确保页面刷新后仍然保持选择
   const [targetEmail, setTargetEmail] = useState(() => {
@@ -253,7 +255,8 @@ const DataCollect: React.FC = () => {
       const conf = {
         keyword,
         max_notes: maxNotes,
-        email: targetEmail
+        email: targetEmail,
+        note_type: noteType
       };
 
       const response = await triggerDagRun(
@@ -269,7 +272,7 @@ const DataCollect: React.FC = () => {
         start_date: response.start_date || new Date().toISOString(),
         end_date: response.end_date || '',
         note: response.note || '',
-        conf: JSON.stringify(conf)
+        conf: JSON.stringify(conf) 
       };
 
       setTasks([newTask, ...tasks]);
@@ -304,7 +307,8 @@ const DataCollect: React.FC = () => {
       const conf: any = {
         keyword: selectedKeyword,
         max_comments: maxComments,
-        email: targetEmail
+        email: targetEmail,
+        note_type: noteType
       };
 
       // Add selected note URLs if any are selected
@@ -472,6 +476,7 @@ const DataCollect: React.FC = () => {
           userInfo: item.userInfo || email || '', // Add userInfo field with global email as default
           note_location: item.note_location || '无地区',
           note_time: item.note_time || '',
+          note_type: item.note_type || '',
           collect_time: item.collect_time || '',
           collects: item.collects || item.collect_count || 0
         }));
@@ -619,6 +624,9 @@ const DataCollect: React.FC = () => {
                 <BaseInput type='hidden' size='large' className="w-full absolute" value={targetEmail} >
                   {/* <label className="block text-sm font-medium text-gray-700 mb-1">目标邮箱</label> */}
                 </BaseInput>
+                <BaseSelect size='large' className="w-full" value={noteType} showSearch options={["图文", "视频"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setNoteType(value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">笔记类型</label>
+                </BaseSelect>
                 <div className="flex items-end">
                   <button
                     type="submit"
@@ -681,6 +689,9 @@ const DataCollect: React.FC = () => {
                             收集数量
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            采集类型
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             任务ID
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -699,6 +710,7 @@ const DataCollect: React.FC = () => {
                           let keyword = "";
                           let collectionQuantity = 0;
                           let isCommentTask = false;
+                          let noteType = "";
 
                           try {
                             const conf = JSON.parse(task.conf);
@@ -713,6 +725,7 @@ const DataCollect: React.FC = () => {
                             } else {
                               collectionQuantity = conf.max_notes || 0;
                             }
+                            noteType = conf.note_type || "";
                           } catch (e) {
                             // Handle parsing error
                             console.error("Error parsing task configuration:", e);
@@ -725,6 +738,9 @@ const DataCollect: React.FC = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {collectionQuantity} {isCommentTask ? '评论' : '笔记'}
+                              </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {noteType?noteType:'图文'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {task.dag_run_id}
@@ -926,6 +942,7 @@ const DataCollect: React.FC = () => {
                         <tr>
                           <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">选择</th>
                           <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">采集类型</th>
                           <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
                           <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
                           <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
@@ -980,6 +997,7 @@ const DataCollect: React.FC = () => {
                                 />
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.id}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{note.note_type?note.note_type:'图文'}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                                 <Tooltipwrap title={note.title}>
                                   {note.title}
