@@ -50,8 +50,7 @@ interface Comment {
 }
 
 // Tab types
-type TabType = '任务' | '笔记' | '评论';
-
+type TabType = 'tasks' | 'notes' | 'comments';
 interface Task {
   dag_run_id: string;
   state: string;
@@ -68,7 +67,7 @@ const DataCollect: React.FC = () => {
   const [refreshingTasks, setRefreshingTasks] = useState(false);
   const [refreshingComments, setRefreshingComments] = useState(false);
   // State for tab navigation
-  const [activeTab, setActiveTab] = useState<TabType>('任务');
+  const [activeTab, setActiveTab] = useState<TabType>('tasks');
 
   // State for form inputs
   const [keyword, setKeyword] = useState('');
@@ -186,6 +185,7 @@ const DataCollect: React.FC = () => {
     }
     if (tab) {
       setActiveTab(tab as TabType);
+      window.history.replaceState({}, '', '/xhs/collect');
     }
   }, []);
 
@@ -583,7 +583,7 @@ const DataCollect: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <Tabs defaultActiveKey="collect">
+      <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as TabType)}>
         <TabPane tab="任务" key="tasks">
           {/* Task Tab Content */}
           {/* Create Notes Collection Task */}
