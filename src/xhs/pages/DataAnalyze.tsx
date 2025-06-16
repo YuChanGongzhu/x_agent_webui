@@ -239,7 +239,6 @@ const DataAnalyze: React.FC = () => {
           setOriginalComments([]);
           setFilteredComments([]);
           setSortFilteredComments([]);
-          notifi(`未找到关键词 "${keyword}" 的评论数据`, 'error');
         }
       } else {
         setOriginalComments([]);
@@ -768,7 +767,7 @@ const DataAnalyze: React.FC = () => {
                   <>
                     <p className="mb-2">找到 {filteredIntents.length} 条意向客户数据</p>
                     <div className="w-full h-full">
-                      <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[10vh]' : 'h-[14vh]'} overflow-y-auto overflow-x-auto w-full`}>
+                      <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[10vh]' : 'h-[34vh]'} overflow-y-auto overflow-x-auto w-full`}>
                         <table className="w-full h-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
