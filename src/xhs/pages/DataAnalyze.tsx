@@ -55,9 +55,9 @@ const DataAnalyze: React.FC = () => {
   const [itemsPerPage] = useState(10);
   const [refreshingTasks, setRefreshingTasks] = useState(false);
 
-  type TabType = 'comments' | 'intents';
+  type TabType = 'analyze' | 'intents';
   // State for tab navigation
-  const [activeTab, setActiveTab] = useState<TabType>('comments');
+  const [activeTab, setActiveTab] = useState<TabType>('analyze');
 
   // Pagination function
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
