@@ -10,7 +10,7 @@ interface EditConfig {
 interface BaseListUserItemProps {
     idx?: number;
     item: {
-        username: string;
+        user_name: string;
         message_type: string;
     },
     editConfig?: EditConfig[]
@@ -25,7 +25,7 @@ const BaseListUserItem: React.FC<BaseListUserItemProps> = ({ item, editConfig = 
     return <List.Item className='flex'>
         <List.Item.Meta
             avatar={<Avatar src={randomAvatar(idx)} />}
-            title={item.username}
+            title={item.user_name}
             description={item.message_type}
         />
         {

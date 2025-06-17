@@ -3,169 +3,170 @@ const roomListUrl = process.env.REACT_APP_GET_ROOM_LIST;
 const roomMpListUrl = process.env.REACT_APP_GET_MP_ROOM_LIST;
 const roomMpMsgListUrl = process.env.REACT_APP_GET_MP_ROOM_MSG_LIST;
 const tokenUsageUrl = process.env.REACT_APP_GET_CHAT_TOKEN;
-const getNoteUrl=process.env.REACT_APP_TECENT_GET_NOTES;
-const getKeywordUrl=process.env.REACT_APP_TECENT_GET_KEYWORDS;
-const getCommentsUrl=process.env.REACT_APP_TECENT_GET_COMMENTS;
-const getCommentsKeywordUrl=process.env.REACT_APP_TECENT_GET_COMMENTS_KEYWORD;
-const getIntentCustomersUrl=process.env.REACT_APP_TECENT_GET_INTENT_CUSTOMERS;
-const getReplyTemplatesUrl=process.env.REACT_APP_TECENT_GET_REPLY_TEMPLATES;
-const updateReplyTemplateUrl=process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLATE;
+const getNoteUrl = process.env.REACT_APP_TECENT_GET_NOTES;
+const getKeywordUrl = process.env.REACT_APP_TECENT_GET_KEYWORDS;
+const getCommentsUrl = process.env.REACT_APP_TECENT_GET_COMMENTS;
+const getCommentsKeywordUrl = process.env.REACT_APP_TECENT_GET_COMMENTS_KEYWORD;
+const getIntentCustomersUrl = process.env.REACT_APP_TECENT_GET_INTENT_CUSTOMERS;
+const getReplyTemplatesUrl = process.env.REACT_APP_TECENT_GET_REPLY_TEMPLATES;
+const updateReplyTemplateUrl = process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLATE;
+const getXhsDevicesMsgListUrl = process.env.REACT_APP_TECENT_GET_XHS_DEVICES_MSG_LIST;
 
 export interface ChatMessage {
-    msg_id: string;
-    wx_user_id: string;
-    wx_user_name: string;
-    room_id: string;
-    room_name: string;
-    sender_id: string;
-    sender_name: string;
-    msg_type: number;
-    msg_type_name: string;
-    content: string;
-    msg_datetime: string;
+  msg_id: string;
+  wx_user_id: string;
+  wx_user_name: string;
+  room_id: string;
+  room_name: string;
+  sender_id: string;
+  sender_name: string;
+  msg_type: number;
+  msg_type_name: string;
+  content: string;
+  msg_datetime: string;
 }
 
 export interface ChatMessagesResponse {
-    code: number;
-    message: string;
-    data: {
-        total: number;
-        records: ChatMessage[];
-    };
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    records: ChatMessage[];
+  };
 }
 
 export const getChatMessagesApi = async (params: {
-    room_id?: string;
-    wx_user_id?: string;
-    sender_id?: string;
-    start_time?: string;
-    end_time?: string;
-    limit?: number;
-    offset?: number;
+  room_id?: string;
+  wx_user_id?: string;
+  sender_id?: string;
+  start_time?: string;
+  end_time?: string;
+  limit?: number;
+  offset?: number;
 }) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value.toString());
-    });
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) queryParams.append(key, value.toString());
+  });
 
-    const response = await fetch(`${roomMsgListUrl}/messages?${queryParams.toString()}`);
-    if (!response.ok) {
-        throw new Error('Failed to fetch chat messages');
-    }
-    return response.json() as Promise<ChatMessagesResponse>;
+  const response = await fetch(`${roomMsgListUrl}/messages?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat messages');
+  }
+  return response.json() as Promise<ChatMessagesResponse>;
 };
 
 export interface RoomListMessage {
-    room_id: string;
-    room_name: string;
-    wx_user_id: string;
-    wx_user_name: string;
-    sender_id: string;
-    sender_name: string;
-    msg_id: string;
-    msg_content: string;
-    msg_datetime: string;
-    msg_type: number;
-    is_group: boolean;
+  room_id: string;
+  room_name: string;
+  wx_user_id: string;
+  wx_user_name: string;
+  sender_id: string;
+  sender_name: string;
+  msg_id: string;
+  msg_content: string;
+  msg_datetime: string;
+  msg_type: number;
+  is_group: boolean;
 }
 
 export interface RoomListMessagesResponse {
-    code: number;
-    message: string;
-    data: RoomListMessage[];
+  code: number;
+  message: string;
+  data: RoomListMessage[];
 }
 
 export const getRoomListMessagesApi = async (params: {
-    wx_user_id?: string;
+  wx_user_id?: string;
 }) => {
-    const queryParams = new URLSearchParams();
-    if (params.wx_user_id) {
-        queryParams.append('wx_user_id', params.wx_user_id);
-    }
+  const queryParams = new URLSearchParams();
+  if (params.wx_user_id) {
+    queryParams.append('wx_user_id', params.wx_user_id);
+  }
 
-    const response = await fetch(`${roomListUrl}?${queryParams.toString()}`);
-    if (!response.ok) {
-        throw new Error('Failed to fetch chat messages');
-    }
-    return response.json() as Promise<RoomListMessagesResponse>;
+  const response = await fetch(`${roomListUrl}?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat messages');
+  }
+  return response.json() as Promise<RoomListMessagesResponse>;
 };
 
 export const getChatMpMessagesApi = async (params: {
-    room_id?: string;
-    wx_user_id?: string;
-    sender_id?: string;
-    start_time?: string;
-    end_time?: string;
-    limit?: number;
-    offset?: number;
+  room_id?: string;
+  wx_user_id?: string;
+  sender_id?: string;
+  start_time?: string;
+  end_time?: string;
+  limit?: number;
+  offset?: number;
 }) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value.toString());
-    });
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) queryParams.append(key, value.toString());
+  });
 
-    const response = await fetch(`${roomMpMsgListUrl}/messages?${queryParams.toString()}`);
-    if (!response.ok) {
-        throw new Error('Failed to fetch chat MP messages');
-    }
-    return response.json() as Promise<ChatMessagesResponse>;
+  const response = await fetch(`${roomMpMsgListUrl}/messages?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat MP messages');
+  }
+  return response.json() as Promise<ChatMessagesResponse>;
 };
 
 export const getRoomMpListMessagesApi = async (params: {
-    wx_user_id?: string;
+  wx_user_id?: string;
 }) => {
-    const queryParams = new URLSearchParams();
-    if (params.wx_user_id) {
-        queryParams.append('wx_user_id', params.wx_user_id);
-    }
+  const queryParams = new URLSearchParams();
+  if (params.wx_user_id) {
+    queryParams.append('wx_user_id', params.wx_user_id);
+  }
 
-    const response = await fetch(`${roomMpListUrl}?${queryParams.toString()}`);
-    if (!response.ok) {
-        throw new Error('Failed to fetch chat MP room messages');
-    }
-    return response.json() as Promise<RoomListMessagesResponse>;
+  const response = await fetch(`${roomMpListUrl}?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat MP room messages');
+  }
+  return response.json() as Promise<RoomListMessagesResponse>;
 };
 
 // Interface for WeChat Public Account room list items
 export interface MpRoomListMessage {
-    room_id: string;
-    room_name: string;
-    user_id: string;
-    sender_id: string;
-    sender_name: string;
-    msg_id: string;
-    msg_type: string; // Changed to string based on SQL schema
-    msg_content: string;
-    msg_datetime: string;
-    is_group: boolean;
+  room_id: string;
+  room_name: string;
+  user_id: string;
+  sender_id: string;
+  sender_name: string;
+  msg_id: string;
+  msg_type: string; // Changed to string based on SQL schema
+  msg_content: string;
+  msg_datetime: string;
+  is_group: boolean;
 }
 
 // Interface for WeChat Public Account chat messages
 export interface MpChatMessage {
-    msg_id: string;
-    sender_id: string;
-    sender_name: string;
-    receiver_id: string;
-    msg_type: string;
-    msg_content: string;
-    msg_datetime: string;
+  msg_id: string;
+  sender_id: string;
+  sender_name: string;
+  receiver_id: string;
+  msg_type: string;
+  msg_content: string;
+  msg_datetime: string;
 }
 
 export interface MpChatMessagesResponse {
-    code: number;
-    message: string;
-    data: {
-        total: number;
-        records: MpChatMessage[];
-        limit: number;
-        offset: number;
-    };
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    records: MpChatMessage[];
+    limit: number;
+    offset: number;
+  };
 }
 
 export interface MpRoomListResponse {
-    code: number;
-    message: string;
-    data: MpRoomListMessage[];
+  code: number;
+  message: string;
+  data: MpRoomListMessage[];
 }
 
 /**
@@ -175,28 +176,28 @@ export interface MpRoomListResponse {
  * @param params.gh_user_id Optional public account ID to filter results
  */
 export const getMpRoomListApi = async (params?: {
-    gh_user_id?: string;
+  gh_user_id?: string;
 }) => {
-    try {
-        const queryParams = new URLSearchParams();
-        if (params?.gh_user_id) {
-            queryParams.append('gh_user_id', params.gh_user_id);
-        }
-
-        const baseUrl = roomMpListUrl || '';
-        const url = queryParams.toString() 
-            ? `${baseUrl}?${queryParams.toString()}` 
-            : baseUrl;
-            
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Failed to fetch WeChat public account room list');
-        }
-        return response.json() as Promise<MpRoomListResponse>;
-    } catch (error) {
-        console.error('Error fetching WeChat public account room list:', error);
-        throw error;
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.gh_user_id) {
+      queryParams.append('gh_user_id', params.gh_user_id);
     }
+
+    const baseUrl = roomMpListUrl || '';
+    const url = queryParams.toString()
+      ? `${baseUrl}?${queryParams.toString()}`
+      : baseUrl;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch WeChat public account room list');
+    }
+    return response.json() as Promise<MpRoomListResponse>;
+  } catch (error) {
+    console.error('Error fetching WeChat public account room list:', error);
+    throw error;
+  }
 };
 
 /**
@@ -209,40 +210,40 @@ export const getMpRoomListApi = async (params?: {
  * @returns Promise with the chat messages response
  */
 export const getMpChatMessageApi = async (params: {
-    room_id?: string;
-    from_user_id?: string;
-    to_user_id?: string;
-    msg_type?: string;
-    start_time?: string;
-    end_time?: string;
-    limit?: number;
-    offset?: number;
+  room_id?: string;
+  from_user_id?: string;
+  to_user_id?: string;
+  msg_type?: string;
+  start_time?: string;
+  end_time?: string;
+  limit?: number;
+  offset?: number;
 }) => {
-    try {
-        const queryParams = new URLSearchParams();
-        
-        // Add all provided parameters to the query string
-        Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined) {
-                queryParams.append(key, value.toString());
-            }
-        });
-        
-        const baseUrl = roomMpMsgListUrl || '';
-        const url = queryParams.toString()
-            ? `${baseUrl}?${queryParams.toString()}`
-            : baseUrl;
-            
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Failed to fetch WeChat public account chat messages');
-        }
-        
-        return response.json() as Promise<MpChatMessagesResponse>;
-    } catch (error) {
-        console.error('Error fetching WeChat public account chat messages:', error);
-        throw error;
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Add all provided parameters to the query string
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const baseUrl = roomMpMsgListUrl || '';
+    const url = queryParams.toString()
+      ? `${baseUrl}?${queryParams.toString()}`
+      : baseUrl;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch WeChat public account chat messages');
     }
+
+    return response.json() as Promise<MpChatMessagesResponse>;
+  } catch (error) {
+    console.error('Error fetching WeChat public account chat messages:', error);
+    throw error;
+  }
 };
 
 /**
@@ -368,15 +369,15 @@ export interface KeywordsResponse {
 export const getKeywordsApi = async (email?: string): Promise<KeywordsResponse> => {
   try {
     const baseUrl = getKeywordUrl || '';
-    
+
     // Add email parameter to query if provided
     const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch keywords');
     }
-    
+
     return await response.json() as Promise<KeywordsResponse>;
   } catch (error) {
     console.error('Error fetching keywords:', error);
@@ -395,23 +396,23 @@ export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string
     if (!keyword) {
       throw new Error('Missing required parameter: keyword');
     }
-    
+
     const queryParams = new URLSearchParams();
     queryParams.append('keyword', keyword);
-    
+
     // Add email parameter to query if provided
     if (email) {
       queryParams.append('email', email);
     }
-    
+
     const baseUrl = getCommentsUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch Xiaohongshu comments by keyword');
     }
-    
+
     return await response.json() as Promise<XhsCommentsResponse>;
   } catch (error) {
     console.error('Error fetching Xiaohongshu comments by keyword:', error);
@@ -468,40 +469,40 @@ export const getIntentCustomersApi = async (params?: {
 }): Promise<CustomerIntentResponse> => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     // Add optional filters to query parameters
     if (params?.keyword) {
       queryParams.append('keyword', params.keyword);
     }
-    
+
     if (params?.intent) {
       queryParams.append('intent', params.intent);
     }
-    
+
     // Add email filter if provided
     if (params?.email) {
       queryParams.append('email', params.email);
     }
-    
+
     // Add flags for getting keywords or intents lists
     if (params?.get_keywords) {
       queryParams.append('get_keywords', 'true');
     }
-    
+
     if (params?.get_intents) {
       queryParams.append('get_intents', 'true');
     }
-    
+
     const baseUrl = getIntentCustomersUrl || '';
     const url = queryParams.toString()
       ? `${baseUrl}?${queryParams.toString()}`
       : baseUrl;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch customer intent data');
     }
-    
+
     return await response.json() as Promise<CustomerIntentResponse>;
   } catch (error) {
     console.error('Error fetching customer intent data:', error);
@@ -519,18 +520,18 @@ export const getXhsCommentsByUrlsApi = async (urls: string[]): Promise<XhsCommen
     if (!urls || urls.length === 0) {
       throw new Error('Missing required parameter: urls');
     }
-    
+
     const queryParams = new URLSearchParams();
     queryParams.append('urls', JSON.stringify(urls));
-    
+
     const baseUrl = getCommentsUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch Xiaohongshu comments by URLs');
     }
-    
+
     return await response.json() as Promise<XhsCommentsResponse>;
   } catch (error) {
     console.error('Error fetching Xiaohongshu comments by URLs:', error);
@@ -547,15 +548,15 @@ export const getXhsCommentsApi = async (limit: number = 100): Promise<XhsComment
   try {
     const queryParams = new URLSearchParams();
     queryParams.append('limit', limit.toString());
-    
+
     const baseUrl = getCommentsUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch Xiaohongshu comments');
     }
-    
+
     return await response.json() as Promise<XhsCommentsResponse>;
   } catch (error) {
     console.error('Error fetching Xiaohongshu comments:', error);
@@ -573,18 +574,18 @@ export const getXhsNotesByKeywordApi = async (keyword: string): Promise<XhsNotes
     if (!keyword) {
       throw new Error('Missing required parameter: keyword');
     }
-    
+
     const queryParams = new URLSearchParams();
     queryParams.append('keyword', keyword);
-    
+
     const baseUrl = getNoteUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch Xiaohongshu notes');
     }
-    
+
     return await response.json() as Promise<XhsNotesResponse>;
   } catch (error) {
     console.error('Error fetching Xiaohongshu notes:', error);
@@ -605,33 +606,33 @@ export const getTokenUsageApi = async (params: {
     if (!params || !params.token_source_platform) {
       throw new Error('Missing required parameter: token_source_platform');
     }
-    
+
     if (!params.wx_user_id) {
       throw new Error('Missing required parameter: wx_user_id');
     }
 
     const queryParams = new URLSearchParams();
-    
+
     queryParams.append('token_source_platform', params.token_source_platform);
     queryParams.append('wx_user_id', params.wx_user_id);
-    
+
     if (params.room_id) queryParams.append('room_id', params.room_id);
     if (params.start_time) queryParams.append('start_time', params.start_time);
     if (params.end_time) queryParams.append('end_time', params.end_time);
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.offset) queryParams.append('offset', params.offset.toString());
-    
+
     const baseUrl = tokenUsageUrl || '';
     const url = queryParams.toString()
       ? `${baseUrl}?${queryParams.toString()}`
       : baseUrl;
-    
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch token usage records');
     }
-    
+
     return await response.json() as TokenUsageResponse;
   } catch (error) {
     console.error('Error fetching token usage records:', error);
@@ -733,7 +734,7 @@ export const getWxChatHistorySummaryApi = async (wxid: string, room_id: string):
 
     const baseUrl = chatSummaryUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch chat history summary');
@@ -787,27 +788,27 @@ export const getReplyTemplatesApi = async (params?: {
       console.error('Error: email parameter is required for getReplyTemplatesApi');
       throw new Error('email parameter is required');
     }
-    
+
     const queryParams = new URLSearchParams();
-    
+
     // Send email parameter to backend
     queryParams.append('email', params.email);
     console.log(`Fetching templates with email: ${params.email}`);
-    
+
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
-    
+
     const baseUrl = getReplyTemplatesUrl || '';
     const url = queryParams.toString()
       ? `${baseUrl}?${queryParams.toString()}`
       : baseUrl;
-    
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch reply templates');
     }
-    
+
     return await response.json() as ReplyTemplatesResponse;
   } catch (error) {
     console.error('Error fetching reply templates:', error);
@@ -833,13 +834,13 @@ export const createReplyTemplateApi = async (data: {
       console.error('Error: email parameter is required for createReplyTemplateApi');
       throw new Error('email parameter is required');
     }
-    
+
     const baseUrl = updateReplyTemplateUrl || '';
     console.log(`Creating template with email: ${data.email}`);
-    
+
     // Send email parameter directly to backend
     const userIdentifier = { email: data.email };
-    
+
     const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
@@ -851,11 +852,11 @@ export const createReplyTemplateApi = async (data: {
         ...userIdentifier
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to create reply template');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error creating reply template:', error);
@@ -885,13 +886,13 @@ export const updateReplyTemplateApi = async (
       console.error('Error: email parameter is required for updateReplyTemplateApi');
       throw new Error('email parameter is required');
     }
-    
+
     const baseUrl = updateReplyTemplateUrl || '';
     console.log(`Updating template ${id} with email: ${data.email}`);
-    
+
     // Send email parameter directly to backend
     const userIdentifier = { email: data.email };
-    
+
     const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
@@ -904,11 +905,11 @@ export const updateReplyTemplateApi = async (
         ...userIdentifier
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to update reply template');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error updating reply template:', error);
@@ -924,15 +925,15 @@ export const updateReplyTemplateApi = async (
 export const getCommentsKeyword = async (email?: string): Promise<KeywordsResponse> => {
   try {
     const baseUrl = getCommentsKeywordUrl || '';
-    
+
     // Add email parameter to query if provided
     const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch comments keywords');
     }
-    
+
     return await response.json() as Promise<KeywordsResponse>;
   } catch (error) {
     console.error('Error fetching comments keywords:', error);
@@ -952,10 +953,10 @@ export const deleteReplyTemplateApi = async (id: number, email: string): Promise
       console.error('Error: email parameter is required for deleteReplyTemplateApi');
       throw new Error('email parameter is required');
     }
-    
+
     const baseUrl = updateReplyTemplateUrl || '';
     console.log(`Deleting template ${id} with email: ${email}`);
-    
+
     const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
@@ -967,14 +968,33 @@ export const deleteReplyTemplateApi = async (id: number, email: string): Promise
         email: email // Send email parameter directly to backend
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to delete reply template');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error deleting reply template:', error);
     throw error;
   }
 };
+
+export const getXhsDevicesMsgList = async (email: string = '') => {
+  try {
+    const baseUrl = getXhsDevicesMsgListUrl || '';
+
+    // Add email parameter to query if provided
+    const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch getXhsDevicesMsgList');
+    }
+
+    return await response.json() as Promise<KeywordsResponse>;
+  } catch (error) {
+    console.error('Error fetching getXhsDevicesMsgList:', error);
+    throw error;
+  }
+}
