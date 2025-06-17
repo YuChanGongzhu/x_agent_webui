@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, Avatar, Button } from 'antd';
+import { List, Avatar, Button, Tag } from 'antd';
 
 interface EditConfig {
     editIcon: React.ReactNode;
@@ -12,6 +12,7 @@ interface BaseListUserItemProps {
     item: {
         user_name: string;
         message_type: string;
+        reply_status: 0 | 1
     },
     editConfig?: EditConfig[]
 }
@@ -28,6 +29,9 @@ const BaseListUserItem: React.FC<BaseListUserItemProps> = ({ item, editConfig = 
             title={item.user_name}
             description={item.message_type}
         />
+        {
+            item.reply_status == 1 ? <Tag color='green'>已回复</Tag> : <Tag color='red'>未回复</Tag>
+        }
         {
             editConfig?.length > 0 && (
                 <div className='flex items-center gap-2'>
