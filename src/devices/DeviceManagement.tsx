@@ -457,6 +457,7 @@ const DeviceManagement: React.FC = () => {
             <Input
               placeholder="请输入邮箱"
               disabled={!isAdmin && userEmail !== null}
+              autoComplete='off'
             />
           </Form.Item>
 
@@ -465,7 +466,7 @@ const DeviceManagement: React.FC = () => {
             label="设备IP"
             rules={[{ required: true, message: '请输入设备IP' }]}
           >
-            <Input placeholder="请输入设备IP" />
+            <Input placeholder="请输入设备IP" autoComplete='off' />
           </Form.Item>
 
           <Form.Item
@@ -473,7 +474,7 @@ const DeviceManagement: React.FC = () => {
             label="用户名"
             rules={[{ required: true, message: '请输入用户名' }]}
           >
-            <Input placeholder="请输入用户名" />
+            <Input placeholder="请输入用户名" autoComplete='off' />
           </Form.Item>
 
           <Form.Item
@@ -481,7 +482,7 @@ const DeviceManagement: React.FC = () => {
             label="密码"
             rules={[{ required: true, message: '请输入密码' }]}
           >
-            <Input.Password placeholder="请输入密码" />
+            <Input.Password placeholder="请输入密码" autoComplete='off' />
           </Form.Item>
 
           <Form.Item
@@ -489,7 +490,7 @@ const DeviceManagement: React.FC = () => {
             label="端口"
             rules={[{ required: true, message: '请输入端口号' }]}
           >
-            <InputNumber min={1} max={65535} style={{ width: '100%' }} placeholder="请输入端口号" />
+            <InputNumber min={1} max={65535} style={{ width: '100%' }} placeholder="请输入端口号" autoComplete='off' />
           </Form.Item>
 
           <Form.Item>

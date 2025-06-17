@@ -11,7 +11,7 @@ const BaseInput = ({ children, className, inputClassName, ...props }: BaseInputP
     return (
         <div className={`flex flex-col w-full ${className}`}>
             {children}
-            <Input className={inputClassName} {...props}>
+            <Input className={inputClassName} autoComplete='off' {...props}>
             </Input>
         </div>
     )
