@@ -22,70 +22,21 @@ const GenerateMsg: React.FC = () => {
   const [generatedMessages, setGeneratedMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [deviceMsgList, setDeviceMsgList] = useState<any[]>([]);
+  const [activeKeys, setActiveKeys] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchDeviceMsgList = async () => {
       const variable = await getVariable(VARIABLE_NAME);
-      console.log('deviceMsgList', JSON.parse(variable.value));
-      setDeviceMsgList(JSON.parse(variable.value).filter((device: any) => device.unreplied_users.length > 0));
+      const deviceMsgList = JSON.parse(variable.value).filter((device: any) => device.unreplied_users.length > 0);
+      setDeviceMsgList(deviceMsgList);
+      setActiveKeys(deviceMsgList.map((device: any) => device.device_id));
     };
     fetchDeviceMsgList();
   }, []);
 
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim()) {
-      notifi('请输入提示词', 'error');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Create timestamp for unique dag_run_id
-      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
-      const dag_run_id = `xhs_content_generator_${timestamp}`;
-
-      // Prepare configuration
-      const conf = {
-        prompt: prompt,
-        type: 'text'
-      };
-
-      // Trigger DAG run using Airflow API
-      const response = await triggerDagRun(
-        "xhs_content_generator",
-        dag_run_id,
-        conf
-      );
-
-      // Create a new message with the DAG run information
-      const newMessage: Message = {
-        id: Date.now(),
-        content: `已提交生成请求，任务ID: ${response.dag_run_id}。\n\n提示词：${prompt}\n\n请稍后刷新页面查看生成结果。`,
-        type: 'text',
-        createdAt: new Date().toISOString()
-      };
-
-      setGeneratedMessages([newMessage, ...generatedMessages]);
-      notifi('内容生成请求已提交！', 'success');
-      setPrompt('');
-      setLoading(false);
-
-      // Optional: Poll for results
-      // You could implement a polling mechanism to check for results
-      // using getDagRuns and update the message when content is ready
-    } catch (err) {
-      console.error('Error generating content:', err);
-      notifi('内容生成请求失败', 'error');
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('zh-CN');
-  };
+  const handleChange = (key: string | string[]) => {
+    setActiveKeys(key as string[]);
+  }
 
   return (
     <div className='flex flex-col h-full'>
@@ -147,13 +98,13 @@ const GenerateMsg: React.FC = () => {
       <div className="flex-1 bg-white rounded-lg shadow-lg p-4 overflow-y-auto">
         <h2 className="text-lg font-semibold leading-4 mb-4">设备列表</h2>
         <div className="w-full overflow-y-auto h-[calc(100%-2rem)]">
-          <BaseCollapse allActive={true} items={deviceMsgList.map((device, idx) => ({
+          <BaseCollapse activeKey={activeKeys} onChange={handleChange} items={deviceMsgList.map((device) => ({
             style: {
               display: 'block'
             },
             key: device.device_id,
-            label: device.device_id,
-            children: device.unreplied_users.length > 0 ? <BaseList dataSource={device.unreplied_users} renderItem={(item) => <BaseListUserItem editConfig={[{ editIcon: <SendOutlined style={{ transform: 'translate(-2px, -2px) rotate(315deg)' }} />, editText: '发送', editFn: () => { console.log('发送') } }]} item={item} />} /> : <div>暂无未回复用户</div>,
+            label: `设备：  ${device.device_id}`,
+            children: device.unreplied_users.length > 0 ? <BaseList dataSource={device.unreplied_users} renderItem={(item, idx) => <BaseListUserItem idx={idx + 1} editConfig={[{ editIcon: <SendOutlined style={{ transform: 'translate(-2px, -2px) rotate(315deg)' }} />, editText: '发送', editFn: () => { console.log('发送') } }]} item={item} />} /> : <div>暂无未回复用户</div>,
           }))} />
         </div>
       </div>

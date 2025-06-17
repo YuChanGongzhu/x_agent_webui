@@ -8,6 +8,7 @@ interface EditConfig {
 }
 
 interface BaseListUserItemProps {
+    idx?: number;
     item: {
         username: string;
         message_type: string;
@@ -15,15 +16,15 @@ interface BaseListUserItemProps {
     editConfig?: EditConfig[]
 }
 
-const randomAvatar = () => {
+const randomAvatar = (idx?: number) => {
     const random = ~~(Math.random() * 5);
-    return `https://api.dicebear.com/7.x/miniavs/svg?seed=${random}`;
+    return `https://api.dicebear.com/7.x/miniavs/svg?seed=${idx ? (idx % 2) : random}`;
 }
 
-const BaseListUserItem: React.FC<BaseListUserItemProps> = ({ item, editConfig = [] }) => {
+const BaseListUserItem: React.FC<BaseListUserItemProps> = ({ item, editConfig = [], idx }) => {
     return <List.Item className='flex'>
         <List.Item.Meta
-            avatar={<Avatar src={randomAvatar()} />}
+            avatar={<Avatar src={randomAvatar(idx)} />}
             title={item.username}
             description={item.message_type}
         />
