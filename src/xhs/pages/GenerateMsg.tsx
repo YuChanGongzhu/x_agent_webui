@@ -9,7 +9,7 @@ import BaseListUserItem from '../../components/BaseComponents/BaseListUserItem';
 import { SendOutlined } from '@ant-design/icons';
 import BasePopconfirm from '../../components/BaseComponents/BasePopconfirm'
 import BaseInput from '../../components/BaseComponents/BaseInput';
-import { Button } from 'antd'
+import { Button, Space } from 'antd'
 import { getXhsDevicesMsgList } from '../../api/mysql';
 import { useUser } from '../../context/UserContext';
 
@@ -92,31 +92,34 @@ const GenerateMsg: React.FC = () => {
       <div className="flex-1 bg-white rounded-lg shadow-lg p-4 overflow-y-auto">
         <div className='flex justify-between mb-4'>
           <h2 className="text-lg font-semibold leading-4">设备列表</h2>
-          <BasePopconfirm popconfirmConfig={{
-            title: <><div className='p-6 pb-0'>您想一键回复什么内容？</div></>,
-            description: <>
-              <div className='w-[24rem] h-[6rem] p-6 pt-0 pb-0'>
-                <BaseInput type='textarea' textareaConfig={{
-                  autoSize: {
-                    minRows: 4,
-                    maxRows: 4
-                  },
-                  value: sendMsg,
-                  onChange: (e: any) => setSendMsg(e.target.value)
-                }} />
-              </div>
-            </>,
-            placement: 'bottomRight',
-            icon: <></>,
-            okText: '发送',
-            cancelText: '取消',
-            okButtonProps: {
-              className: 'mr-7'
-            },
-            onConfirm: handleSend
-          }}>
-            <Button disabled={!deviceMsgList.length} type='default'>一键回复</Button>
-          </BasePopconfirm>
+          <Space>
+            <Button disabled={!deviceMsgList.length || loading} type='default' onClick={fetchDeviceMsgList}>刷新</Button>
+            <BasePopconfirm popconfirmConfig={{
+              title: <><div className='p-4 pb-0'>您想一键回复什么内容？</div></>,
+              description: <>
+                <div className='w-[24rem] h-[6rem] p-4 pt-1 pb-0'>
+                  <BaseInput type='textarea' textareaConfig={{
+                    autoSize: {
+                      minRows: 4,
+                      maxRows: 4
+                    },
+                    value: sendMsg,
+                    onChange: (e: any) => setSendMsg(e.target.value)
+                  }} />
+                </div>
+              </>,
+              placement: 'bottomRight',
+              icon: <></>,
+              okText: '发送',
+              cancelText: '取消',
+              okButtonProps: {
+                className: 'mr-7 mt-2'
+              },
+              onConfirm: handleSend
+            }}>
+              <Button disabled={!deviceMsgList.length || loading} type='primary'>一键回复</Button>
+            </BasePopconfirm>
+          </Space>
         </div>
         <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
           {deviceMsgList.length ? <BaseList dataSource={deviceMsgList} renderItem={(item, idx) => <BaseListUserItem idx={idx + 1} item={item} />} /> : (<>
