@@ -12,6 +12,8 @@ import BaseInput from '../../components/BaseComponents/BaseInput';
 import { Button, Space, Tabs } from 'antd';
 import { CheckOutlined } from '@ant-design/icons'
 import { XhsComment } from '../../api/mysql';
+import { dateFormat } from '../../utils/tool';
+import * as XLSX from 'xlsx';
 type Comment = XhsComment;
 
 const { TabPane } = Tabs;
@@ -444,38 +446,61 @@ const DataAnalyze: React.FC = () => {
 
     try {
       // Convert data to CSV format
-      const headers = ['ID', '评论ID', '作者', '内容', '意向', '分数', '关键词', '分析', '创建时间'];
+      const headers = ['ID', '作者', '内容', '笔记链接', '意向', '关键词', '分析时间'];
+
       const csvRows = [
-        headers.join(','),
+        headers,
         ...filteredIntents.map(item => [
           item.id,
-          item.comment_id,
           item.author,
           `"${item.content.replace(/"/g, '""')}"`, // Escape quotes in content
+          item.note_url,
           item.intent,
-          item.score,
           item.keyword,
-          `"${item.analysis.replace(/"/g, '""')}"`, // Escape quotes in analysis
-          item.created_at
-        ].join(','))
+          item.analyzed_at,
+        ])
       ];
 
-      const csvContent = csvRows.join('\n');
+      const worksheet = XLSX.utils.aoa_to_sheet(csvRows);
 
-      // Create a blob and download link
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `意向客户数据_${new Date().toISOString().slice(0, 10)}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // 设置列宽
+      worksheet['!cols'] = [
+        { wch: 10 }, // ID 列宽
+        { wch: 15 }, // 作者 列宽
+        { wch: 50 }, // 内容 列宽（设置较宽因为内容可能较长）
+        { wch: 15 }, // 笔记链接 列宽
+        { wch: 15 }, // 意向 列宽
+        { wch: 20 }, // 关键词 列宽
+        { wch: 20 }  // 分析时间 列宽
+      ];
 
+      // const headers = ['ID', '作者', '内容', '笔记链接', '意向', '关键词', '分析时间'];
+      // const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+      // filteredIntents.forEach((item, rowIndex) => {
+      //   const row = [
+      //     item.id,
+      //     item.author,
+      //     item.content,
+      //     item.note_url,// 这里可以自定义显示文本（如 "查看详情"）
+      //     item.intent,
+      //     item.keyword,
+      //     item.analyzed_at,
+      //   ];
+      //   XLSX.utils.sheet_add_aoa(worksheet, [row], { origin: -1 });
+      //   // 设置超链接（假设 "内容" 是第3列，索引2）
+      //   const cellAddress = XLSX.utils.encode_cell({ c: 3, r: rowIndex + 1 }); // +1 因为表头占第0行
+      //   worksheet[cellAddress].l = { Target: item.content };
+      // });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '意向客户数据');
+
+      // Generate Excel file and trigger download
+      XLSX.writeFile(workbook, `关键词“${selectedKeyword}”_意向客户数据_${dateFormat()}.xlsx`);
       notifi('数据导出成功', 'success');
     } catch (err) {
       notifi('导出数据失败', 'error');
+      console.log(err)
     }
   };
 
