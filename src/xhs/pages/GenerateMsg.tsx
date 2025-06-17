@@ -118,7 +118,7 @@ const GenerateMsg: React.FC = () => {
             <Button disabled={!deviceMsgList.length} type='default'>一键回复</Button>
           </BasePopconfirm>
         </div>
-        <div className="w-full overflow-y-auto h-[calc(100%-2rem)]">
+        <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
           {deviceMsgList.length ? <BaseList dataSource={deviceMsgList} renderItem={(item, idx) => <BaseListUserItem idx={idx + 1} item={item} />} /> : (<>
             <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
               <h2 className="text-lg font-semibold mb-4">暂无未回复用户</h2>
