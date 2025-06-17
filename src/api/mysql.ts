@@ -879,6 +879,7 @@ export const updateReplyTemplateApi = async (
     content: string;
     user_id?: string; // Deprecated, kept for backward compatibility
     email: string; // User's email address
+    image_urls?: string;
   }
 ): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
@@ -902,6 +903,7 @@ export const updateReplyTemplateApi = async (
         action: 'update',
         template_id: id,
         content: data.content,
+        image_urls: data.image_urls,
         ...userIdentifier
       }),
     });
