@@ -13,22 +13,31 @@ const Login: React.FC = () => {
 
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
-  
+
   // Detect mobile screen size
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     // Initial check
     checkIfMobile();
-    
+
     // Add event listener for window resize
     window.addEventListener('resize', checkIfMobile);
-    
+
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
+
+  useEffect(() => {
+    const rememberMeStorage = localStorage.getItem('rememberMe');
+    if (rememberMeStorage == 'true') {
+      setRememberMe(true);
+      setEmail(localStorage.getItem('email') || '');
+      setPassword(localStorage.getItem('password') || '');
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +48,23 @@ const Login: React.FC = () => {
     try {
       // 登录逻辑
       await loginUser(email, password);
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+        localStorage.setItem('email', email);
+        localStorage.setItem('password', password);
+      } else {
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('email');
+        localStorage.removeItem('password');
+      }
       // 登录成功，导航到仪表盘
-      navigate('/dashboard');
+      navigate('/manage');
     } catch (error: any) {
       // 处理错误信息
       let errorMessage = '登录失败，请检查您的邮箱和密码';
-      
+
       console.error('认证错误:', error);
-      
+
       if (error.code) {
         switch (error.code) {
           case 'auth/user-not-found':
@@ -73,7 +91,7 @@ const Login: React.FC = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -114,13 +132,13 @@ const Login: React.FC = () => {
                   <div className="text-xs sm:text-sm text-red-700">{error}</div>
                 </div>
               )}
-              
+
               {successMessage && (
                 <div className="rounded-md bg-green-50 p-3 sm:p-4">
                   <div className="text-xs sm:text-sm text-green-700">{successMessage}</div>
                 </div>
               )}
-              
+
               <div>
                 <input
                   type="email"
@@ -179,7 +197,7 @@ const Login: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Contact Information Footer */}
       <div className="w-full max-w-md sm:max-w-6xl bg-[rgba(248,213,126,1)] text-white py-3 sm:py-4 px-4 sm:px-8 mt-4 sm:mt-8 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-8 rounded-b-lg text-xs sm:text-sm">
       </div>
