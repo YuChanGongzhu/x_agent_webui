@@ -115,7 +115,7 @@ const GenerateMsg: React.FC = () => {
             },
             onConfirm: handleSend
           }}>
-            <Button disabled={loading} type='default'>一键回复</Button>
+            <Button disabled={!deviceMsgList.length} type='default'>一键回复</Button>
           </BasePopconfirm>
         </div>
         <div className="w-full overflow-y-auto h-[calc(100%-2rem)]">
