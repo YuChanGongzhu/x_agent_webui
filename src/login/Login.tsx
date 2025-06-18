@@ -58,7 +58,7 @@ const Login: React.FC = () => {
         localStorage.removeItem('password');
       }
       // 登录成功，导航到仪表盘
-      navigate('/manage');
+      navigate('/xhs/collect');
     } catch (error: any) {
       // 处理错误信息
       let errorMessage = '登录失败，请检查您的邮箱和密码';
