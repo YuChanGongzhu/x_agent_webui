@@ -264,6 +264,25 @@ const TemplateManager: React.FC = () => {
     setImageFile(null);
   };
 
+  // 从腾讯云COS获取图片并显示
+  const loadImageFromCOS = async (imageUrl: string) => {
+    if (!imageUrl) return;
+    
+    try {
+      console.log('Loading image from URL:', imageUrl);
+      
+      // 直接设置图片URL而不尝试从腾讯云COS获取
+      // 这样可以避免解析URL时的问题
+      setImageUrl(imageUrl);
+      setImageFile(null); // 不需要文件对象，因为我们直接使用URL
+      
+      console.log('Image URL set successfully');
+    } catch (error) {
+      console.error('加载图片失败:', error);
+      message.error('加载图片失败');
+    }
+  };
+
   // 处理模板创建
   const handleAddTemplate = async () => {
     // 确保有email才能创建模板
@@ -532,8 +551,19 @@ const TemplateManager: React.FC = () => {
       title: '模板内容',
       dataIndex: 'content',
       key: 'content',
-      render: (text: string) => (
-        <div className="max-w-xl line-clamp-3 hover:line-clamp-none">{text}</div>
+      render: (text: string, record: ReplyTemplate) => (
+        <div>
+          <div className="max-w-xl line-clamp-3 hover:line-clamp-none">{text}</div>
+          {record.image_urls && (
+            <div className="mt-2">
+              <img 
+                src={record.image_urls} 
+                alt="模板图片" 
+                style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain' }} 
+              />
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -554,6 +584,16 @@ const TemplateManager: React.FC = () => {
             onClick={() => {
               setEditingTemplate(record);
               setTemplateContent(record.content);
+              
+              // 如果模板有图片URL，加载图片
+              if (record.image_urls) {
+                loadImageFromCOS(record.image_urls);
+              } else {
+                // 清空之前可能存在的图片
+                setImageUrl('');
+                setImageFile(null);
+              }
+              
               setIsModalVisible(true);
             }}
           />

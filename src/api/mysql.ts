@@ -754,6 +754,7 @@ export interface ReplyTemplate {
   email: string; // Email of the user who owns the template
   content: string;
   created_at: string;
+  image_urls?: string; // Optional image URL for the template
 }
 
 /**
