@@ -9,7 +9,7 @@ import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
-import { Tabs } from 'antd';
+import { Tabs, Button } from 'antd';
 
 const { TabPane } = Tabs;
 
@@ -72,6 +72,8 @@ const DataCollect: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(10);
   const [noteType, setNoteType] = useState('图文');
+  const [sortBy, setSortBy] = useState('最新');
+  const [timeRange, setTimeRange] = useState('一天内');
   const [maxComments, setMaxComments] = useState(10);
   // 使用localStorage存储目标邮箱，确保页面刷新后仍然保持选择
   const [targetEmail, setTargetEmail] = useState(() => {
@@ -258,7 +260,9 @@ const DataCollect: React.FC = () => {
         keyword,
         max_notes: maxNotes,
         email: targetEmail,
-        note_type: noteType
+        note_type: noteType,
+        time_range: timeRange,
+        sort_by: sortBy
       };
 
       const response = await triggerDagRun(
@@ -463,6 +467,8 @@ const DataCollect: React.FC = () => {
 
       // Set notes data from response
       if (response && response.code === 0 && response.data && response.data.records) {
+
+        console.log('====', response.data.records)
         // Transform the API response to match the expected Note format
         const transformedNotes: Note[] = response.data.records.map((item: any) => ({
           id: item.id || 0,
@@ -589,7 +595,7 @@ const DataCollect: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <h2 className="text-lg font-semibold mb-4">创建笔记采集任务</h2>
             <form onSubmit={handleCreateNotesTask} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <BaseInput size='large' className="w-full" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键字">
                   <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
                 </BaseInput>
@@ -601,6 +607,12 @@ const DataCollect: React.FC = () => {
                 </BaseInput>
                 <BaseSelect size='large' className="w-full" value={noteType} showSearch options={["图文", "视频"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setNoteType(value)}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">笔记类型</label>
+                </BaseSelect>
+                <BaseSelect size='large' className="w-full" value={sortBy} showSearch options={["最新", "点赞最多", "最多评论", "最多收藏"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setSortBy(value)}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">排序依据</label>
+                </BaseSelect>
+                <BaseSelect size='large' className="w-full" value={timeRange} showSearch options={["一天内", "一周内", "半年内"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setTimeRange(value)}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">发布时间</label>
                 </BaseSelect>
                 <div className="flex items-end">
                   <button
