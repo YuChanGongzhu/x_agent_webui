@@ -67,8 +67,7 @@ const DataCollect: React.FC = () => {
   const [refreshingTasks, setRefreshingTasks] = useState(false);
   const [refreshingComments, setRefreshingComments] = useState(false);
   // State for tab navigation
-  const [activeTab, setActiveTab] = useState<TabType>('tasks');
-
+  const [activeTab, setActiveTab] = useState<TabType>('tasks'); // Get shared keyword context
   // State for form inputs
   const [keyword, setKeyword] = useState('');
   const [maxNotes, setMaxNotes] = useState(10);
@@ -847,7 +846,10 @@ const DataCollect: React.FC = () => {
                 刷新关键词
               </button>
             </div>
-            <BaseSelect size='large' className="w-full" selectClassName="w-1/2" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => setSelectedKeyword(value)} >
+            <BaseSelect size='large' className="w-full" selectClassName="w-1/2" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
+              setSelectedKeyword(value)
+              setLatestKeyword(value)
+            }} >
               <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
             </BaseSelect>
           </div>
@@ -1074,7 +1076,10 @@ const DataCollect: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6 mb-2">
             <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => setSelectedKeyword(value)} >
+              <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={keywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
+                setSelectedKeyword(value)
+                setLatestKeyword(value)
+              }} >
                 <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
               </BaseSelect>
               <BaseInput size='large' type='number' className="w-full" value={maxComments} onChange={(e) => setMaxComments(parseInt(e.target.value))} min={1} max={1000}>

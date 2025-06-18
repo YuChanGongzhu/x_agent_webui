@@ -474,24 +474,6 @@ const DataAnalyze: React.FC = () => {
         { wch: 20 }  // 分析时间 列宽
       ];
 
-      // const headers = ['ID', '作者', '内容', '笔记链接', '意向', '关键词', '分析时间'];
-      // const worksheet = XLSX.utils.aoa_to_sheet([headers]);
-      // filteredIntents.forEach((item, rowIndex) => {
-      //   const row = [
-      //     item.id,
-      //     item.author,
-      //     item.content,
-      //     item.note_url,// 这里可以自定义显示文本（如 "查看详情"）
-      //     item.intent,
-      //     item.keyword,
-      //     item.analyzed_at,
-      //   ];
-      //   XLSX.utils.sheet_add_aoa(worksheet, [row], { origin: -1 });
-      //   // 设置超链接（假设 "内容" 是第3列，索引2）
-      //   const cellAddress = XLSX.utils.encode_cell({ c: 3, r: rowIndex + 1 }); // +1 因为表头占第0行
-      //   worksheet[cellAddress].l = { Target: item.content };
-      // });
-
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, '意向客户数据');
 
