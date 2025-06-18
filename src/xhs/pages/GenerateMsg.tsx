@@ -2,29 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { triggerDagRun } from '../../api/airflow';
 
 import notifi from '../../utils/notification';
-import { getVariable } from '../../api/airflow';
 import BaseCollapse from '../../components/BaseComponents/BaseCollapse';
 import BaseList from '../../components/BaseComponents/BaseList';
 import BaseListUserItem from '../../components/BaseComponents/BaseListUserItem';
-import { SendOutlined } from '@ant-design/icons';
 import BasePopconfirm from '../../components/BaseComponents/BasePopconfirm'
 import BaseInput from '../../components/BaseComponents/BaseInput';
 import { Button, Space } from 'antd'
 import { getXhsDevicesMsgList } from '../../api/mysql';
 import { useUser } from '../../context/UserContext';
 
-interface Message {
-  id: number;
-  content: string;
-  type: 'text' | 'image';
-  createdAt: string;
-}
-
 const GenerateMsg: React.FC = () => {
-  const [prompt, setPrompt] = useState('');
-  const [generatedMessages, setGeneratedMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [deviceMsgList, setDeviceMsgList] = useState<any[]>([]);
+  const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<any[]>([])
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
   const { isAdmin, email } = useUser();
   const [sendMsg, setSendMsg] = useState('')
@@ -38,9 +28,18 @@ const GenerateMsg: React.FC = () => {
       setLoading(true)
       const data = (await getXhsDevicesMsgList(email ? email : '')).data;
       console.log(data, '=====')
-      const filterData = data.filter((device: any) => device.reply_status == 0)
+      const filterData = data.filter((device: any) => device.device_id)
+      const formatData = filterData.reduce((acc: any, device: any) => {
+        if (!acc[device.device_id]) {
+          acc[device.device_id] = [];
+        }
+        acc[device.device_id].push(device);
+        return acc;
+      }, {});
+      console.log(formatData, '=====')
       setDeviceMsgList(filterData);
-      setActiveKeys(filterData.map((device: any) => device.id));
+      setActiveKeys(filterData.map((device: any) => device.device_id));
+      setFormatDeviceMsgList(formatData);
       setLoading(false)
     } catch (err) {
       setLoading(false)
@@ -122,12 +121,24 @@ const GenerateMsg: React.FC = () => {
           </Space>
         </div>
         <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
-          {deviceMsgList.length ? <BaseList dataSource={deviceMsgList} renderItem={(item, idx) => <BaseListUserItem idx={idx + 1} item={item} />} /> : (<>
+          {Object.keys(formatDeviceMsgList).length ? <>
+            <BaseCollapse activeKey={activeKeys} onChange={(keys) => {
+              setActiveKeys(keys as string[]);
+            }} items={Object.entries(formatDeviceMsgList).map(([device_id, device]) => ({
+              style: {
+                display: 'block'
+              },
+              key: device_id,
+              label: `设备：  ${device_id}`,
+              children: device.length > 0 ? <BaseList dataSource={device} renderItem={(item, idx) => {
+                return <BaseListUserItem idx={idx + 1} item={item} />
+              }} /> : <div>暂无未回复用户</div>
+            }))} />
+          </> : (<>
             <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
               <h2 className="text-lg font-semibold mb-4">暂无未回复用户</h2>
             </div>
-          </>
-          )}
+          </>)}
         </div>
       </div>
     </div>
