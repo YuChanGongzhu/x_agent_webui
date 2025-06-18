@@ -34,7 +34,7 @@ function App() {
                       <NavBar />
                       <main className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4" style={{ margin: '1rem', height: 'calc(100vh - 2rem)' }}>
                         <Routes>
-                          <Route path="/" element={<Navigate to="/manage" replace />} />
+                          <Route path="/" element={<Navigate to="/xhs/collect" replace />} />
                           <Route path="/manage" element={<ManagementPage />} />
                           {/* <Route path="/xhs" element={<XHSAutomation />} /> */}
                           <Route path="/xhs/collect" element={<DataCollect />} />
