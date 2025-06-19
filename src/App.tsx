@@ -16,6 +16,7 @@ import TemplateManager from './xhs/pages/TemplateManager';
 import DeviceManagement from './devices/DeviceManagement';
 import { ConfigProvider } from 'antd';
 import config from './themeConfig/config';
+import BasePermission from './components/BaseComponents/BasePermission';
 
 function App() {
   return (
@@ -35,7 +36,11 @@ function App() {
                       <main className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4" style={{ margin: '1rem', height: 'calc(100vh - 2rem)' }}>
                         <Routes>
                           <Route path="/" element={<Navigate to="/xhs/collect" replace />} />
-                          <Route path="/manage" element={<ManagementPage />} />
+                          <Route path="/manage" element={
+                            <BasePermission>
+                              <ManagementPage />
+                            </BasePermission>
+                          } />
                           {/* <Route path="/xhs" element={<XHSAutomation />} /> */}
                           <Route path="/xhs/collect" element={<DataCollect />} />
                           {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
