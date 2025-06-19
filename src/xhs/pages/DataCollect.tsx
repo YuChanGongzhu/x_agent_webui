@@ -9,6 +9,7 @@ import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
+import TooltipIcon from '../../components/BaseComponents/TooltipIcon';
 import { Tabs, Button } from 'antd';
 
 const { TabPane } = Tabs;
@@ -597,22 +598,22 @@ const DataCollect: React.FC = () => {
             <form onSubmit={handleCreateNotesTask} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <BaseInput size='large' className="w-full" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键字">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">关键字</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">关键字 <TooltipIcon tooltipProps={{ title: "设置关键词后，AI将根据关键词采集笔记" }} /></label>
                 </BaseInput>
                 <BaseInput type='number' size='large' className="w-full" value={maxNotes} onChange={(e) => setMaxNotes(parseInt(e.target.value))} min={1} max={1000}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量 <TooltipIcon tooltipProps={{ title: "设置采集笔记数量后，AI将根据数量采集笔记" }} /></label>
                 </BaseInput>
                 <BaseInput type='hidden' size='large' className="w-full absolute" value={targetEmail} >
                   {/* <label className="block text-sm font-medium text-gray-700 mb-1">目标邮箱</label> */}
                 </BaseInput>
                 <BaseSelect size='large' className="w-full" value={noteType} showSearch options={["图文", "视频"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setNoteType(value)}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">笔记类型</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">笔记类型 <TooltipIcon tooltipProps={{ title: "设置笔记类型后，AI将根据类型采集笔记" }} /></label>
                 </BaseSelect>
                 <BaseSelect size='large' className="w-full" value={sortBy} showSearch options={["最新", "点赞最多", "最多评论", "最多收藏"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setSortBy(value)}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">排序依据</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">排序依据 <TooltipIcon tooltipProps={{ title: "设置排序依据后，AI将根据排序依据采集笔记" }} /></label>
                 </BaseSelect>
                 <BaseSelect size='large' className="w-full" value={timeRange} showSearch options={["一天内", "一周内", "半年内"].map((note_type) => ({ label: note_type, value: note_type }))} onChange={(value) => setTimeRange(value)}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">发布时间</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">发布时间 <TooltipIcon tooltipProps={{ title: "设置发布时间后，AI将根据发布时间采集笔记" }} /></label>
                 </BaseSelect>
                 <div className="flex items-end">
                   <button
@@ -1095,7 +1096,7 @@ const DataCollect: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
               </BaseSelect>
               <BaseInput size='large' type='number' className="w-full" value={maxComments} onChange={(e) => setMaxComments(parseInt(e.target.value))} min={1} max={1000}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">采集评论笔记篇数 <TooltipIcon tooltipProps={{ title: "设置采集评论笔记篇数后，AI将根据篇数采集评论" }} /></label>
               </BaseInput>
               <div className="flex items-end">
                 <button
