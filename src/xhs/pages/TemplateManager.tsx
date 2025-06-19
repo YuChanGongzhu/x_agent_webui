@@ -199,14 +199,14 @@ const TemplateManager: React.FC = () => {
 
     try {
       setUploadLoading(true);
-      
+
       // 检查文件类型
       const isImage = file.type.startsWith('image/');
       if (!isImage) {
         message.error('只能上传图片文件!');
         return false;
       }
-      
+
       // 检查文件大小，限制为5MB
       const isLt5M = file.size / 1024 / 1024 < 5;
       if (!isLt5M) {
@@ -216,11 +216,11 @@ const TemplateManager: React.FC = () => {
 
       // 保存文件以供后续上传
       setImageFile(file);
-      
+
       // 创建本地预览URL
       const objectUrl = URL.createObjectURL(file);
       setImageUrl(objectUrl);
-      
+
       return false; // 返回false阻止Upload组件默认上传行为
     } catch (error) {
       console.error('处理图片上传失败:', error);
@@ -234,20 +234,20 @@ const TemplateManager: React.FC = () => {
   // 上传图片到腾讯云COS
   const uploadImageToCOS = async (templateId: number): Promise<string> => {
     if (!imageFile || !email) return '';
-    
+
     try {
       setUploadLoading(true);
-      
+
       // 创建腾讯云COS服务实例
       const cosService = tencentCOSService;
-      
+
       // 构建上传路径：email/模板序号/图片名称
       // 使用实际的模板ID
       const uploadPath = `${email}/${templateId}`;
-      
+
       // 上传文件到腾讯云COS
       const result = await cosService.uploadFile(imageFile, uploadPath);
-      
+
       return result.url;
     } catch (error) {
       console.error('上传图片到腾讯云COS失败:', error);
@@ -267,15 +267,15 @@ const TemplateManager: React.FC = () => {
   // 从腾讯云COS获取图片并显示
   const loadImageFromCOS = async (imageUrl: string) => {
     if (!imageUrl) return;
-    
+
     try {
       console.log('Loading image from URL:', imageUrl);
-      
+
       // 直接设置图片URL而不尝试从腾讯云COS获取
       // 这样可以避免解析URL时的问题
       setImageUrl(imageUrl);
       setImageFile(null); // 不需要文件对象，因为我们直接使用URL
-      
+
       console.log('Image URL set successfully');
     } catch (error) {
       console.error('加载图片失败:', error);
@@ -293,7 +293,7 @@ const TemplateManager: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       // 先创建不带图片的模板
       const response = await createReplyTemplateApi({
         content: templateContent,
@@ -304,7 +304,7 @@ const TemplateManager: React.FC = () => {
         message.error(response.message || '添加模板失败');
         return;
       }
-      
+
       // 如果没有图片，直接完成
       if (!imageFile) {
         message.success('添加模板成功');
@@ -313,14 +313,14 @@ const TemplateManager: React.FC = () => {
         fetchTemplates(); // 刷新模板列表
         return;
       }
-      
+
       // 如果有图片，需要获取最新创建的模板ID
       const templatesResponse = await getReplyTemplatesApi({
         page: 1,
         page_size: 10,
         email: email
       });
-      
+
       if (!templatesResponse.data?.records || templatesResponse.data.records.length === 0) {
         message.warning('创建模板成功，但无法上传图片，请稍后编辑模板添加图片');
         setTemplateContent('');
@@ -330,10 +330,10 @@ const TemplateManager: React.FC = () => {
         fetchTemplates();
         return;
       }
-      
+
       // 假设最新的模板就是我们刚创建的（按创建时间排序，最新的在最前面）
       const latestTemplate = templatesResponse.data.records[0];
-      
+
       // 上传图片
       const imageUrlCOS = await uploadImageToCOS(latestTemplate.id);
       if (!imageUrlCOS) {
@@ -345,20 +345,20 @@ const TemplateManager: React.FC = () => {
         fetchTemplates();
         return;
       }
-      
+
       // 更新模板添加图片URL
       const updateResponse = await updateReplyTemplateApi(latestTemplate.id, {
         content: templateContent,
         email: email,
         image_urls: imageUrlCOS
       });
-      
+
       if (updateResponse.code === 0) {
         message.success('添加模板成功');
       } else {
         message.warning('模板创建成功，但更新图片失败');
       }
-      
+
       setTemplateContent('');
       setImageUrl('');
       setImageFile(null);
@@ -384,11 +384,11 @@ const TemplateManager: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       // 如果有新图片，先上传到腾讯云COS
       let imageUrlCOS = imageUrl;
       console.log('Initial imageUrl value:', imageUrl);
-      
+
       if (imageFile) {
         // 使用现有模板ID上传图片
         console.log('Uploading new image file:', imageFile.name);
@@ -401,7 +401,7 @@ const TemplateManager: React.FC = () => {
       } else {
         console.log('No new image file, using existing imageUrl');
       }
-      
+
       const response = await updateReplyTemplateApi(editingTemplate.id, {
         content: templateContent,
         email: email, // 使用当前用户的邮箱
@@ -556,10 +556,10 @@ const TemplateManager: React.FC = () => {
           <div className="max-w-xl line-clamp-3 hover:line-clamp-none">{text}</div>
           {record.image_urls && (
             <div className="mt-2">
-              <img 
-                src={record.image_urls} 
-                alt="模板图片" 
-                style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain' }} 
+              <img
+                src={record.image_urls}
+                alt="模板图片"
+                style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain' }}
               />
             </div>
           )}
@@ -584,7 +584,7 @@ const TemplateManager: React.FC = () => {
             onClick={() => {
               setEditingTemplate(record);
               setTemplateContent(record.content);
-              
+
               // 如果模板有图片URL，加载图片
               if (record.image_urls) {
                 loadImageFromCOS(record.image_urls);
@@ -593,7 +593,7 @@ const TemplateManager: React.FC = () => {
                 setImageUrl('');
                 setImageFile(null);
               }
-              
+
               setIsModalVisible(true);
             }}
           />
@@ -785,7 +785,7 @@ const TemplateManager: React.FC = () => {
                     {imageUrl ? (
                       <div className="relative">
                         <img src={imageUrl} alt="模板图片" style={{ width: '100%' }} />
-                        <div 
+                        <div
                           className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -803,8 +803,8 @@ const TemplateManager: React.FC = () => {
                     )}
                   </Upload>
                   {imageUrl && (
-                    <Button 
-                      icon={<DeleteOutlined />} 
+                    <Button
+                      icon={<DeleteOutlined />}
                       onClick={handleRemoveImage}
                       danger
                     >
