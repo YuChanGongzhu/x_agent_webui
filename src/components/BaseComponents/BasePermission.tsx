@@ -12,7 +12,12 @@ const BasePermission = ({ children }: BasePermissionProps) => {
             {children}
         </>
     } else {
-        return <p>无权访问</p>
+        return <>
+            <div className='flex flex-col h-full items-center justify-center'>
+                <p className='text-2xl font-bold'>无权访问</p>
+                <p className='text-sm text-gray-500'>请联系管理员</p>
+            </div>
+        </>
     }
 }
 
