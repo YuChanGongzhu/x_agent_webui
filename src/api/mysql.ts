@@ -425,7 +425,7 @@ export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string
  */
 export interface CustomerIntent {
   id: number;
-  comment_id: number;
+  comment_id: string;
   keyword: string;
   author: string;
   intent: string;

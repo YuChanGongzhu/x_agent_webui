@@ -10,7 +10,7 @@ import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
 import { Button, Space, Tabs, Form, Pagination, Spin, Card, Table, Input, Modal, Upload, message } from 'antd';
-import { CheckOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { CheckOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ExportOutlined, SendOutlined } from '@ant-design/icons'
 import { XhsComment, ReplyTemplate } from '../../api/mysql';
 import { dateFormat } from '../../utils/tool';
 import { tencentCOSService } from '../../api/tencent_cos';
@@ -80,6 +80,9 @@ const DataAnalyze: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
+  const [dagRunId, setDagRunId] = useState('');
+  const [dagRunStatus, setDagRunStatus] = useState('');
+  const [selectedComments, setSelectedComments] = useState<string[]>([]);
 
 
   // Load filtered comments from session storage on component mount
@@ -865,6 +868,85 @@ const DataAnalyze: React.FC = () => {
     }
   };
 
+  const handleReachOut = async () => {
+    if (selectedComments.length === 0) {
+      message.warning('请至少选择一条评论');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+      const newDagRunId = `xhs_comments_template_replier_${timestamp}`;
+
+      // 从 localStorage 中获取目标邮箱
+      const targetEmail = localStorage.getItem('xhs_target_email') || '';
+
+      const conf = {
+        comment_ids: selectedComments,
+        email: targetEmail
+      };
+
+      const response = await triggerDagRun(
+        "xhs_comments_template_replier",
+        newDagRunId,
+        conf
+      );
+
+      if (response && response.dag_run_id) {
+        setDagRunId(response.dag_run_id);
+        setDagRunStatus('running');
+        message.success(`已提交触达任务，处理 ${selectedComments.length} 条评论`);
+      } else {
+        message.error('提交触达任务失败');
+      }
+    } catch (error) {
+      console.error('触发DAG失败:', error);
+      message.error('触发DAG失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 检查DAG运行状态
+  const checkDagRunStatus = async () => {
+    if (!dagRunId) {
+      message.warning('没有正在运行的任务');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await getDagRuns("xhs_comments_template_replier", 10, "-start_date");
+
+      if (response && response.dag_runs) {
+        const dagRun = response.dag_runs.find((run: any) => run.dag_run_id === dagRunId);
+
+        if (dagRun) {
+          setDagRunStatus(dagRun.state);
+
+          if (dagRun.state === 'success') {
+            message.success('触达任务已完成');
+            fetchCustomerIntents(); // 刷新评论以更新发送状态
+          } else if (dagRun.state === 'failed') {
+            message.error('触达任务失败');
+          } else {
+            message.info(`触达任务状态: ${dagRun.state}`);
+          }
+        } else {
+          message.warning('找不到任务信息');
+        }
+      }
+    } catch (error) {
+      console.error('检查DAG运行状态失败:', error);
+      message.error('检查任务状态失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <div className='p-6'>
@@ -1151,12 +1233,47 @@ const DataAnalyze: React.FC = () => {
 
                 {filteredIntents.length > 0 ? (
                   <>
-                    <p className="mb-2">找到 {filteredIntents.length} 条意向客户数据</p>
+                    <div className='flex mb-4 justify-between'>
+                      <div className='flex items-center gap-4'>
+                        <div className="text-sm text-gray-500">
+                          找到 {filteredIntents.length} 条意向客户数据
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="select-all-notes"
+                            checked={selectedComments.length > 0 && selectedComments.length === filteredIntents.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                // Select all notes
+                                setSelectedComments(filteredIntents.map(intent => intent.comment_id));
+                              } else {
+                                // Deselect all notes
+                                setSelectedComments([]);
+                              }
+                            }}
+                            className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded mr-2"
+                          />
+                          <label htmlFor="select-all-notes" className="text-sm text-gray-600">全选</label>
+                        </div>
+                      </div>
+                      <div className='flex items-center gap-4'>
+                        {dagRunStatus && <>
+                          <div className="text-sm text-gray-500">
+                            当前状态：{dagRunStatus}
+                          </div>
+                          <Button size='small' onClick={checkDagRunStatus} className="text-sm text-gray-500">
+                            刷新状态
+                          </Button>
+                        </>}
+                      </div>
+                    </div>
                     <div className="w-full h-full">
                       <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[10vh]' : 'h-[34vh]'} overflow-y-auto overflow-x-auto w-full`}>
                         <table className="w-full h-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">选择</th>
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
@@ -1171,6 +1288,20 @@ const DataAnalyze: React.FC = () => {
                               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                               .map((item) => (
                                 <tr key={item.id}>
+                                  <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedComments.includes(item.comment_id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedComments([...selectedComments, item.comment_id]);
+                                        } else {
+                                          setSelectedComments(selectedComments.filter(comment_id => comment_id !== item.comment_id));
+                                        }
+                                      }}
+                                      className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
+                                    />
+                                  </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.id}</td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
                                   <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
@@ -1270,17 +1401,14 @@ const DataAnalyze: React.FC = () => {
                         onClick={handleExportData}
                         className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                       >
-                        导出筛选后的意向客户数据
+                        导出数据 <ExportOutlined />
                       </button>
 
                       <button
-                        onClick={handleTransferToTemplateManager}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
+                        onClick={handleReachOut}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                        </svg>
-                        传递意向客户到模板管理
+                        触达用户 <SendOutlined />
                       </button>
                     </div>
                   </>
