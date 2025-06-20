@@ -46,7 +46,7 @@ function App() {
                           {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
                           <Route path="/xhs/analyze" element={<DataAnalyze />} />
                           <Route path="/xhs/generate" element={<GenerateMsg />} />
-                          <Route path="/xhs/templates" element={<TemplateManager />} />
+                          {/* <Route path="/xhs/templates" element={<TemplateManager />} /> */}
                           <Route path="/devices" element={<DeviceManagement />} />
                         </Routes>
                       </main>

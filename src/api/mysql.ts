@@ -433,6 +433,7 @@ export interface CustomerIntent {
   note_url: string;
   profile_sentence: string;
   analyzed_at: string;
+  is_reply: string;
   [key: string]: any; // For any other fields that might be returned
 }
 

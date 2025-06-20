@@ -51,6 +51,7 @@ const DataAnalyze: React.FC = () => {
   const [intents, setIntents] = useState<string[]>([]);
   const [selectedKeyword, setSelectedKeyword] = useState<string>(latestKeyword || '全部');
   const [selectedIntent, setSelectedIntent] = useState<string>('全部');
+  const [isReply, setIsReply] = useState<string>('全部');
   const [filteredIntents, setFilteredIntents] = useState<CustomerIntent[]>([]);
   const [minLikes, setMinLikes] = useState(0);
   const [minLength, setMinLength] = useState(1);
@@ -606,10 +607,14 @@ const DataAnalyze: React.FC = () => {
       filtered = filtered.filter(item => item.intent === selectedIntent);
     }
 
+    if (isReply !== '全部') {
+      filtered = filtered.filter(item => item.is_reply == isReply);
+    }
+
     setFilteredIntents(filtered);
     // Reset to first page when filters change
     paginate(1);
-  }, [selectedKeyword, selectedIntent, customerIntents]);
+  }, [selectedKeyword, selectedIntent, customerIntents, isReply]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -1217,7 +1222,7 @@ const DataAnalyze: React.FC = () => {
                     )}
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={uniqueKeywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
                     setSelectedKeyword(value);
                     if (value !== '全部') {
@@ -1228,6 +1233,9 @@ const DataAnalyze: React.FC = () => {
                   </BaseSelect>
                   <BaseSelect size='large' className="w-full" value={selectedIntent} showSearch options={intents.map((intent) => ({ label: intent, value: intent }))} onChange={(value) => setSelectedIntent(value)} >
                     <label className="block text-sm font-medium text-gray-700 mb-1">按意向类型筛选</label>
+                  </BaseSelect>
+                  <BaseSelect size='large' className="w-full" value={isReply} showSearch options={[{ label: '全部', value: '全部' }, { label: '已回复', value: '1' }, { label: '未回复', value: '0' }]} onChange={(value) => setIsReply(value)} >
+                    <label className="block text-sm font-medium text-gray-700 mb-1">是否已回复</label>
                   </BaseSelect>
                 </div>
 
@@ -1319,8 +1327,8 @@ const DataAnalyze: React.FC = () => {
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.keyword}</td>
                                   <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.is_reply === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                      {item.is_reply === 1 ? '已回复' : '未回复'}
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.is_reply == '1' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                      {item.is_reply == '1' ? '已回复' : '未回复'}
                                     </span>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(item.analyzed_at)}</td>
