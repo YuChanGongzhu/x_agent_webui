@@ -9,7 +9,7 @@ import TooltipIcon from '../../components/BaseComponents/TooltipIcon'
 import Tooltipwrap from '../../components/BaseComponents/Tooltipwrap'
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
-import { Button, Space, Tabs, Form, Pagination, Spin, Card, Table, Input, Modal, Upload, message } from 'antd';
+import { Button, Space, Tabs, Form, Pagination, Spin, Card, Table, Input, Modal, Upload, message, Tag } from 'antd';
 import { CheckOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ExportOutlined, SendOutlined } from '@ant-design/icons'
 import { XhsComment, ReplyTemplate } from '../../api/mysql';
 import { dateFormat } from '../../utils/tool';
@@ -82,8 +82,23 @@ const DataAnalyze: React.FC = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [dagRunId, setDagRunId] = useState('');
-  const [dagRunStatus, setDagRunStatus] = useState('');
+  const [dagRunStatus, setDagRunStatus] = useState<string>('');
   const [selectedComments, setSelectedComments] = useState<string[]>([]);
+
+  const runStatus = {
+    'success': {
+      'color': 'green',
+      'text': '成功'
+    },
+    'running': {
+      'color': 'blue',
+      'text': '运行中'
+    },
+    'failed': {
+      'color': 'red',
+      'text': '失败'
+    }
+  }
 
 
   // Load filtered comments from session storage on component mount
@@ -1271,10 +1286,10 @@ const DataAnalyze: React.FC = () => {
                       <label htmlFor="select-all-notes" className="text-sm text-gray-600">全选</label>
                     </div>
                   </div>
-                  <div className='flex items-center gap-4'>
+                  <div className='flex items-center'>
                     {dagRunStatus && <>
                       <div className="text-sm text-gray-500">
-                        当前状态：{dagRunStatus}
+                        当前状态：<Tag color={runStatus[dagRunStatus as keyof typeof runStatus].color}>{runStatus[dagRunStatus as keyof typeof runStatus].text}</Tag>
                       </div>
                       <Button size='small' onClick={checkDagRunStatus} className="text-sm text-gray-500">
                         刷新状态
