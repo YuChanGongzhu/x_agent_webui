@@ -963,103 +963,389 @@ const DataAnalyze: React.FC = () => {
           <h2 className="text-lg font-semibold mb-4">选择关键字 {loading && <Spinner />}</h2>
         </BaseSelect>
       </div>
-      {
-        originalComments.length > 0 ? (<>
+      <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as TabType)}>
+        <TabPane tab="评论数据" key="analyze">
+          {originalComments.length > 0 ?
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
+                <button
+                  onClick={async () => {
+                    setRefreshingTasks(true);
+                    try {
+                      await fetchComments(selectedKeyword);
+                    } finally {
+                      setRefreshingTasks(false);
+                    }
+                  }}
+                  className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  title="刷新任务列表"
+                  disabled={refreshingTasks}
+                >
+                  {refreshingTasks ? (
+                    <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <BaseInput size='large' type='number' className="w-full" value={minLikes} onChange={(e) => setMinLikes(parseInt(e.target.value))} onBlur={() => {
+                  if (!minLikes) {
+                    setMinLikes(0)
+                  }
+                }} min={0}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">最小点赞数</label>
+                </BaseInput>
+                <BaseInput size='large' type='number' className="w-full" value={minLength} onChange={(e) => setMinLength(parseInt(e.target.value))} onBlur={() => {
+                  if (!minLength) {
+                    setMinLength(1)
+                  }
+                }} min={1}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">最小评论长度</label>
+                </BaseInput>
+                <BaseInput size='large' type='text' className="w-full" value={filterKeywords} onChange={(e) => setFilterKeywords(e.target.value)} placeholder="例如：优惠,折扣,价格">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">筛选关键词（用逗号分隔）</label>
+                </BaseInput>
+              </div>
+              <div className="text-sm text-gray-500 mb-4">
+                已过滤出 {filteredComments.length} 条评论
+              </div>
+              <div className="w-full h-full">
+                <div className="h-[21vw] overflow-y-auto overflow-x-auto w-full">
+                  <table className="w-full h-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredComments
+                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .map((comment) => (
+                          <tr key={comment.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <Tooltipwrap title={comment.note_url}>
+                                <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
+                                  {comment.note_url}
+                                </a>
+                              </Tooltipwrap>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                            <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                              <Tooltipwrap title={comment.content}>
+                                {comment.content || '无内容'}
+                              </Tooltipwrap>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Pagination for comments */}
+                {filteredComments.length > itemsPerPage && (
+                  <div className="flex justify-center mt-4">
+                    <nav className="flex items-center">
+                      <button
+                        onClick={() => paginate(1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        首页
+                      </button>
+                      <button
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        上一页
+                      </button>
 
-          <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as TabType)}>
-            <TabPane tab="评论数据" key="analyze">
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-lg font-semibold mb-4">过滤条件设置 {loading && <Spinner />}</h2>
+                      {[...Array(Math.min(5, Math.ceil(filteredComments.length / itemsPerPage)))].map((_, i) => {
+                        let pageNum: number = 0;
+                        const totalPages = Math.ceil(filteredComments.length / itemsPerPage);
+
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        if (pageNum > 0 && pageNum <= totalPages) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => paginate(pageNum)}
+                              className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === Math.ceil(filteredComments.length / itemsPerPage)}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        下一页
+                      </button>
+                      <button
+                        onClick={() => paginate(Math.ceil(filteredComments.length / itemsPerPage))}
+                        disabled={currentPage === Math.ceil(filteredComments.length / itemsPerPage)}
+                        className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                      >
+                        末页
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">用户画像描述（可选）<TooltipIcon tooltipProps={{ title: "添加用户画像描述可以帮助AI更好地理解评论背景" }} /></label>
+                <textarea
+                  value={profileSentence}
+                  onChange={(e) => setProfileSentence(e.target.value)}
+                  placeholder="例如：这是一个对美妆产品感兴趣的年轻女性用户群体..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
+                  rows={3}
+                />
+              </div>
+              <Button type='primary' onClick={handleStartAnalysis} disabled={loading || analysisStatus === 'running' || filteredComments.length === 0}>
+                {loading ? '处理中...' : '分析内容'}
+              </Button>
+            </div> : <>
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
+                <h2 className="text-lg font-semibold mb-4">未找到关键词“ {selectedKeyword} ”的评论数据，请先采集/刷新数据</h2>
+                <Space>
+                  <Button className='w-24' type="primary" onClick={() => navigate(`/xhs/collect?keyword=${selectedKeyword}&&tab=comments`)}>采集数据</Button>
+                  <Button className='w-24' type="default" disabled={loading} onClick={() => fetchComments(selectedKeyword)}>刷新数据</Button>
+                </Space>
+              </div>
+            </>}
+        </TabPane>
+        <TabPane tab="意向客户" key="intents">
+          {
+            analysisTask && (
+              <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+                <h2 className="text-lg font-semibold mb-4">分析任务状态</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-gray-600">任务ID:</p>
+                    <p className="font-medium">{analysisTask.dag_run_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">状态:</p>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${analysisTask.state === 'success' ? 'bg-green-100 text-green-800' :
+                      analysisTask.state === 'running' ? 'bg-blue-100 text-blue-800' :
+                        analysisTask.state === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                      }`}>
+                      {analysisTask.state === 'success' ? '成功' :
+                        analysisTask.state === 'running' ? '运行中' :
+                          analysisTask.state === 'failed' ? '失败' : analysisTask.state}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">开始时间:</p>
+                    <p>{formatDate(analysisTask.start_date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">结束时间:</p>
+                    <p>{analysisTask.end_date ? formatDate(analysisTask.end_date) : '-'}</p>
+                  </div>
+                </div>
+
+                {analysisStatus === 'running' && (
                   <button
-                    onClick={async () => {
-                      setRefreshingTasks(true);
-                      try {
-                        await fetchComments(selectedKeyword);
-                      } finally {
-                        setRefreshingTasks(false);
-                      }
-                    }}
-                    className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    title="刷新任务列表"
-                    disabled={refreshingTasks}
+                    onClick={checkAnalysisStatus}
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    {refreshingTasks ? (
-                      <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    )}
+                    {loading ? '检查中...' : '检查分析状态'}
                   </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <BaseInput size='large' type='number' className="w-full" value={minLikes} onChange={(e) => setMinLikes(parseInt(e.target.value))} onBlur={() => {
-                    if (!minLikes) {
-                      setMinLikes(0)
-                    }
-                  }} min={0}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">最小点赞数</label>
-                  </BaseInput>
-                  <BaseInput size='large' type='number' className="w-full" value={minLength} onChange={(e) => setMinLength(parseInt(e.target.value))} onBlur={() => {
-                    if (!minLength) {
-                      setMinLength(1)
-                    }
-                  }} min={1}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">最小评论长度</label>
-                  </BaseInput>
-                  <BaseInput size='large' type='text' className="w-full" value={filterKeywords} onChange={(e) => setFilterKeywords(e.target.value)} placeholder="例如：优惠,折扣,价格">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">筛选关键词（用逗号分隔）</label>
-                  </BaseInput>
-                </div>
-                <div className="text-sm text-gray-500 mb-4">
-                  已过滤出 {filteredComments.length} 条评论
+                )}
+
+                {analysisStatus === 'success' && (
+
+                  <Space>
+                    <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md">
+                      分析任务已完成
+                    </div>
+                    <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md cursor-pointer" onClick={() => setAnalysisStatus(null)}>
+                      <CheckOutlined />
+                    </div>
+                  </Space>
+                )}
+              </div>
+            )
+          }
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-semibold mb-4">意向客户数据 <TooltipIcon tooltipProps={{ title: "意向客户数据为分析后的数据，可能存在误差，请谨慎使用" }} /></h2>
+              <button
+                onClick={async () => {
+                  setRefreshingTasks(true);
+                  try {
+                    await fetchCustomerIntents();
+                  } finally {
+                    setRefreshingTasks(false);
+                  }
+                }}
+                className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                title="刷新任务列表"
+                disabled={refreshingTasks}
+              >
+                {refreshingTasks ? (
+                  <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={uniqueKeywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
+                setSelectedKeyword(value);
+                if (value !== '全部') {
+                  setLatestKeyword(value);
+                }
+              }} >
+                <label className="block text-sm font-medium text-gray-700 mb-1">按关键词筛选</label>
+              </BaseSelect>
+              <BaseSelect size='large' className="w-full" value={selectedIntent} showSearch options={intents.map((intent) => ({ label: intent, value: intent }))} onChange={(value) => setSelectedIntent(value)} >
+                <label className="block text-sm font-medium text-gray-700 mb-1">按意向类型筛选</label>
+              </BaseSelect>
+              <BaseSelect size='large' className="w-full" value={isReply} showSearch options={[{ label: '全部', value: '全部' }, { label: '已回复', value: '1' }, { label: '未回复', value: '0' }]} onChange={(value) => setIsReply(value)} >
+                <label className="block text-sm font-medium text-gray-700 mb-1">是否已回复</label>
+              </BaseSelect>
+            </div>
+
+            {filteredIntents.length > 0 ? (
+              <>
+                <div className='flex mb-4 justify-between'>
+                  <div className='flex items-center gap-4'>
+                    <div className="text-sm text-gray-500">
+                      找到 {filteredIntents.length} 条意向客户数据
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="select-all-notes"
+                        checked={selectedComments.length > 0 && selectedComments.length === filteredIntents.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Select all notes
+                            setSelectedComments(filteredIntents.map(intent => intent.comment_id));
+                          } else {
+                            // Deselect all notes
+                            setSelectedComments([]);
+                          }
+                        }}
+                        className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded mr-2"
+                      />
+                      <label htmlFor="select-all-notes" className="text-sm text-gray-600">全选</label>
+                    </div>
+                  </div>
+                  <div className='flex items-center gap-4'>
+                    {dagRunStatus && <>
+                      <div className="text-sm text-gray-500">
+                        当前状态：{dagRunStatus}
+                      </div>
+                      <Button size='small' onClick={checkDagRunStatus} className="text-sm text-gray-500">
+                        刷新状态
+                      </Button>
+                    </>}
+                  </div>
                 </div>
                 <div className="w-full h-full">
-                  <div className="h-[21vw] overflow-y-auto overflow-x-auto w-full">
+                  <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[10vh]' : 'h-[34vh]'} overflow-y-auto overflow-x-auto w-full`}>
                     <table className="w-full h-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">选择</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">笔记链接</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">点赞数</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">意向</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">是否已回复</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分析时间</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredComments
+                        {filteredIntents
                           .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                          .map((comment) => (
-                            <tr key={comment.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{comment.id}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <Tooltipwrap title={comment.note_url}>
-                                  <a href={comment.note_url} target="_blank" rel="noopener noreferrer" className="text-[rgba(248,213,126,1)] hover:underline break-all">
-                                    {comment.note_url}
-                                  </a>
-                                </Tooltipwrap>
+                          .map((item) => (
+                            <tr key={item.id}>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedComments.includes(item.comment_id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedComments([...selectedComments, item.comment_id]);
+                                    } else {
+                                      setSelectedComments(selectedComments.filter(comment_id => comment_id !== item.comment_id));
+                                    }
+                                  }}
+                                  className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
+                                />
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.keyword}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.id}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
                               <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                                <Tooltipwrap title={comment.content}>
-                                  {comment.content || '无内容'}
+                                <Tooltipwrap title={item.content}>
+                                  {item.content}
                                 </Tooltipwrap>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.author}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{comment.likes}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.intent === '高意向' ? 'bg-green-100 text-green-800' :
+                                  item.intent === '中意向' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {item.intent}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.keyword}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.is_reply == '1' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                  {item.is_reply == '1' ? '已回复' : '未回复'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(item.analyzed_at)}</td>
                             </tr>
                           ))}
                       </tbody>
                     </table>
                   </div>
-                  {/* Pagination for comments */}
-                  {filteredComments.length > itemsPerPage && (
-                    <div className="flex justify-center mt-4">
+                  {/* Pagination */}
+                  {filteredIntents.length > itemsPerPage && (
+                    <div className="flex justify-center mt-4 mb-4">
                       <nav className="flex items-center">
                         <button
                           onClick={() => paginate(1)}
@@ -1076,10 +1362,11 @@ const DataAnalyze: React.FC = () => {
                           上一页
                         </button>
 
-                        {[...Array(Math.min(5, Math.ceil(filteredComments.length / itemsPerPage)))].map((_, i) => {
-                          let pageNum: number = 0;
-                          const totalPages = Math.ceil(filteredComments.length / itemsPerPage);
+                        {[...Array(Math.min(5, Math.ceil(filteredIntents.length / itemsPerPage)))].map((_, i) => {
+                          let pageNum: number = 0; // Initialize with default value
+                          const totalPages = Math.ceil(filteredIntents.length / itemsPerPage);
 
+                          // Logic to show page numbers centered around current page
                           if (totalPages <= 5) {
                             pageNum = i + 1;
                           } else if (currentPage <= 3) {
@@ -1106,14 +1393,14 @@ const DataAnalyze: React.FC = () => {
 
                         <button
                           onClick={() => paginate(currentPage + 1)}
-                          disabled={currentPage === Math.ceil(filteredComments.length / itemsPerPage)}
+                          disabled={currentPage === Math.ceil(filteredIntents.length / itemsPerPage)}
                           className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                         >
                           下一页
                         </button>
                         <button
-                          onClick={() => paginate(Math.ceil(filteredComments.length / itemsPerPage))}
-                          disabled={currentPage === Math.ceil(filteredComments.length / itemsPerPage)}
+                          onClick={() => paginate(Math.ceil(filteredIntents.length / itemsPerPage))}
+                          disabled={currentPage === Math.ceil(filteredIntents.length / itemsPerPage)}
                           className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
                         >
                           末页
@@ -1123,440 +1410,151 @@ const DataAnalyze: React.FC = () => {
                   )}
                 </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">用户画像描述（可选）<TooltipIcon tooltipProps={{ title: "添加用户画像描述可以帮助AI更好地理解评论背景" }} /></label>
-                  <textarea
-                    value={profileSentence}
-                    onChange={(e) => setProfileSentence(e.target.value)}
-                    placeholder="例如：这是一个对美妆产品感兴趣的年轻女性用户群体..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[rgba(248,213,126,1)] focus:border-[rgba(248,213,126,1)]"
-                    rows={3}
-                  />
-                </div>
-                <Button type='primary' onClick={handleStartAnalysis} disabled={loading || analysisStatus === 'running' || filteredComments.length === 0}>
-                  {loading ? '处理中...' : '分析内容'}
-                </Button>
-              </div>
-            </TabPane>
-            <TabPane tab="意向客户" key="intents">
-              {
-                analysisTask && (
-                  <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-                    <h2 className="text-lg font-semibold mb-4">分析任务状态</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600">任务ID:</p>
-                        <p className="font-medium">{analysisTask.dag_run_id}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">状态:</p>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${analysisTask.state === 'success' ? 'bg-green-100 text-green-800' :
-                          analysisTask.state === 'running' ? 'bg-blue-100 text-blue-800' :
-                            analysisTask.state === 'failed' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                          }`}>
-                          {analysisTask.state === 'success' ? '成功' :
-                            analysisTask.state === 'running' ? '运行中' :
-                              analysisTask.state === 'failed' ? '失败' : analysisTask.state}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">开始时间:</p>
-                        <p>{formatDate(analysisTask.start_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">结束时间:</p>
-                        <p>{analysisTask.end_date ? formatDate(analysisTask.end_date) : '-'}</p>
-                      </div>
-                    </div>
-
-                    {analysisStatus === 'running' && (
-                      <button
-                        onClick={checkAnalysisStatus}
-                        disabled={loading}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        {loading ? '检查中...' : '检查分析状态'}
-                      </button>
-                    )}
-
-                    {analysisStatus === 'success' && (
-
-                      <Space>
-                        <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md">
-                          分析任务已完成
-                        </div>
-                        <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md cursor-pointer" onClick={() => setAnalysisStatus(null)}>
-                          <CheckOutlined />
-                        </div>
-                      </Space>
-                    )}
-                  </div>
-                )
-              }
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-lg font-semibold mb-4">意向客户数据 <TooltipIcon tooltipProps={{ title: "意向客户数据为分析后的数据，可能存在误差，请谨慎使用" }} /></h2>
+                <div className="flex space-x-4">
                   <button
-                    onClick={async () => {
-                      setRefreshingTasks(true);
-                      try {
-                        await fetchCustomerIntents();
-                      } finally {
-                        setRefreshingTasks(false);
-                      }
-                    }}
-                    className={`p-2 text-[rgba(248,213,126,1)] hover:text-[rgba(248,213,126,0.8)] focus:outline-none ${refreshingTasks ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    title="刷新任务列表"
-                    disabled={refreshingTasks}
+                    onClick={handleExportData}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                   >
-                    {refreshingTasks ? (
-                      <svg className="animate-spin h-5 w-5 text-[rgba(248,213,126,1)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    )}
+                    导出数据 <ExportOutlined />
+                  </button>
+
+                  <button
+                    onClick={handleReachOut}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    触达用户 <SendOutlined />
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <BaseSelect size='large' className="w-full" value={selectedKeyword} showSearch options={uniqueKeywords.map((kw) => ({ label: kw, value: kw }))} onChange={(value) => {
-                    setSelectedKeyword(value);
-                    if (value !== '全部') {
-                      setLatestKeyword(value);
-                    }
-                  }} >
-                    <label className="block text-sm font-medium text-gray-700 mb-1">按关键词筛选</label>
-                  </BaseSelect>
-                  <BaseSelect size='large' className="w-full" value={selectedIntent} showSearch options={intents.map((intent) => ({ label: intent, value: intent }))} onChange={(value) => setSelectedIntent(value)} >
-                    <label className="block text-sm font-medium text-gray-700 mb-1">按意向类型筛选</label>
-                  </BaseSelect>
-                  <BaseSelect size='large' className="w-full" value={isReply} showSearch options={[{ label: '全部', value: '全部' }, { label: '已回复', value: '1' }, { label: '未回复', value: '0' }]} onChange={(value) => setIsReply(value)} >
-                    <label className="block text-sm font-medium text-gray-700 mb-1">是否已回复</label>
-                  </BaseSelect>
-                </div>
-
-                {filteredIntents.length > 0 ? (
-                  <>
-                    <div className='flex mb-4 justify-between'>
-                      <div className='flex items-center gap-4'>
-                        <div className="text-sm text-gray-500">
-                          找到 {filteredIntents.length} 条意向客户数据
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="select-all-notes"
-                            checked={selectedComments.length > 0 && selectedComments.length === filteredIntents.length}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                // Select all notes
-                                setSelectedComments(filteredIntents.map(intent => intent.comment_id));
-                              } else {
-                                // Deselect all notes
-                                setSelectedComments([]);
-                              }
-                            }}
-                            className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded mr-2"
-                          />
-                          <label htmlFor="select-all-notes" className="text-sm text-gray-600">全选</label>
-                        </div>
-                      </div>
-                      <div className='flex items-center gap-4'>
-                        {dagRunStatus && <>
-                          <div className="text-sm text-gray-500">
-                            当前状态：{dagRunStatus}
-                          </div>
-                          <Button size='small' onClick={checkDagRunStatus} className="text-sm text-gray-500">
-                            刷新状态
-                          </Button>
-                        </>}
-                      </div>
-                    </div>
-                    <div className="w-full h-full">
-                      <div className={`${analysisStatus === 'success' || analysisStatus === 'running' ? 'h-[10vh]' : 'h-[34vh]'} overflow-y-auto overflow-x-auto w-full`}>
-                        <table className="w-full h-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">选择</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">意向</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">关键词</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">是否已回复</th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分析时间</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredIntents
-                              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                              .map((item) => (
-                                <tr key={item.id}>
-                                  <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedComments.includes(item.comment_id)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedComments([...selectedComments, item.comment_id]);
-                                        } else {
-                                          setSelectedComments(selectedComments.filter(comment_id => comment_id !== item.comment_id));
-                                        }
-                                      }}
-                                      className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.id}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                                    <Tooltipwrap title={item.content}>
-                                      {item.content}
-                                    </Tooltipwrap>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.intent === '高意向' ? 'bg-green-100 text-green-800' :
-                                      item.intent === '中意向' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-gray-100 text-gray-800'
-                                      }`}>
-                                      {item.intent}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.keyword}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.is_reply == '1' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                      {item.is_reply == '1' ? '已回复' : '未回复'}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(item.analyzed_at)}</td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      {/* Pagination */}
-                      {filteredIntents.length > itemsPerPage && (
-                        <div className="flex justify-center mt-4 mb-4">
-                          <nav className="flex items-center">
-                            <button
-                              onClick={() => paginate(1)}
-                              disabled={currentPage === 1}
-                              className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                            >
-                              首页
-                            </button>
-                            <button
-                              onClick={() => paginate(currentPage - 1)}
-                              disabled={currentPage === 1}
-                              className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                            >
-                              上一页
-                            </button>
-
-                            {[...Array(Math.min(5, Math.ceil(filteredIntents.length / itemsPerPage)))].map((_, i) => {
-                              let pageNum: number = 0; // Initialize with default value
-                              const totalPages = Math.ceil(filteredIntents.length / itemsPerPage);
-
-                              // Logic to show page numbers centered around current page
-                              if (totalPages <= 5) {
-                                pageNum = i + 1;
-                              } else if (currentPage <= 3) {
-                                pageNum = i + 1;
-                              } else if (currentPage >= totalPages - 2) {
-                                pageNum = totalPages - 4 + i;
-                              } else {
-                                pageNum = currentPage - 2 + i;
-                              }
-
-                              if (pageNum > 0 && pageNum <= totalPages) {
-                                return (
-                                  <button
-                                    key={pageNum}
-                                    onClick={() => paginate(pageNum)}
-                                    className={`px-3 py-1 mx-1 rounded ${currentPage === pageNum ? 'bg-[rgba(248,213,126,1)] text-white' : 'border border-gray-300'}`}
-                                  >
-                                    {pageNum}
-                                  </button>
-                                );
-                              }
-                              return null;
-                            })}
-
-                            <button
-                              onClick={() => paginate(currentPage + 1)}
-                              disabled={currentPage === Math.ceil(filteredIntents.length / itemsPerPage)}
-                              className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                            >
-                              下一页
-                            </button>
-                            <button
-                              onClick={() => paginate(Math.ceil(filteredIntents.length / itemsPerPage))}
-                              disabled={currentPage === Math.ceil(filteredIntents.length / itemsPerPage)}
-                              className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                            >
-                              末页
-                            </button>
-                          </nav>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex space-x-4">
-                      <button
-                        onClick={handleExportData}
-                        className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                      >
-                        导出数据 <ExportOutlined />
-                      </button>
-
-                      <button
-                        onClick={handleReachOut}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        触达用户 <SendOutlined />
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-yellow-600">未找到符合条件的意向客户数据</p>
-                )}
-              </div>
-            </TabPane>
-          </Tabs>
-        </>) : (<>
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
-            <h2 className="text-lg font-semibold mb-4">未找到关键词“ {selectedKeyword} ”的评论数据，请先采集/刷新数据</h2>
-            <Space>
-              <Button className='w-24' type="primary" onClick={() => navigate(`/xhs/collect?keyword=${selectedKeyword}&&tab=comments`)}>采集数据</Button>
-              <Button className='w-24' type="default" disabled={loading} onClick={() => fetchComments(selectedKeyword)}>刷新数据</Button>
-            </Space>
+              </>
+            ) : (
+              <p className="text-yellow-600">未找到符合条件的意向客户数据</p>
+            )}
           </div>
-        </>)
-      }
-      {activeTab === 'intents' && <>
-        <Card
-          title="回复模板管理"
-          extra={
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditingTemplate(null);
-                setTemplateContent('');
-                setIsModalVisible(true);
-              }}
-            >
-              添加模板
-            </Button>
-          }
-        >
-          <Spin spinning={loading}>
-            <Table
-              dataSource={templates}
-              columns={templateColumns}
-              rowKey="id"
-              pagination={false}
-            />
-            <div className="mt-4 flex justify-end">
-              <Pagination
-                current={currentPage}
-                pageSize={pageSize}
-                total={totalTemplates}
-                onChange={(page: number) => setCurrentPage(page)}
-                onShowSizeChange={(current: number, size: number) => {
-                  setCurrentPage(1);
-                  setPageSize(size);
+        </TabPane>
+      </Tabs>
+      {
+        activeTab === 'intents' && <>
+          <Card
+            title="回复模板管理"
+            extra={
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditingTemplate(null);
+                  setTemplateContent('');
+                  setIsModalVisible(true);
                 }}
-                showSizeChanger
-                showQuickJumper
-                showTotal={(total: number) => `共 ${total} 条`}
-                locale={{
-                  items_per_page: '条/页',
-                  jump_to: '跳至',
-                  jump_to_confirm: '确定',
-                  page: '页',
-                  prev_page: '上一页',
-                  next_page: '下一页',
-                  prev_5: '向前 5 页',
-                  next_5: '向后 5 页',
-                  prev_3: '向前 3 页',
-                  next_3: '向后 3 页'
-                }}
+              >
+                添加模板
+              </Button>
+            }
+          >
+            <Spin spinning={loading}>
+              <Table
+                dataSource={templates}
+                columns={templateColumns}
+                rowKey="id"
+                pagination={false}
               />
-            </div>
-          </Spin>
-        </Card>
-        <Modal
-          title={editingTemplate ? "编辑模板" : "添加模板"}
-          open={isModalVisible}
-          onOk={editingTemplate ? handleUpdateTemplate : handleAddTemplate}
-          onCancel={() => {
-            setIsModalVisible(false);
-            setTemplateContent('');
-            setImageUrl('');
-            setImageFile(null);
-            setEditingTemplate(null);
-          }}
-          confirmLoading={loading || uploadLoading}
-          okText={editingTemplate ? "更新" : "添加"}
-          cancelText="取消"
-        >
-          <Form layout="vertical">
-            <Form.Item label="模板内容" required>
-              <TextArea
-                rows={6}
-                value={templateContent}
-                onChange={(e) => setTemplateContent(e.target.value)}
-                placeholder="请输入模板内容..."
-              />
-            </Form.Item>
-            <Form.Item label="图片（可选）">
-              <div className="flex flex-col space-y-2">
-                <Upload
-                  name="image"
-                  listType="picture-card"
-                  className="avatar-uploader"
-                  showUploadList={false}
-                  beforeUpload={handleImageUpload}
-                  accept="image/*"
-                >
-                  {imageUrl ? (
-                    <div className="relative">
-                      <img src={imageUrl} alt="模板图片" style={{ width: '100%' }} />
-                      <div
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveImage();
-                        }}
-                      >
-                        X
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {uploadLoading ? <Spin /> : <PlusOutlined />}
-                      <div style={{ marginTop: 8 }}>上传图片</div>
-                    </div>
-                  )}
-                </Upload>
-                {imageUrl && (
-                  <Button
-                    icon={<DeleteOutlined />}
-                    onClick={handleRemoveImage}
-                    danger
-                  >
-                    移除图片
-                  </Button>
-                )}
+              <div className="mt-4 flex justify-end">
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={totalTemplates}
+                  onChange={(page: number) => setCurrentPage(page)}
+                  onShowSizeChange={(current: number, size: number) => {
+                    setCurrentPage(1);
+                    setPageSize(size);
+                  }}
+                  showSizeChanger
+                  showQuickJumper
+                  showTotal={(total: number) => `共 ${total} 条`}
+                  locale={{
+                    items_per_page: '条/页',
+                    jump_to: '跳至',
+                    jump_to_confirm: '确定',
+                    page: '页',
+                    prev_page: '上一页',
+                    next_page: '下一页',
+                    prev_5: '向前 5 页',
+                    next_5: '向后 5 页',
+                    prev_3: '向前 3 页',
+                    next_3: '向后 3 页'
+                  }}
+                />
               </div>
-            </Form.Item>
-          </Form>
-        </Modal>
-      </>}
+            </Spin>
+          </Card>
+          <Modal
+            title={editingTemplate ? "编辑模板" : "添加模板"}
+            open={isModalVisible}
+            onOk={editingTemplate ? handleUpdateTemplate : handleAddTemplate}
+            onCancel={() => {
+              setIsModalVisible(false);
+              setTemplateContent('');
+              setImageUrl('');
+              setImageFile(null);
+              setEditingTemplate(null);
+            }}
+            confirmLoading={loading || uploadLoading}
+            okText={editingTemplate ? "更新" : "添加"}
+            cancelText="取消"
+          >
+            <Form layout="vertical">
+              <Form.Item label="模板内容" required>
+                <TextArea
+                  rows={6}
+                  value={templateContent}
+                  onChange={(e) => setTemplateContent(e.target.value)}
+                  placeholder="请输入模板内容..."
+                />
+              </Form.Item>
+              <Form.Item label="图片（可选）">
+                <div className="flex flex-col space-y-2">
+                  <Upload
+                    name="image"
+                    listType="picture-card"
+                    className="avatar-uploader"
+                    showUploadList={false}
+                    beforeUpload={handleImageUpload}
+                    accept="image/*"
+                  >
+                    {imageUrl ? (
+                      <div className="relative">
+                        <img src={imageUrl} alt="模板图片" style={{ width: '100%' }} />
+                        <div
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage();
+                          }}
+                        >
+                          X
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {uploadLoading ? <Spin /> : <PlusOutlined />}
+                        <div style={{ marginTop: 8 }}>上传图片</div>
+                      </div>
+                    )}
+                  </Upload>
+                  {imageUrl && (
+                    <Button
+                      icon={<DeleteOutlined />}
+                      onClick={handleRemoveImage}
+                      danger
+                    >
+                      移除图片
+                    </Button>
+                  )}
+                </div>
+              </Form.Item>
+            </Form>
+          </Modal>
+        </>
+      }
     </div >
   );
 };
