@@ -547,7 +547,7 @@ const DataCollect: React.FC = () => {
                 <BaseInput size='large' className="w-full" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键字">
                   <label className="block text-sm font-medium text-gray-700 mb-1">关键字 <TooltipIcon tooltipProps={{ title: "设置关键词后，AI将根据关键词采集笔记" }} /></label>
                 </BaseInput>
-                <BaseInput type='number' size='large' className="w-full" value={maxNotes} onChange={(e) => setMaxNotes(parseInt(e.target.value))} min={1} max={1000}>
+                <BaseInput type='number' size='large' className="w-full" value={maxNotes} onChange={(e) => setMaxNotes(parseInt(e.target.value))} min={1} max={500}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">采集笔记数量 <TooltipIcon tooltipProps={{ title: "设置采集笔记数量后，AI将根据数量采集笔记" }} /></label>
                 </BaseInput>
                 <BaseInput type='hidden' size='large' className="w-full absolute" value={targetEmail} >
