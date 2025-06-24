@@ -400,7 +400,6 @@ export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string
     const queryParams = new URLSearchParams();
     queryParams.append('keyword', keyword);
 
-    // Add email parameter to query if provided
     if (email) {
       queryParams.append('email', email);
     }
@@ -570,7 +569,7 @@ export const getXhsCommentsApi = async (limit: number = 100): Promise<XhsComment
  * @param keyword The keyword to filter notes by
  * @returns Promise with the notes response
  */
-export const getXhsNotesByKeywordApi = async (keyword: string): Promise<XhsNotesResponse> => {
+export const getXhsNotesByKeywordApi = async (keyword: string,email?: string): Promise<XhsNotesResponse> => {
   try {
     if (!keyword) {
       throw new Error('Missing required parameter: keyword');
@@ -578,6 +577,10 @@ export const getXhsNotesByKeywordApi = async (keyword: string): Promise<XhsNotes
 
     const queryParams = new URLSearchParams();
     queryParams.append('keyword', keyword);
+
+    if (email) {
+      queryParams.append('email', email);
+    }
 
     const baseUrl = getNoteUrl || '';
     const url = `${baseUrl}?${queryParams.toString()}`;

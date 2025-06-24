@@ -62,7 +62,7 @@ interface Task {
 }
 
 const DataCollect: React.FC = () => {
-  // ...原有state...
+  // State for refreshing
   const [refreshingKeywords, setRefreshingKeywords] = useState(false);
   const [refreshingNotes, setRefreshingNotes] = useState(false);
   const [refreshingTasks, setRefreshingTasks] = useState(false);
@@ -176,8 +176,10 @@ const DataCollect: React.FC = () => {
 
   // Fetch keywords on component mount
   useEffect(() => {
+    if(email || isAdmin){
     fetchKeywords();
     fetchRecentTasks();
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const keyword = urlParams.get('keyword');
@@ -189,27 +191,18 @@ const DataCollect: React.FC = () => {
       setActiveTab(tab as TabType);
       window.history.replaceState({}, '', '/xhs/collect');
     }
-  }, []);
+  }, [isAdmin, email]);
 
-  // Fetch keywords from API
   const fetchKeywords = async () => {
     try {
       setLoading(true);
       setRefreshingKeywords(true);
 
-      // Get keywords from real API endpoint
-      // If user is not admin, filter by their email
       const response = await getKeywordsApi(!isAdmin && email ? email : undefined);
-
-      // Check if response has data and data has keywords
       if (response && response.data) {
-        // Extract keywords from the response
         const extractedKeywords = response.data;
 
-        console.log(`Keywords for ${!isAdmin && email ? `email: ${email}` : 'admin'}:`, extractedKeywords);
-
         if (extractedKeywords.length > 0) {
-          //获取到的关键字列表需要倒序
           const extractedKeywordsReverse = extractedKeywords.reverse();
           setKeywords(extractedKeywordsReverse);
 
@@ -222,12 +215,10 @@ const DataCollect: React.FC = () => {
           // 更新共享的最新关键词
           setLatestKeyword(keywordToSelect);
         } else {
-          // No keywords found in the response
           setKeywords([]);
           notifi('未找到关键词', 'error');
         }
       } else {
-        // No data in the response
         setKeywords([]);
         notifi('未找到关键词数据', 'error');
       }
@@ -242,7 +233,6 @@ const DataCollect: React.FC = () => {
     }
   };
 
-  // Create note collection task
   const handleCreateNotesTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) {
@@ -252,11 +242,9 @@ const DataCollect: React.FC = () => {
 
     try {
       setLoading(true);
-      // Create timestamp for unique dag_run_id
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const dag_run_id = `xhs_notes_${timestamp}`;
 
-      // Prepare configuration
       const conf = {
         keyword,
         max_notes: maxNotes,
@@ -272,7 +260,6 @@ const DataCollect: React.FC = () => {
         conf
       );
 
-      // Add new task to the list
       const newTask = {
         dag_run_id: response.dag_run_id,
         state: response.state,
@@ -286,9 +273,7 @@ const DataCollect: React.FC = () => {
       notifi(`成功创建笔记采集任务，任务ID: ${newTask.dag_run_id}`, 'success');
       setLoading(false);
       setKeyword('');
-      // 不清空目标邮箱，保持选择状态
-
-      // Refresh task list
+      
       fetchRecentTasks();
     } catch (err) {
       console.error('Error creating notes task:', err);
@@ -306,11 +291,9 @@ const DataCollect: React.FC = () => {
 
     try {
       setLoading(true);
-      // Create timestamp for unique dag_run_id
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
       const dag_run_id = `xhs_comments_${timestamp}`;
 
-      // Prepare configuration
       const conf: any = {
         keyword: selectedKeyword,
         max_comments: maxComments,
@@ -318,7 +301,6 @@ const DataCollect: React.FC = () => {
         note_type: noteType
       };
 
-      // Add selected note URLs if any are selected
       if (selectedNotes.length > 0) {
         conf.note_urls = selectedNotes;
       }
@@ -329,7 +311,6 @@ const DataCollect: React.FC = () => {
         conf
       );
 
-      // Add new task to the list
       const newTask = {
         dag_run_id: response.dag_run_id,
         state: response.state,
@@ -343,7 +324,6 @@ const DataCollect: React.FC = () => {
       notifi(`成功创建笔记评论收集任务，任务ID: ${newTask.dag_run_id}`, 'success');
       setLoading(false);
 
-      // Refresh task list
       fetchRecentTasks();
     } catch (err) {
       console.error('Error creating comments task:', err);
@@ -352,18 +332,13 @@ const DataCollect: React.FC = () => {
     }
   };
 
-  // Fetch recent tasks
-
-  // Reset pagination when notes or comments change
   useEffect(() => {
     setCurrentNotesPage(1);
   }, [notes]);
-
   useEffect(() => {
     setCurrentCommentsPage(1);
   }, [comments]);
 
-  // Fetch notes and comments when selectedKeyword changes
   useEffect(() => {
     if (selectedKeyword) {
       fetchNotes(selectedKeyword);
@@ -376,15 +351,13 @@ const DataCollect: React.FC = () => {
       setLoading(true);
       setRefreshingTasks(true);
 
-      // Get tasks from Airflow API directly
       let allTasks: Task[] = [];
 
-      // Directly fetch DAG runs from Airflow API
       const notesResponse = await getDagRuns("notes_collector", 200, "-start_date");
       const commentsResponse = await getDagRuns("comments_collector", 200, "-start_date");
 
-      console.log('Notes response from Airflow:', notesResponse);
-      console.log('Comments response from Airflow:', commentsResponse);
+      console.log('前200条airflow 笔记任务', notesResponse);
+      console.log('前200条airflow 评论任务', commentsResponse);
 
       if (notesResponse && notesResponse.dag_runs) {
         const notesTasks = notesResponse.dag_runs.map((run: any) => ({
@@ -410,21 +383,15 @@ const DataCollect: React.FC = () => {
         allTasks = [...allTasks, ...commentsTasks];
       }
 
-      // Sort by start_date (newest first) - ensure we're using proper date comparison
       allTasks.sort((a, b) => {
         const dateA = new Date(a.start_date).getTime();
         const dateB = new Date(b.start_date).getTime();
         return dateB - dateA; // Newest first
       });
 
-      console.log('All tasks (sorted):', allTasks);
-      console.log('Total tasks count:', allTasks.length);
-
-      // Filter tasks by email if user is not admin
       if (!isAdmin && email) {
         const filteredTasks = allTasks.filter(task => {
           try {
-            // Parse the conf JSON string to check the email
             const conf = JSON.parse(task.conf);
             return conf.email === email;
           } catch (error) {
@@ -433,7 +400,7 @@ const DataCollect: React.FC = () => {
           }
         });
 
-        console.log(`Filtered tasks for email ${email}:`, filteredTasks.length);
+        console.log(`隔离任务邮箱 ${email}:`, filteredTasks.length,filteredTasks);
         setTasks(filteredTasks);
       } else {
         // Admin can see all tasks
@@ -463,14 +430,9 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
 
-      // Use the real API endpoint for notes data
-      const response = await getXhsNotesByKeywordApi(keyword);
+      const response = await getXhsNotesByKeywordApi(keyword,!isAdmin && email ? email : undefined);
 
-      // Set notes data from response
       if (response && response.code === 0 && response.data && response.data.records) {
-
-        console.log('====', response.data.records)
-        // Transform the API response to match the expected Note format
         const transformedNotes: Note[] = response.data.records.map((item: any) => ({
           id: item.id || 0,
           title: item.title || '',
@@ -493,12 +455,10 @@ const DataCollect: React.FC = () => {
         setNotes(transformedNotes);
         setSortNotes(transformedNotes)
       } else {
-        // Handle empty or invalid response
         setNotes([]);
         setSortNotes([]);
         console.warn('Notes API returned invalid data format:', response);
       }
-
       setLoading(false);
     } catch (err) {
       console.error('Error fetching notes data:', err);
@@ -514,14 +474,10 @@ const DataCollect: React.FC = () => {
       setLoading(true);
       setRefreshingComments(true);
 
-      // Use the new comments API endpoint with email filtering for non-admin users
       const response = await getXhsCommentsByKeywordApi(keyword, !isAdmin && email ? email : undefined);
-
       console.log(`Comments for ${!isAdmin && email ? `email: ${email}` : 'admin'} and keyword: ${keyword}`);
 
-      // Set comments data from response
       if (response && response.code === 0 && response.data && response.data.records) {
-        // 将API返回的数据映射到Comment接口
         const mappedComments: Comment[] = response.data.records.map((record: any) => ({
           id: record.id?.toString() || '',
           note_id: record.note_id?.toString() || '',
@@ -533,19 +489,17 @@ const DataCollect: React.FC = () => {
           collect_time: record.collect_time,
           created_at: record.created_at,
           updated_at: record.updated_at,
-          userInfo: record.userInfo || email || '', // Add userInfo field with global email as default
+          userInfo: record.userInfo || '', 
           location: record.location || '',
           comment_time: record.comment_time || ''
         }));
         setComments(mappedComments);
         setSortComments(mappedComments);
       } else {
-        // Handle empty or invalid response
         setComments([]);
         setSortComments([]);
         console.warn('Comments API returned invalid data format:', response);
       }
-
       setLoading(false);
       setRefreshingComments(false);
     } catch (err) {
@@ -558,25 +512,18 @@ const DataCollect: React.FC = () => {
     }
   };
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('zh-CN');
   };
 
-  // Get current tasks for pagination
   const indexOfLastTask = currentPage * tasksPerPage;
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
   const currentTasks = tasks.slice(indexOfFirstTask, indexOfLastTask);
 
-  // Change page for tasks
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  // Change page for notes
   const paginateNotes = (pageNumber: number) => setCurrentNotesPage(pageNumber);
-
-  // Change page for comments
   const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
 
   return (

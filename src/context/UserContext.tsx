@@ -69,13 +69,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 保存用户邮箱
       if (user.email) {
         setEmail(user.email);
+        // console.log('用户邮箱:', user.email);
       }
 
-      console.log('用户上下文: 使用session中的用户信息, userId:', user.id);
+      console.log('用户上下文: 使用session中的用户信息', user);
       
       // 获取用户配置信息
       const profile = await UserProfileService.getUserProfile(user.id);
-      console.log('用户配置已加载:', profile);
+      // console.log('用户配置已加载:', profile);
       
       // 更新状态
       setUserProfile(profile);
