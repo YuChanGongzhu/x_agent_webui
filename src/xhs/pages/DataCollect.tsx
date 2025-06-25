@@ -107,6 +107,10 @@ const DataCollect: React.FC = () => {
   const [notesPerPage] = useState(10);
   const [currentCommentsPage, setCurrentCommentsPage] = useState(1);
   const [commentsPerPage] = useState(10);
+  const [jumpToPage, setJumpToPage] = useState<string>('');
+  const [totalNotesPages, setTotalNotesPages] = useState(0);
+  const [jumpToCommentsPage, setJumpToCommentsPage] = useState<string>('');
+  const [totalCommentsPages, setTotalCommentsPages] = useState(0);
 
   // State for loading and errors
   const [loading, setLoading] = useState(false);
@@ -430,7 +434,7 @@ const DataCollect: React.FC = () => {
     try {
       setLoading(true);
 
-      const response = await getXhsNotesByKeywordApi(keyword,!isAdmin && email ? email : undefined);
+      const response = await getXhsNotesByKeywordApi(keyword, !isAdmin && email ? email : undefined);
 
       if (response && response.code === 0 && response.data && response.data.records) {
         const transformedNotes: Note[] = response.data.records.map((item: any) => ({
@@ -453,10 +457,19 @@ const DataCollect: React.FC = () => {
         }));
 
         setNotes(transformedNotes);
-        setSortNotes(transformedNotes)
+        setSortNotes(transformedNotes);
+        
+        // Set total pages from API response
+        if (response.data.total_pages) {
+          setTotalNotesPages(response.data.total_pages);
+        } else {
+          // Fallback calculation if total_pages is not provided
+          setTotalNotesPages(Math.ceil(response.data.total / 1000));
+        }
       } else {
         setNotes([]);
         setSortNotes([]);
+        setTotalNotesPages(0);
         console.warn('Notes API returned invalid data format:', response);
       }
       setLoading(false);
@@ -465,6 +478,7 @@ const DataCollect: React.FC = () => {
       notifi('获取笔记数据失败', 'error');
       setNotes([]);
       setSortNotes([]);
+      setTotalNotesPages(0);
       setLoading(false);
     }
   };
@@ -495,9 +509,18 @@ const DataCollect: React.FC = () => {
         }));
         setComments(mappedComments);
         setSortComments(mappedComments);
+        
+        // Set total pages from API response
+        if (response.data.total_pages) {
+          setTotalCommentsPages(response.data.total_pages);
+        } else {
+          // Fallback calculation if total_pages is not provided
+          setTotalCommentsPages(Math.ceil(response.data.total / 1000));
+        }
       } else {
         setComments([]);
         setSortComments([]);
+        setTotalCommentsPages(0);
         console.warn('Comments API returned invalid data format:', response);
       }
       setLoading(false);
@@ -507,6 +530,7 @@ const DataCollect: React.FC = () => {
       notifi('获取评论数据失败', 'error');
       setComments([]);
       setSortComments([]);
+      setTotalCommentsPages(0);
       setLoading(false);
       setRefreshingComments(false);
     }
@@ -525,6 +549,121 @@ const DataCollect: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   const paginateNotes = (pageNumber: number) => setCurrentNotesPage(pageNumber);
   const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
+
+  const handleJumpToNotesPage = async () => {
+    if (!jumpToPage || !selectedKeyword) return;
+    
+    try {
+      const pageNumber = parseInt(jumpToPage);
+      if (isNaN(pageNumber) || pageNumber < 1 || pageNumber > totalNotesPages) {
+        notifi('请输入有效的页码', 'warning');
+        return;
+      }
+      
+      setLoading(true);
+      // Call API with the specific page number
+      const response = await getXhsNotesByKeywordApi(
+        selectedKeyword, 
+        !isAdmin && email ? email : undefined,
+        pageNumber
+      );
+      
+      if (response && response.code === 0 && response.data && response.data.records) {
+        const transformedNotes: Note[] = response.data.records.map((item: any) => ({
+          id: item.id || 0,
+          title: item.title || '',
+          content: item.content || '',
+          author: item.author || 'Unknown',
+          likes: item.likes || 0,
+          comments: item.comments || 0,
+          keyword: item.keyword || selectedKeyword,
+          note_url: item.note_url || '',
+          collected_at: item.create_time || new Date().toISOString(),
+          last_comments_collected_at: item.last_comments_collected_at || null,
+          userInfo: item.userInfo || email || '',
+          note_location: item.note_location || '无地区',
+          note_time: item.note_time || '',
+          note_type: item.note_type || '',
+          collect_time: item.collect_time || '',
+          collects: item.collects || item.collect_count || 0
+        }));
+        
+        setNotes(transformedNotes);
+        setSortNotes(transformedNotes);
+        setCurrentNotesPage(pageNumber);
+        
+        // Update total pages if available
+        if (response.data.total_pages) {
+          setTotalNotesPages(response.data.total_pages);
+        }
+      } else {
+        notifi('获取笔记数据失败', 'error');
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error('Error jumping to page:', err);
+      notifi('跳转页面失败', 'error');
+      setLoading(false);
+    }
+  };
+
+  const handleJumpToCommentsPage = async () => {
+    if (!jumpToCommentsPage || !selectedKeyword) return;
+    
+    try {
+      const pageNumber = parseInt(jumpToCommentsPage);
+      if (isNaN(pageNumber) || pageNumber < 1 || pageNumber > totalCommentsPages) {
+        notifi('请输入有效的页码', 'warning');
+        return;
+      }
+      
+      setLoading(true);
+      setRefreshingComments(true);
+      
+      // Call API with the specific page number
+      const response = await getXhsCommentsByKeywordApi(
+        selectedKeyword, 
+        !isAdmin && email ? email : undefined,
+        pageNumber
+      );
+      
+      if (response && response.code === 0 && response.data && response.data.records) {
+        const mappedComments: Comment[] = response.data.records.map((record: any) => ({
+          id: record.id?.toString() || '',
+          note_id: record.note_id?.toString() || '',
+          note_url: record.note_url || '',
+          content: record.content || '',
+          author: record.author || '',
+          likes: record.likes || 0,
+          keyword: record.keyword || '',
+          collect_time: record.collect_time,
+          created_at: record.created_at,
+          updated_at: record.updated_at,
+          userInfo: record.userInfo || '', 
+          location: record.location || '',
+          comment_time: record.comment_time || ''
+        }));
+        
+        setComments(mappedComments);
+        setSortComments(mappedComments);
+        setCurrentCommentsPage(pageNumber);
+        
+        // Update total pages if available
+        if (response.data.total_pages) {
+          setTotalCommentsPages(response.data.total_pages);
+        }
+      } else {
+        notifi('获取评论数据失败', 'error');
+      }
+      setLoading(false);
+      setRefreshingComments(false);
+    } catch (err) {
+      console.error('Error jumping to comments page:', err);
+      notifi('跳转页面失败', 'error');
+      setLoading(false);
+      setRefreshingComments(false);
+    }
+  };
 
   return (
     <div>
@@ -959,9 +1098,9 @@ const DataCollect: React.FC = () => {
                     </table>
                   </div>
                   {/* Pagination for notes */}
-                  {notes.length > notesPerPage && (
+                  {notes.length > 0 && (
                     <div className="flex justify-center mt-4">
-                      <nav className="flex items-center">
+                      <nav className="flex items-center flex-wrap">
                         <button
                           onClick={() => paginateNotes(1)}
                           disabled={currentNotesPage === 1}
@@ -1020,6 +1159,30 @@ const DataCollect: React.FC = () => {
                         >
                           末页
                         </button>
+                        
+                        {/* Jump to page input and button */}
+                        {totalNotesPages > 1 && (
+                          <div className="flex items-center ml-4 mt-2 sm:mt-0">
+                            <Tooltipwrap title="每个大页有1000条笔记，跳转到指定大页">
+                              <input
+                                type="number"
+                                value={jumpToPage}
+                                onChange={(e) => setJumpToPage(e.target.value)}
+                                placeholder={`共${totalNotesPages}大页`}
+                              min="1"
+                              max={totalNotesPages.toString()}
+                              className="w-24 px-2 py-1 border border-gray-300 rounded mr-2"
+                            />
+                            <button
+                              onClick={handleJumpToNotesPage}
+                              disabled={loading || !jumpToPage}
+                              className="px-3 py-1 rounded bg-[rgba(248,213,126,1)] text-white hover:bg-[rgba(248,213,126,0.8)] disabled:opacity-50"
+                            >
+                              跳转
+                            </button>
+                            </Tooltipwrap>
+                          </div>
+                        )}
                       </nav>
                     </div>
                   )}
@@ -1220,6 +1383,30 @@ const DataCollect: React.FC = () => {
                         >
                           末页
                         </button>
+                        
+                        {/* Jump to page input and button */}
+                        {totalCommentsPages > 1 && (
+                          <div className="flex items-center ml-4 mt-2 sm:mt-0">
+                            <Tooltipwrap title="每个大页有1000条评论，跳转到指定大页">
+                              <input
+                                type="number"
+                                value={jumpToCommentsPage}
+                                onChange={(e) => setJumpToCommentsPage(e.target.value)}
+                                placeholder={`共${totalCommentsPages}大页`}
+                                min="1"
+                                max={totalCommentsPages.toString()}
+                                className="w-24 px-2 py-1 border border-gray-300 rounded mr-2"
+                              />
+                              <button
+                                onClick={handleJumpToCommentsPage}
+                                disabled={loading || !jumpToCommentsPage}
+                                className="px-3 py-1 rounded bg-[rgba(248,213,126,1)] text-white hover:bg-[rgba(248,213,126,0.8)] disabled:opacity-50"
+                              >
+                                跳转
+                              </button>
+                            </Tooltipwrap>
+                          </div>
+                        )}
                       </nav>
                     </div>
                   )}

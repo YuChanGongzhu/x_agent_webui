@@ -318,8 +318,11 @@ export interface XhsNotesResponse {
   code: number;
   message: string;
   data: {
+    page: number;
+    page_size: number;
     total: number;
     records: XhsNote[];
+    total_pages: number;
   } | null;
 }
 
@@ -349,6 +352,9 @@ export interface XhsCommentsResponse {
   data: {
     total: number;
     records: XhsComment[];
+    total_pages: number;
+    page: number;
+    page_size: number;
   } | null;
 }
 
@@ -391,7 +397,7 @@ export const getKeywordsApi = async (email?: string): Promise<KeywordsResponse> 
  * @param email Optional email to filter comments by user
  * @returns Promise with the comments response
  */
-export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string): Promise<XhsCommentsResponse> => {
+export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string,page?: number,page_size?: number): Promise<XhsCommentsResponse> => {
   try {
     if (!keyword) {
       throw new Error('Missing required parameter: keyword');
@@ -402,6 +408,14 @@ export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string
 
     if (email) {
       queryParams.append('email', email);
+    }
+
+    if (page) {
+      queryParams.append('page', page.toString());
+    }
+
+    if (page_size) {
+      queryParams.append('page_size', page_size.toString());
     }
 
     const baseUrl = getCommentsUrl || '';
@@ -569,7 +583,7 @@ export const getXhsCommentsApi = async (limit: number = 100): Promise<XhsComment
  * @param keyword The keyword to filter notes by
  * @returns Promise with the notes response
  */
-export const getXhsNotesByKeywordApi = async (keyword: string,email?: string): Promise<XhsNotesResponse> => {
+export const getXhsNotesByKeywordApi = async (keyword: string,email?: string,page?: number,page_size?: number): Promise<XhsNotesResponse> => {
   try {
     if (!keyword) {
       throw new Error('Missing required parameter: keyword');
@@ -580,6 +594,14 @@ export const getXhsNotesByKeywordApi = async (keyword: string,email?: string): P
 
     if (email) {
       queryParams.append('email', email);
+    }
+
+    if (page) {
+      queryParams.append('page', page.toString());
+    }
+
+    if (page_size) {
+      queryParams.append('page_size', page_size.toString());
     }
 
     const baseUrl = getNoteUrl || '';
