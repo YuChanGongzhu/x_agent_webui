@@ -84,6 +84,7 @@ const DataAnalyze: React.FC = () => {
   const [dagRunId, setDagRunId] = useState('');
   const [dagRunStatus, setDagRunStatus] = useState<string>('');
   const [selectedComments, setSelectedComments] = useState<string[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<number[]>([]);
 
   const runStatus = {
     'success': {
@@ -99,7 +100,6 @@ const DataAnalyze: React.FC = () => {
       'text': '失败'
     }
   }
-
 
   // Load filtered comments from session storage on component mount
   useEffect(() => {
@@ -692,6 +692,25 @@ const DataAnalyze: React.FC = () => {
   // 模板表格列定义
   const templateColumns = [
     {
+      title: '选择',
+      key: 'selection',
+      width: 60,
+      render: (_: any, record: ReplyTemplate) => (
+        <input
+          type="checkbox"
+          checked={selectedTemplateIds.includes(record.id)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedTemplateIds([...selectedTemplateIds, record.id]);
+            } else {
+              setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== record.id));
+            }
+          }}
+          className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
+        />
+      ),
+    },
+    {
       title: '模板内容',
       dataIndex: 'content',
       key: 'content',
@@ -894,6 +913,11 @@ const DataAnalyze: React.FC = () => {
       return;
     }
 
+    if (selectedTemplateIds.length === 0) {
+      message.warning('请至少选择一个回复模板');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -905,6 +929,7 @@ const DataAnalyze: React.FC = () => {
 
       const conf = {
         comment_ids: selectedComments,
+        template_ids: selectedTemplateIds,
         email: targetEmail
       };
 
@@ -917,7 +942,7 @@ const DataAnalyze: React.FC = () => {
       if (response && response.dag_run_id) {
         setDagRunId(response.dag_run_id);
         setDagRunStatus('running');
-        message.success(`已提交触达任务，处理 ${selectedComments.length} 条评论`);
+        message.success(`已提交触达任务，处理 ${selectedComments.length} 条评论，使用 ${selectedTemplateIds.length} 个模板`);
       } else {
         message.error('提交触达任务失败');
       }
@@ -965,6 +990,18 @@ const DataAnalyze: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 添加选择/取消选择所有模板的函数
+  const handleSelectAllTemplates = () => {
+    if (templates.length > 0) {
+      const allTemplateIds = templates.map(template => template.id);
+      setSelectedTemplateIds(allTemplateIds);
+    }
+  };
+
+  const handleDeselectAllTemplates = () => {
+    setSelectedTemplateIds([]);
   };
 
   return (
@@ -1378,10 +1415,9 @@ const DataAnalyze: React.FC = () => {
                         </button>
 
                         {[...Array(Math.min(5, Math.ceil(filteredIntents.length / itemsPerPage)))].map((_, i) => {
-                          let pageNum: number = 0; // Initialize with default value
+                          let pageNum: number = 0;
                           const totalPages = Math.ceil(filteredIntents.length / itemsPerPage);
 
-                          // Logic to show page numbers centered around current page
                           if (totalPages <= 5) {
                             pageNum = i + 1;
                           } else if (currentPage <= 3) {
@@ -1452,17 +1488,35 @@ const DataAnalyze: React.FC = () => {
           <Card
             title="回复模板管理"
             extra={
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditingTemplate(null);
-                  setTemplateContent('');
-                  setIsModalVisible(true);
-                }}
-              >
-                添加模板
-              </Button>
+              <>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    setEditingTemplate(null);
+                    setTemplateContent('');
+                    setIsModalVisible(true);
+                  }}
+                  style={{ marginRight: '8px' }}
+                >
+                  添加模板
+                </Button>
+                {selectedTemplateIds.length > 0 ? (
+                  <Button
+                    onClick={handleDeselectAllTemplates}
+                    style={{ marginRight: '8px' }}
+                  >
+                    清除选择
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSelectAllTemplates}
+                    style={{ marginRight: '8px' }}
+                  >
+                    全选
+                  </Button>
+                )}
+              </>
             }
           >
             <Spin spinning={loading}>
