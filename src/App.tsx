@@ -7,7 +7,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ManagementPage from './management/ManagementPage';
 import { UserProvider } from './context/UserContext';
 import { KeywordProvider } from './context/KeywordContext';
-import XHSAutomation from './xhs/XHSAutomation';
 import DataCollect from './xhs/pages/DataCollect';
 import DataFilter from './xhs/pages/DataFilter';
 import DataAnalyze from './xhs/pages/DataAnalyze';
@@ -41,7 +40,6 @@ function App() {
                               <ManagementPage />
                             </BasePermission>
                           } />
-                          {/* <Route path="/xhs" element={<XHSAutomation />} /> */}
                           <Route path="/xhs/collect" element={<DataCollect />} />
                           {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
                           <Route path="/xhs/analyze" element={<DataAnalyze />} />
