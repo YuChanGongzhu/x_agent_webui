@@ -10,6 +10,7 @@ import { KeywordProvider } from './context/KeywordContext';
 import DataCollect from './xhs/pages/DataCollect';
 import DataFilter from './xhs/pages/DataFilter';
 import DataAnalyze from './xhs/pages/DataAnalyze';
+import Dashboard from './xhs/pages/Dashboard';
 import GenerateMsg from './xhs/pages/GenerateMsg';
 import TemplateManager from './xhs/pages/TemplateManager';
 import DeviceManagement from './devices/DeviceManagement';
@@ -44,6 +45,7 @@ function App() {
                           {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
                           <Route path="/xhs/analyze" element={<DataAnalyze />} />
                           <Route path="/xhs/generate" element={<GenerateMsg />} />
+                          <Route path="/xhs/dashboard" element={<Dashboard />} />
                           {/* <Route path="/xhs/templates" element={<TemplateManager />} /> */}
                           <Route path="/devices" element={<DeviceManagement />} />
                         </Routes>
