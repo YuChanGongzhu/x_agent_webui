@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Modal, Button, Form, Input, Select, DatePicker, TimePicker, Tooltip, Checkbox, Steps, Popover } from 'antd';
-import type { StepsProps } from 'antd';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { Modal, Button, Form, Input, Select, DatePicker, TimePicker, Tooltip, Checkbox, Steps, Popover, Upload } from 'antd';
+import type { StepsProps, UploadProps } from 'antd';
+import { QuestionCircleOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 
 // Define the steps of the task creation process
 type TaskCreationStep = '采集任务' | '过滤条件' | '回复模板';
@@ -13,6 +13,13 @@ interface CreateTaskModalProps {
   onFinish: (values: any) => void;
 }
 
+// Interface for template item
+interface TemplateItem {
+  id: string;
+  content: string;
+  imageUrl?: string;
+}
+
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   visible,
   onClose,
@@ -20,6 +27,16 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState<TaskCreationStep>('采集任务');
+  // Add state for template items
+  const [commentTemplates, setCommentTemplates] = useState<TemplateItem[]>([
+    { id: '1', content: '' },
+    { id: '2', content: '' },
+    { id: '3', content: '' }
+  ]);
+  const [messageTemplates, setMessageTemplates] = useState<TemplateItem[]>([
+    { id: '1', content: '' },
+    { id: '2', content: '' }
+  ]);
   
   // Steps configuration
   const steps = [
@@ -369,47 +386,52 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   
                   {/* 模板项目 */}
                   <div className="space-y-3">
-                    <div className="flex">
-                      <Input.TextArea 
-                        placeholder="Autosize height based" 
-                        autoSize 
-                        className="flex-grow"
-                      />
-                      <div className="ml-2 flex items-start">
-                        <Button type="text" className="text-blue-500 hover:text-blue-700">
-                          上传图片(可选)
-                        </Button>
+                    {commentTemplates.map((template, index) => (
+                      <div key={template.id} className="flex">
+                        <Input.TextArea 
+                          placeholder="请输入评论模板" 
+                          autoSize 
+                          className="flex-grow"
+                          value={template.content}
+                          onChange={(e) => {
+                            const newTemplates = [...commentTemplates];
+                            newTemplates[index].content = e.target.value;
+                            setCommentTemplates(newTemplates);
+                          }}
+                        />
+                        <div className="ml-2 flex items-start">
+                          <Upload
+                            listType="picture"
+                            maxCount={1}
+                            beforeUpload={(file) => {
+                              // You would typically upload to server here
+                              // For now just update the state with file info
+                              const newTemplates = [...commentTemplates];
+                              newTemplates[index].imageUrl = URL.createObjectURL(file);
+                              setCommentTemplates(newTemplates);
+                              return false; // Prevent auto upload
+                            }}
+                          >
+                            <Button type="text" icon={<UploadOutlined />} className="text-blue-500 hover:text-blue-700">
+                              上传图片(可选)
+                            </Button>
+                          </Upload>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex">
-                      <Input.TextArea 
-                        placeholder="Autosize height based" 
-                        autoSize 
-                        className="flex-grow"
-                      />
-                      <div className="ml-2 flex items-start">
-                        <Button type="text" className="text-blue-500 hover:text-blue-700">
-                          上传图片(可选)
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex">
-                      <Input.TextArea 
-                        placeholder="Autosize height based" 
-                        autoSize 
-                        className="flex-grow"
-                      />
-                      <div className="ml-2 flex items-start">
-                        <Button type="text" className="text-blue-500 hover:text-blue-700">
-                          上传图片(可选)
-                        </Button>
-                      </div>
-                    </div>
+                    ))}
                     
                     <div className="flex justify-center">
-                      <Button type="text" icon={<span>+</span>} className="text-gray-500">
+                      <Button 
+                        type="text" 
+                        icon={<PlusOutlined />} 
+                        className="text-gray-500"
+                        onClick={() => {
+                          setCommentTemplates([
+                            ...commentTemplates, 
+                            { id: Date.now().toString(), content: '' }
+                          ]);
+                        }}
+                      >
                         新增
                       </Button>
                     </div>
@@ -425,47 +447,52 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   
                   {/* 模板项目 */}
                   <div className="space-y-3">
-                    <div className="flex">
-                      <Input.TextArea 
-                        placeholder="Autosize height based" 
-                        autoSize 
-                        className="flex-grow"
-                      />
-                      <div className="ml-2 flex items-start">
-                        <Button type="text" className="text-blue-500 hover:text-blue-700">
-                          上传图片(可选)
-                        </Button>
+                    {messageTemplates.map((template, index) => (
+                      <div key={template.id} className="flex">
+                        <Input.TextArea 
+                          placeholder="请输入私信模板" 
+                          autoSize 
+                          className="flex-grow"
+                          value={template.content}
+                          onChange={(e) => {
+                            const newTemplates = [...messageTemplates];
+                            newTemplates[index].content = e.target.value;
+                            setMessageTemplates(newTemplates);
+                          }}
+                        />
+                        <div className="ml-2 flex items-start">
+                          <Upload
+                            listType="picture"
+                            maxCount={1}
+                            beforeUpload={(file) => {
+                              // You would typically upload to server here
+                              // For now just update the state with file info
+                              const newTemplates = [...messageTemplates];
+                              newTemplates[index].imageUrl = URL.createObjectURL(file);
+                              setMessageTemplates(newTemplates);
+                              return false; // Prevent auto upload
+                            }}
+                          >
+                            <Button type="text" icon={<UploadOutlined />} className="text-blue-500 hover:text-blue-700">
+                              上传图片(可选)
+                            </Button>
+                          </Upload>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex">
-                      <Input.TextArea 
-                        placeholder="Autosize height based" 
-                        autoSize 
-                        className="flex-grow"
-                      />
-                      <div className="ml-2 flex items-start">
-                        <Button type="text" className="text-blue-500 hover:text-blue-700">
-                          上传图片(可选)
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex">
-                      <Input.TextArea 
-                        placeholder="Autosize height based" 
-                        autoSize 
-                        className="flex-grow"
-                      />
-                      <div className="ml-2 flex items-start">
-                        <Button type="text" className="text-blue-500 hover:text-blue-700">
-                          上传图片(可选)
-                        </Button>
-                      </div>
-                    </div>
+                    ))}
                     
                     <div className="flex justify-center">
-                      <Button type="text" icon={<span>+</span>} className="text-gray-500">
+                      <Button 
+                        type="text" 
+                        icon={<PlusOutlined />} 
+                        className="text-gray-500"
+                        onClick={() => {
+                          setMessageTemplates([
+                            ...messageTemplates, 
+                            { id: Date.now().toString(), content: '' }
+                          ]);
+                        }}
+                      >
                         新增
                       </Button>
                     </div>
