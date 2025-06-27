@@ -525,13 +525,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       
       <div className="flex justify-end p-2 border-t border-gray-100">
         <div className="flex space-x-2">
-          <Button 
-            onClick={handleSaveProgress}
-            className="border border-gray-300 rounded"
-            style={{ backgroundColor: 'white' }}
-          >
-            保存为任务模版
-          </Button>
+          {currentStep === '回复模板' && (
+            <Button 
+              onClick={handleSaveProgress}
+              className="border border-gray-300 rounded"
+              style={{ backgroundColor: 'white' }}
+            >
+              保存为任务模版
+            </Button>
+          )}
           <Button 
             onClick={handleSaveProgress}
             className="border border-gray-300 rounded"
