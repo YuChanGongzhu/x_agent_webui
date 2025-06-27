@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircleIcon, ClockIcon, ChatBubbleLeftRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from 'antd';
+import CreateTaskModal from './CreateTaskModal';
 
 // Define the status types
 type TaskStatus = '采集中' | '成功' | '评论中' | '等待中';
@@ -110,6 +111,22 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   onAddTask,
   onRefresh
 }) => {
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  
+  const handleOpenCreateModal = () => {
+    setIsCreateModalVisible(true);
+    onAddTask && onAddTask();
+  };
+  
+  const handleCloseCreateModal = () => {
+    setIsCreateModalVisible(false);
+  };
+  
+  const handleFinishCreateTask = (values: any) => {
+    console.log('Task created with values:', values);
+    setIsCreateModalVisible(false);
+  };
+  
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* Header */}
@@ -123,7 +140,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           </Button>
           <Button
             type="primary"
-            onClick={onAddTask}
+            onClick={handleOpenCreateModal}
             icon={<span>+</span>}
           >
             添加任务
@@ -142,6 +159,13 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           />
         ))}
       </div>
+      
+      {/* Create Task Modal */}
+      <CreateTaskModal
+        visible={isCreateModalVisible}
+        onClose={handleCloseCreateModal}
+        onFinish={handleFinishCreateTask}
+      />
     </div>
   );
 };
