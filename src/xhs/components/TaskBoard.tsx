@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircleIcon, ClockIcon, ChatBubbleLeftRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { Button } from 'antd';
 
 // Define the status types
 type TaskStatus = '采集中' | '成功' | '评论中' | '等待中';
@@ -90,12 +91,13 @@ const TaskRow: React.FC<{
       </div>
       <div className="w-1/5 flex items-center justify-between">
         <span className="text-gray-500 text-sm">{task.timestamp}</span>
-        <button
+        <Button
           onClick={() => onViewTask && onViewTask(task.id)}
-          className="px-3 py-1 bg-white border border-gray-200 rounded text-gray-600 text-sm hover:bg-gray-50"
+          size="small"
+          className="text-sm"
         >
           查看
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -114,19 +116,18 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       <div className="flex justify-between items-center p-4 border-b border-gray-100">
         <h2 className="text-lg font-medium text-gray-800">任务</h2>
         <div className="flex space-x-2">
-          <button
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50 flex items-center"
+          <Button
             onClick={onRefresh}
           >
-            <span>任务概览</span>
-          </button>
-          <button
-            className="px-3 py-1.5 bg-indigo-500 rounded text-white hover:bg-indigo-600 flex items-center"
+            任务模板
+          </Button>
+          <Button
+            type="primary"
             onClick={onAddTask}
+            icon={<span>+</span>}
           >
-            <span className="mr-1">+</span>
-            <span>添加任务</span>
-          </button>
+            添加任务
+          </Button>
         </div>
       </div>
 

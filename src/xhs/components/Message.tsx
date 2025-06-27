@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Button, Checkbox } from 'antd';
 
 // Define message types
 type MessageType = 'user' | 'template';
@@ -39,17 +40,10 @@ interface MessageProps {
 // User message item component
 const UserMessageItem: React.FC<{
   message: UserMessage;
-  onSelect: (id: string) => void;
-}> = ({ message, onSelect }) => {
+}> = ({ message }) => {
   return (
     <div className="flex items-center py-3 px-4 border-b border-gray-100">
       <div className="flex items-center flex-1">
-        <input
-          type="checkbox"
-          checked={message.selected}
-          onChange={() => onSelect(message.id)}
-          className="h-4 w-4 text-indigo-600 rounded border-gray-300 mr-3"
-        />
         <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
           <span className="text-blue-500 text-xs">👤</span>
         </div>
@@ -72,26 +66,27 @@ const TemplateMessageItem: React.FC<{
   return (
     <div className="flex items-center py-3 px-4 border-b border-gray-100">
       <div className="flex items-center flex-1">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={message.selected}
           onChange={() => onSelect(message.id)}
-          className="h-4 w-4 text-indigo-600 rounded border-gray-300 mr-3"
+          className="mr-3"
         />
         <p className="text-sm text-gray-700 flex-1">{message.content}</p>
         <div className="flex space-x-2">
-          <button
+          <Button
             onClick={() => onEdit(message.id)}
-            className="p-1 text-blue-500 hover:text-blue-700"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </button>
-          <button
+            type="text"
+            size="small"
+            icon={<PencilIcon className="h-4 w-4" />}
+            className="text-blue-500 hover:text-blue-700"
+          />
+          <Button
             onClick={() => onDelete(message.id)}
-            className="p-1 text-red-500 hover:text-red-700"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
+            type="text"
+            size="small"
+            icon={<TrashIcon className="h-4 w-4" />}
+            className="text-red-500 hover:text-red-700"
+          />
         </div>
       </div>
     </div>
@@ -131,12 +126,6 @@ const Message: React.FC<MessageProps> = ({
       {/* User Messages Section */}
       <div className="border-b border-gray-100">
         <div className="flex items-center py-3 px-4 border-b border-gray-100">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={handleSelectAll}
-            className="h-4 w-4 text-indigo-600 rounded border-gray-300 mr-3"
-          />
           <span className="font-medium text-sm">私信管理</span>
         </div>
 
@@ -144,14 +133,18 @@ const Message: React.FC<MessageProps> = ({
           <UserMessageItem
             key={message.id}
             message={message}
-            onSelect={handleSelectMessage}
           />
         ))}
       </div>
 
       {/* Template Messages Section */}
       <div>
-        <div className="py-3 px-4 border-b border-gray-100">
+        <div className="flex items-center py-3 px-4 border-b border-gray-100">
+          <Checkbox
+            checked={allSelected}
+            onChange={handleSelectAll}
+            className="mr-3"
+          />
           <span className="font-medium text-sm">私信模板内容</span>
         </div>
 
@@ -168,18 +161,19 @@ const Message: React.FC<MessageProps> = ({
 
       {/* Action Buttons */}
       <div className="flex justify-between p-4">
-        <button
+        <Button
           onClick={onAddTemplate}
-          className="px-4 py-2 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 text-sm"
+          className="text-sm"
         >
           添加模板
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onReplyAll}
-          className="px-4 py-2 bg-indigo-500 rounded-md text-white hover:bg-indigo-600 text-sm"
+          type="primary"
+          className="text-sm"
         >
           一键回复
-        </button>
+        </Button>
       </div>
     </div>
   );
