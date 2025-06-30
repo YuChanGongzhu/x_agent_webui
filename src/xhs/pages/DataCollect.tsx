@@ -722,7 +722,7 @@ const DataCollect: React.FC = () => {
               notifi('创建笔记浏览任务失败', 'error');
               setLoading(false);
             }
-          }} loading={loading}>浏览笔记</Button>
+          }} loading={loading}>启动</Button>
         </div>
       </div>
 
