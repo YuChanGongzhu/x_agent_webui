@@ -10,7 +10,7 @@ import notifi from '../../utils/notification';
 import BaseSelect from '../../components/BaseComponents/BaseSelect';
 import BaseInput from '../../components/BaseComponents/BaseInput';
 import TooltipIcon from '../../components/BaseComponents/TooltipIcon';
-import { Tabs, Button } from 'antd';
+import { Tabs, Button, Input } from 'antd';
 
 const { TabPane } = Tabs;
 
@@ -76,6 +76,8 @@ const DataCollect: React.FC = () => {
   const [sortBy, setSortBy] = useState('最新');
   const [timeRange, setTimeRange] = useState('一天内');
   const [maxComments, setMaxComments] = useState(10);
+  const [browseKeyword, setBrowseKeyword] = useState('');
+
   // 使用localStorage存储目标邮箱，确保页面刷新后仍然保持选择
   const [targetEmail, setTargetEmail] = useState(() => {
     const savedEmail = localStorage.getItem('xhs_target_email');
@@ -668,10 +670,60 @@ const DataCollect: React.FC = () => {
   return (
     <div>
       {/* 目标邮箱选择 - 全局可用 */}
-      <div className="p-6">
-        <BaseSelect size='large' className="w-full" value={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
-          <h2 className="text-lg font-semibold mb-4">目标邮箱</h2>
-        </BaseSelect>
+      <div className="p-2">
+        <div className="flex flex-row gap-2 items-center">
+          <h2 className="text-lg font-semibold">目标邮箱</h2>
+          <div className="flex-1">
+            <BaseSelect size='large' value={targetEmail} showSearch options={availableEmails.map((email) => ({ label: email, value: email }))} onChange={(value) => setTargetEmail(value)}>
+            </BaseSelect>
+          </div>
+          <h2 className="text-lg font-semibold">养号关键词</h2>
+          <div className="flex-1">
+            <Input size='large' value={browseKeyword} onChange={(e) => setBrowseKeyword(e.target.value)} placeholder="输入浏览关键词"></Input>
+          </div>
+          <Button size='large' onClick={async () => {
+            if (!browseKeyword.trim()) {
+              notifi('请输入浏览关键词', 'error');
+              return;
+            }
+            
+            try {
+              setLoading(true);
+              const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+              const dag_run_id = `notes_browser_${timestamp}`;
+              
+              const conf = {
+                keyword: browseKeyword,
+                email: targetEmail
+              };
+              
+              const response = await triggerDagRun(
+                "notes_browser",
+                dag_run_id,
+                conf
+              );
+              
+              const newTask = {
+                dag_run_id: response.dag_run_id,
+                state: response.state,
+                start_date: response.start_date || new Date().toISOString(),
+                end_date: response.end_date || '',
+                note: response.note || '',
+                conf: JSON.stringify(conf)
+              };
+              
+              setTasks([newTask, ...tasks]);
+              notifi(`成功创建笔记浏览任务，任务ID: ${newTask.dag_run_id}`, 'success');
+              setLoading(false);
+              
+              fetchRecentTasks();
+            } catch (err) {
+              console.error('Error creating notes browser task:', err);
+              notifi('创建笔记浏览任务失败', 'error');
+              setLoading(false);
+            }
+          }} loading={loading}>浏览笔记</Button>
+        </div>
       </div>
 
       {/* Tab Navigation */}
