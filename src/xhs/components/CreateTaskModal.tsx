@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Input, Select, DatePicker, TimePicker, Tooltip, Checkbox, Steps, Popover, Upload } from 'antd';
 import type { StepsProps, UploadProps } from 'antd';
 import { QuestionCircleOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { useUser } from '../../context/UserContext';
+import { UserProfileService } from '../../management/userManagement/userProfileService';
 
 // Define the steps of the task creation process
 type TaskCreationStep = '采集任务' | '过滤条件' | '回复模板';
@@ -38,12 +40,92 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     { id: '2', content: '' }
   ]);
   
+  // Add state for data collection options (from DataCollect.tsx)
+  const [availableEmails, setAvailableEmails] = useState<string[]>([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [keyword, setKeyword] = useState('');
+  const [noteTypes] = useState<{value: string, label: string}[]>([
+    { value: '图文', label: '图文' },
+    { value: '视频', label: '视频' },
+    { value: '全部', label: '全部' }
+  ]);
+  const [sortOptions] = useState<{value: string, label: string}[]>([
+    { value: '最新', label: '最新' },
+    { value: '热门', label: '热门' },
+    { value: '相关性', label: '相关性' }
+  ]);
+  const [timeRanges] = useState<{value: string, label: string}[]>([
+    { value: '一天内', label: '一天内' },
+    { value: '三天内', label: '三天内' },
+    { value: '一周内', label: '一周内' },
+    { value: '一月内', label: '一月内' }
+  ]);
+  const [noteCounts] = useState<{value: number, label: string}[]>([
+    { value: 10, label: '10篇' },
+    { value: 20, label: '20篇' },
+    { value: 50, label: '50篇' },
+    { value: 100, label: '100篇' }
+  ]);
+  
+  // Get user context
+  const { isAdmin, email } = useUser();
+  
   // Steps configuration
   const steps = [
     { key: '采集任务', title: '采集任务' },
     { key: '过滤条件', title: '过滤条件' },
     { key: '回复模板', title: '回复模板' }
   ];
+  
+  // Fetch available emails and keywords on component mount
+  useEffect(() => {
+    fetchAvailableEmails();
+    fetchKeywords();
+  }, [isAdmin, email]);
+  
+  // Fetch available emails
+  const fetchAvailableEmails = async () => {
+    if (isAdmin) {
+      // 管理员可以看到所有用户的邮箱
+      try {
+        const response = await UserProfileService.getAllUserProfiles();
+        if (response && Array.isArray(response)) {
+          const emails = response
+            .filter((user: { email?: string }) => user.email) // 过滤掉没有邮箱的用户
+            .map((user: { email?: string }) => user.email as string);
+          setAvailableEmails(emails);
+        } else {
+          console.error('获取用户列表失败');
+          // 如果获取失败，至少添加当前用户的邮箱
+          if (email) {
+            setAvailableEmails([email]);
+          }
+        }
+      } catch (err) {
+        console.error('获取用户列表出错:', err);
+        if (email) {
+          setAvailableEmails([email]);
+        }
+      }
+    } else {
+      // 非管理员只能看到自己的邮箱
+      if (email) {
+        setAvailableEmails([email]);
+      }
+    }
+  };
+  
+  // Fetch keywords
+  const fetchKeywords = async () => {
+    try {
+      // This would typically be an API call
+      // For now, we'll use some sample data
+      const keywordList = ['小红书', '美妆', '穿搭', '旅行', '美食'];
+      setKeywords(keywordList);
+    } catch (error) {
+      console.error('Error fetching keywords:', error);
+    }
+  };
   
   // Handle next step button click
   const handleNextStep = async () => {
@@ -105,31 +187,37 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             <Form
               form={form}
               layout="vertical"
-              initialValues={{}}
+              initialValues={{
+                targetEmail: email || (availableEmails.length > 0 ? availableEmails[0] : ''),
+                sortBy: sortOptions.length > 0 ? sortOptions[0].value : '',
+                timeRange: timeRanges.length > 0 ? timeRanges[0].value : '',
+                noteCount: noteCounts.length > 0 ? noteCounts[0].value : 10,
+                noteType: noteTypes.length > 0 ? noteTypes[0].value : ''
+              }}
             >
               <div className="grid grid-cols-2 gap-4">
                 <Form.Item 
-                  name="targetSetting" 
+                  name="targetEmail" 
                   label={
                     <span className="flex items-center">
                       <span className="text-red-500 mr-1">*</span>
-                      目标设备
-                      <Tooltip title="选择目标设备类型">
+                      目标邮箱
+                      <Tooltip title="选择目标邮箱">
                         <QuestionCircleOutlined className="ml-1 text-gray-400" />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择目标设备' }]}
+                  rules={[{ required: true, message: '请选择目标邮箱' }]}
                 >
-                  <Select placeholder="Please select">
-                    <Select.Option value="mobile">移动设备</Select.Option>
-                    <Select.Option value="desktop">桌面设备</Select.Option>
-                    <Select.Option value="tablet">平板设备</Select.Option>
+                  <Select placeholder="请选择目标邮箱">
+                    {availableEmails.map(email => (
+                      <Select.Option key={email} value={email}>{email}</Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 
                 <Form.Item 
-                  name="rankingPosition" 
+                  name="sortBy" 
                   label={
                     <span className="flex items-center">
                       <span className="text-red-500 mr-1">*</span>
@@ -141,15 +229,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   }
                   rules={[{ required: true, message: '请选择排序依据' }]}
                 >
-                  <Select placeholder="Please select">
-                    <Select.Option value="popular">热门排序</Select.Option>
-                    <Select.Option value="latest">最新排序</Select.Option>
-                    <Select.Option value="relevant">相关性排序</Select.Option>
+                  <Select placeholder="请选择排序方式">
+                    {sortOptions.map(option => (
+                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 
                 <Form.Item 
-                  name="collectionKeyword" 
+                  name="keyword" 
                   label={
                     <span className="flex items-center">
                       <span className="text-red-500 mr-1">*</span>
@@ -161,11 +249,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   }
                   rules={[{ required: true, message: '请输入采集关键词' }]}
                 >
-                  <Input placeholder="Please select" />
+                  <Input 
+                    placeholder="请输入采集关键词" 
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                  />
                 </Form.Item>
                 
                 <Form.Item 
-                  name="publishTime" 
+                  name="timeRange" 
                   label={
                     <span className="flex items-center">
                       <span className="text-red-500 mr-1">*</span>
@@ -177,16 +269,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   }
                   rules={[{ required: true, message: '请选择发布时间' }]}
                 >
-                  <Select placeholder="Please select">
-                    <Select.Option value="today">今天</Select.Option>
-                    <Select.Option value="week">本周</Select.Option>
-                    <Select.Option value="month">本月</Select.Option>
-                    <Select.Option value="year">今年</Select.Option>
+                  <Select placeholder="请选择发布时间范围">
+                    {timeRanges.map(option => (
+                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 
                 <Form.Item 
-                  name="collectionCount" 
+                  name="noteCount" 
                   label={
                     <span className="flex items-center">
                       <span className="text-red-500 mr-1">*</span>
@@ -198,11 +289,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   }
                   rules={[{ required: true, message: '请选择采集笔记数量' }]}
                 >
-                  <Select placeholder="Please select">
-                    <Select.Option value="10">10篇</Select.Option>
-                    <Select.Option value="20">20篇</Select.Option>
-                    <Select.Option value="50">50篇</Select.Option>
-                    <Select.Option value="100">100篇</Select.Option>
+                  <Select placeholder="请选择采集笔记数量">
+                    {noteCounts.map(option => (
+                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 
@@ -245,10 +335,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   }
                   rules={[{ required: true, message: '请选择笔记类型' }]}
                 >
-                  <Select placeholder="Please select">
-                    <Select.Option value="text">图文</Select.Option>
-                    <Select.Option value="video">视频</Select.Option>
-                    <Select.Option value="all">全部</Select.Option>
+                  <Select placeholder="请选择笔记类型">
+                    {noteTypes.map(option => (
+                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </div>
