@@ -55,17 +55,18 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [keyword, setKeyword] = useState('');
   const [noteTypes] = useState<{value: string, label: string}[]>([
     { value: '图文', label: '图文' },
-    { value: '视频', label: '视频' },
-    { value: '全部', label: '全部' }
+    { value: '视频', label: '视频' }
   ]);
   const [sortOptions] = useState<{value: string, label: string}[]>([
+    { value: '综合', label: '综合' },
     { value: '最新', label: '最新' },
-    { value: '热门', label: '热门' },
-    { value: '相关性', label: '相关性' }
+    { value: '最多点赞', label: '最多点赞' },
+    { value: '最多评论', label: '最多评论' },
+    { value: '最多收藏', label: '最多收藏' }
   ]);
   const [timeRanges] = useState<{value: string, label: string}[]>([
+    { value: '不限', label: '不限' },
     { value: '一天内', label: '一天内' },
-    { value: '三天内', label: '三天内' },
     { value: '一周内', label: '一周内' },
     { value: '一月内', label: '一月内' }
   ]);
@@ -78,9 +79,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   
   // Add state for 分析要求 step
   const [intentTypes] = useState<{value: string, label: string}[]>([
-    { value: 'high', label: '高等级' },
-    { value: 'medium', label: '中等级' },
-    { value: 'low', label: '低等级' }
+    { value: 'high', label: '高意向' },
+    { value: 'medium', label: '中意向' },
+    { value: 'low', label: '低意向' }
   ]);
   const [selectedIntentTypes, setSelectedIntentTypes] = useState<string[]>([]);
   const [profileSentence, setProfileSentence] = useState('');
