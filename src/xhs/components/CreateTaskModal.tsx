@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form, Input, Select, DatePicker, TimePicker, Tooltip, Checkbox, Steps, Popover, Upload } from 'antd';
+import { Modal, Button, Form, Input, Select, DatePicker, TimePicker, Tooltip, Checkbox, Steps, Popover, Upload, Image, message } from 'antd';
 import type { StepsProps, UploadProps } from 'antd';
-import { QuestionCircleOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, PlusOutlined, UploadOutlined, EditOutlined, SaveOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useUser } from '../../context/UserContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
+import {
+  getReplyTemplatesApi,
+  createReplyTemplateApi,
+  updateReplyTemplateApi,
+  deleteReplyTemplateApi,
+  ReplyTemplate
+} from '../../api/mysql';
+import { tencentCOSService } from '../../api/tencent_cos';
 
 // Define the steps of the task creation process
-type TaskCreationStep = '采集任务' | '过滤条件' | '回复模板';
+type TaskCreationStep = '采集任务' | '分析要求' | '回复模板';
 
 // Props for the CreateTaskModal component
 interface CreateTaskModalProps {
@@ -20,6 +28,8 @@ interface TemplateItem {
   id: string;
   content: string;
   imageUrl?: string;
+  isEditing?: boolean;
+  templateId?: number; // Backend template ID
 }
 
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
@@ -31,18 +41,17 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [currentStep, setCurrentStep] = useState<TaskCreationStep>('采集任务');
   // Add state for template items
   const [commentTemplates, setCommentTemplates] = useState<TemplateItem[]>([
-    { id: '1', content: '' },
-    { id: '2', content: '' },
-    { id: '3', content: '' }
+    { id: '1', content: '', isEditing: true },
+    { id: '2', content: '', isEditing: false },
+    { id: '3', content: '', isEditing: false }
   ]);
   const [messageTemplates, setMessageTemplates] = useState<TemplateItem[]>([
-    { id: '1', content: '' },
-    { id: '2', content: '' }
+    { id: '1', content: '', isEditing: true },
+    { id: '2', content: '', isEditing: false }
   ]);
   
   // Add state for data collection options (from DataCollect.tsx)
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
-  const [keywords, setKeywords] = useState<string[]>([]);
   const [keyword, setKeyword] = useState('');
   const [noteTypes] = useState<{value: string, label: string}[]>([
     { value: '图文', label: '图文' },
@@ -67,20 +76,28 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     { value: 100, label: '100篇' }
   ]);
   
+  // Add state for 分析要求 step
+  const [intentTypes] = useState<{value: string, label: string}[]>([
+    { value: 'high', label: '高等级' },
+    { value: 'medium', label: '中等级' },
+    { value: 'low', label: '低等级' }
+  ]);
+  const [selectedIntentTypes, setSelectedIntentTypes] = useState<string[]>([]);
+  const [profileSentence, setProfileSentence] = useState('');
+  
   // Get user context
   const { isAdmin, email } = useUser();
   
   // Steps configuration
   const steps = [
     { key: '采集任务', title: '采集任务' },
-    { key: '过滤条件', title: '过滤条件' },
+    { key: '分析要求', title: '分析要求' },
     { key: '回复模板', title: '回复模板' }
   ];
   
   // Fetch available emails and keywords on component mount
   useEffect(() => {
     fetchAvailableEmails();
-    fetchKeywords();
   }, [isAdmin, email]);
   
   // Fetch available emails
@@ -115,18 +132,50 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
   
-  // Fetch keywords
-  const fetchKeywords = async () => {
+  // Add state for image upload
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [currentImageFile, setCurrentImageFile] = useState<{index: number, file: File} | null>(null);
+
+  // Fetch templates from backend when modal is opened
+  useEffect(() => {
+    if (visible && email && currentStep === '回复模板') {
+      fetchTemplates();
+    }
+  }, [visible, email, currentStep]);
+
+  // Fetch templates from backend
+  const fetchTemplates = async () => {
+    if (!email) {
+      message.error('用户邮箱不能为空，无法获取模板');
+      return;
+    }
+
     try {
-      // This would typically be an API call
-      // For now, we'll use some sample data
-      const keywordList = ['小红书', '美妆', '穿搭', '旅行', '美食'];
-      setKeywords(keywordList);
+      const response = await getReplyTemplatesApi({
+        page: 1,
+        page_size: 20,
+        email: email
+      });
+
+      if (response.data?.records && response.data.records.length > 0) {
+        // Map backend templates to our format
+        const templates = response.data.records.map((template: ReplyTemplate) => ({
+          id: template.id.toString(),
+          content: template.content || '',
+          imageUrl: template.image_urls || undefined,
+          isEditing: false,
+          templateId: template.id
+        }));
+        
+        // Update our template state
+        setCommentTemplates(templates);
+      }
     } catch (error) {
-      console.error('Error fetching keywords:', error);
+      console.error('获取模板失败:', error);
+      message.error('获取模板失败');
     }
   };
-  
+
   // Handle next step button click
   const handleNextStep = async () => {
     try {
@@ -135,8 +184,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       
       // Move to next step based on current step
       if (currentStep === '采集任务') {
-        setCurrentStep('过滤条件');
-      } else if (currentStep === '过滤条件') {
+        setCurrentStep('分析要求');
+      } else if (currentStep === '分析要求') {
         setCurrentStep('回复模板');
       } else {
         // Final step, submit the form
@@ -150,10 +199,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   
   // Handle previous step button click
   const handlePrevStep = () => {
-    if (currentStep === '过滤条件') {
+    if (currentStep === '分析要求') {
       setCurrentStep('采集任务');
     } else if (currentStep === '回复模板') {
-      setCurrentStep('过滤条件');
+      setCurrentStep('分析要求');
     }
   };
   
@@ -178,6 +227,202 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
   
+  // Toggle template edit mode
+  const toggleTemplateEditMode = (templateType: 'comment' | 'message', id: string) => {
+    if (templateType === 'comment') {
+      const template = commentTemplates.find(t => t.id === id);
+      
+      // If we're saving a template that was in edit mode
+      if (template && template.isEditing) {
+        // Save the template to backend
+        saveTemplate(template);
+      } else {
+        // Just toggle edit mode
+        setCommentTemplates(prev => 
+          prev.map(template => 
+            template.id === id 
+              ? { ...template, isEditing: !template.isEditing } 
+              : template
+          )
+        );
+      }
+    } else {
+      setMessageTemplates(prev => 
+        prev.map(template => 
+          template.id === id 
+            ? { ...template, isEditing: !template.isEditing } 
+            : template
+        )
+      );
+    }
+  };
+  
+  // Save template to backend
+  const saveTemplate = async (template: TemplateItem) => {
+    if (!email) {
+      message.error('用户邮箱不能为空，无法保存模板');
+      return;
+    }
+    
+    try {
+      // If template has a backend ID, update it
+      if (template.templateId) {
+        // If we have a new image file to upload
+        let imageUrl = template.imageUrl;
+        if (currentImageFile && currentImageFile.index.toString() === template.id) {
+          imageUrl = await uploadImageToCOS(template.templateId, currentImageFile.file);
+          setCurrentImageFile(null);
+        }
+        
+        const response = await updateReplyTemplateApi(template.templateId, {
+          content: template.content,
+          email: email,
+          image_urls: imageUrl
+        });
+        
+        if (response.code === 0) {
+          message.success('更新模板成功');
+          // Toggle edit mode off
+          setCommentTemplates(prev => 
+            prev.map(t => 
+              t.id === template.id 
+                ? { ...t, isEditing: false } 
+                : t
+            )
+          );
+        } else {
+          message.error(response.message || '更新模板失败');
+        }
+      } 
+      // Otherwise create a new template
+      else {
+        const response = await createReplyTemplateApi({
+          content: template.content,
+          email: email
+        });
+        
+        if (response.code !== 0) {
+          message.error(response.message || '添加模板失败');
+          return;
+        }
+        
+        // If we have an image to upload, we need to get the new template ID
+        if (currentImageFile && currentImageFile.index.toString() === template.id) {
+          const templatesResponse = await getReplyTemplatesApi({
+            page: 1,
+            page_size: 10,
+            email: email
+          });
+          
+          if (!templatesResponse.data?.records || templatesResponse.data.records.length === 0) {
+            message.warning('创建模板成功，但无法上传图片');
+            setCurrentImageFile(null);
+            return;
+          }
+          
+          // Get the latest template (should be the one we just created)
+          const latestTemplate = templatesResponse.data.records[0];
+          
+          // Upload the image
+          const imageUrl = await uploadImageToCOS(latestTemplate.id, currentImageFile.file);
+          setCurrentImageFile(null);
+          
+          if (!imageUrl) {
+            message.warning('模板创建成功，但图片上传失败');
+            return;
+          }
+          
+          // Update the template with the image URL
+          const updateResponse = await updateReplyTemplateApi(latestTemplate.id, {
+            content: template.content,
+            email: email,
+            image_urls: imageUrl
+          });
+          
+          if (updateResponse.code === 0) {
+            message.success('添加模板成功');
+          } else {
+            message.warning('模板创建成功，但更新图片失败');
+          }
+        } else {
+          message.success('添加模板成功');
+        }
+        
+        // Toggle edit mode off
+        setCommentTemplates(prev => 
+          prev.map(t => 
+            t.id === template.id 
+              ? { ...t, isEditing: false } 
+              : t
+          )
+        );
+      }
+      
+      // Refresh templates
+      fetchTemplates();
+    } catch (error) {
+      console.error('保存模板失败:', error);
+      message.error('保存模板失败');
+    }
+  };
+  
+  // Function to delete a template
+  const deleteTemplate = async (templateType: 'comment' | 'message', id: string) => {
+    if (templateType === 'comment') {
+      const template = commentTemplates.find(t => t.id === id);
+      
+      // If it has a backend ID, delete it from backend
+      if (template && template.templateId && email) {
+        try {
+          const response = await deleteReplyTemplateApi(template.templateId, email);
+          
+          if (response.code === 0) {
+            message.success('删除模板成功');
+            setCommentTemplates(prev => prev.filter(t => t.id !== id));
+          } else {
+            message.error(response.message || '删除模板失败');
+          }
+        } catch (error) {
+          console.error('删除模板失败:', error);
+          message.error('删除模板失败');
+          return;
+        }
+      } else {
+        // Just remove from local state
+        setCommentTemplates(prev => prev.filter(t => t.id !== id));
+      }
+    } else {
+      // For message templates, just remove from local state
+      setMessageTemplates(prev => prev.filter(t => t.id !== id));
+    }
+  };
+  
+  // Upload image to COS
+  const uploadImageToCOS = async (templateId: number, file: File): Promise<string> => {
+    if (!file || !email) return '';
+
+    try {
+      setUploadLoading(true);
+
+      // Create Tencent COS service instance
+      const cosService = tencentCOSService;
+
+      // Build upload path: email/templateId
+      const uploadPath = `${email}/${templateId}`;
+
+      // Upload file to Tencent COS
+      const result = await cosService.uploadFile(file, uploadPath);
+
+      return result.url;
+    } catch (error) {
+      console.error('上传图片到腾讯云COS失败:', error);
+      message.error('上传图片失败');
+      return '';
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   // Render the current step content
   const renderStepContent = () => {
     switch (currentStep) {
@@ -346,101 +591,53 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           </div>
         );
       
-      case '过滤条件':
+      case '分析要求':
         return (
           <div className="p-4">
             <Form
               form={form}
               layout="vertical"
-              initialValues={{}}
+              initialValues={{
+                userProfileLevel: selectedIntentTypes,
+                filterKeywords: profileSentence
+              }}
             >
               <div className="space-y-6">
-                {/* 最小点赞数 */}
-                <Form.Item
-                  name="minLikes"
-                  label={
-                    <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
-                      最小点赞数
-                      <Tooltip title="设置最小点赞数量">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
-                      </Tooltip>
-                    </span>
-                  }
-                  rules={[{ required: true, message: '请设置最小点赞数' }]}
-                >
-                  <div className="flex items-center">
-                    <Input 
-                      placeholder="0" 
-                      type="number" 
-                      min={0}
-                      className="flex-1"
-                    />
-                    <div className="bg-gray-100 px-3 py-1 rounded-r border border-l-0 border-gray-300">
-                      <span>≥</span>
-                    </div>
-                  </div>
-                </Form.Item>
-                
-                {/* 最小评论数量 */}
-                <Form.Item
-                  name="minComments"
-                  label={
-                    <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
-                      最小评论数量
-                      <Tooltip title="设置最小评论数量">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
-                      </Tooltip>
-                    </span>
-                  }
-                  rules={[{ required: true, message: '请设置最小评论数量' }]}
-                >
-                  <div className="flex items-center">
-                    <Input 
-                      placeholder="0" 
-                      type="number" 
-                      min={0}
-                      className="flex-1"
-                    />
-                    <div className="bg-gray-100 px-3 py-1 rounded-r border border-l-0 border-gray-300">
-                      <span>≥</span>
-                    </div>
-                  </div>
-                </Form.Item>
-                
-                {/* 用户画像等级 */}
+                {/* 用户意向等级 */}
                 <Form.Item
                   name="userProfileLevel"
                   label={
                     <span className="flex items-center">
                       <span className="text-red-500 mr-1">*</span>
-                      用户画像等级
-                      <Tooltip title="选择用户画像等级">
+                      用户意向等级
+                      <Tooltip title="选择用户意向等级">
                         <QuestionCircleOutlined className="ml-1 text-gray-400" />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择用户画像等级' }]}
+                  rules={[{ required: true, message: '请选择用户意向等级' }]}
                 >
                   <div className="flex space-x-4">
-                    <Checkbox.Group>
+                    <Checkbox.Group 
+                      onChange={(checkedValues) => {
+                        setSelectedIntentTypes(checkedValues as string[]);
+                      }}
+                    >
                       <div className="flex space-x-4">
-                        <Checkbox value="high">高等级</Checkbox>
-                        <Checkbox value="medium">中等级</Checkbox>
-                        <Checkbox value="low">低等级</Checkbox>
+                        {intentTypes.map(type => (
+                          <Checkbox key={type.value} value={type.value}>{type.label}</Checkbox>
+                        ))}
                       </div>
                     </Checkbox.Group>
                   </div>
                 </Form.Item>
                 
-                {/* 筛选关键词 */}
                 <Form.Item
                   name="filterKeywords"
                   label={
                     <span className="flex items-center">
-                      筛选关键词
-                      <Tooltip title="输入筛选关键词，多个关键词用逗号分隔">
+                      输入用户画像
+                      <Tooltip title="输入用户画像，例如我是做医美的，想找有意向买面膜的客户">
                         <QuestionCircleOutlined className="ml-1 text-gray-400" />
                       </Tooltip>
                     </span>
@@ -451,6 +648,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     rows={4}
                     maxLength={100}
                     showCount
+                    onChange={(e) => {
+                      setProfileSentence(e.target.value);
+                    }}
                   />
                 </Form.Item>
               </div>
@@ -464,48 +664,105 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             <Form
               form={form}
               layout="vertical"
-              initialValues={{}}
             >
-              <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-6">
                 {/* 评论区模版 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-base font-medium">评论区模版</h3>
-                    <span className="text-sm text-gray-500">操作</span>
                   </div>
                   
-                  {/* 模板项目 */}
                   <div className="space-y-3">
                     {commentTemplates.map((template, index) => (
-                      <div key={template.id} className="flex">
-                        <Input.TextArea 
-                          placeholder="请输入评论模板" 
-                          autoSize 
-                          className="flex-grow"
-                          value={template.content}
-                          onChange={(e) => {
-                            const newTemplates = [...commentTemplates];
-                            newTemplates[index].content = e.target.value;
-                            setCommentTemplates(newTemplates);
-                          }}
-                        />
-                        <div className="ml-2 flex items-start">
-                          <Upload
-                            listType="picture"
-                            maxCount={1}
-                            beforeUpload={(file) => {
-                              // You would typically upload to server here
-                              // For now just update the state with file info
+                      <div key={template.id} className="flex items-start">
+                        <div className="flex-grow">
+                          <Input.TextArea 
+                            placeholder="请输入评论模板" 
+                            autoSize 
+                            className="flex-grow"
+                            value={template.content}
+                            onChange={(e) => {
                               const newTemplates = [...commentTemplates];
-                              newTemplates[index].imageUrl = URL.createObjectURL(file);
+                              newTemplates[index].content = e.target.value;
                               setCommentTemplates(newTemplates);
-                              return false; // Prevent auto upload
                             }}
+                            disabled={!template.isEditing}
+                          />
+                          {/* Show image preview */}
+                          {template.imageUrl && (
+                            <div className="mt-2 relative">
+                              <Image 
+                                src={template.imageUrl} 
+                                alt="Template image" 
+                                width={100}
+                                height={100}
+                                style={{ objectFit: 'cover' }}
+                              />
+                              {/* Show delete button only in edit mode */}
+                              {template.isEditing && (
+                                <Button 
+                                  type="text" 
+                                  danger
+                                  icon={<DeleteOutlined />} 
+                                  size="small"
+                                  className="absolute top-0 right-0 bg-white bg-opacity-75"
+                                  onClick={() => {
+                                    const newTemplates = [...commentTemplates];
+                                    newTemplates[index].imageUrl = undefined;
+                                    setCommentTemplates(newTemplates);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-2 flex items-start">
+                          {template.isEditing && (
+                            <Upload
+                              listType="picture"
+                              maxCount={1}
+                              beforeUpload={(file) => {
+                                // Store the file for later upload when saving
+                                setCurrentImageFile({
+                                  index,
+                                  file
+                                });
+                                
+                                // Create a preview URL
+                                const newTemplates = [...commentTemplates];
+                                newTemplates[index].imageUrl = URL.createObjectURL(file);
+                                setCommentTemplates(newTemplates);
+                                
+                                return false; // Prevent auto upload
+                              }}
+                              showUploadList={false} // Hide the default upload list
+                            >
+                              <Button 
+                                type="text" 
+                                icon={<UploadOutlined />} 
+                                className="text-blue-500 hover:text-blue-700"
+                                loading={uploadLoading}
+                              >
+                                上传图片(可选)
+                              </Button>
+                            </Upload>
+                          )}
+                          <Button 
+                            type="text" 
+                            icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
+                            onClick={() => toggleTemplateEditMode('comment', template.id)}
+                            className={template.isEditing ? "text-green-500 hover:text-green-700" : "text-blue-500 hover:text-blue-700"}
+                            loading={template.isEditing && uploadLoading}
                           >
-                            <Button type="text" icon={<UploadOutlined />} className="text-blue-500 hover:text-blue-700">
-                              上传图片(可选)
-                            </Button>
-                          </Upload>
+                            {template.isEditing ? '保存' : '编辑'}
+                          </Button>
+                          <Button
+                            type="text"
+                            danger
+                            onClick={() => deleteTemplate('comment', template.id)}
+                          >
+                            删除
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -514,15 +771,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                       <Button 
                         type="text" 
                         icon={<PlusOutlined />} 
-                        className="text-gray-500"
                         onClick={() => {
+                          const newId = (commentTemplates.length + 1).toString();
                           setCommentTemplates([
                             ...commentTemplates, 
-                            { id: Date.now().toString(), content: '' }
+                            { id: newId, content: '', isEditing: true }
                           ]);
                         }}
                       >
-                        新增
+                        添加模板
                       </Button>
                     </div>
                   </div>
@@ -532,41 +789,87 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-base font-medium">私信回复模版</h3>
-                    <span className="text-sm text-gray-500">操作</span>
                   </div>
                   
-                  {/* 模板项目 */}
                   <div className="space-y-3">
                     {messageTemplates.map((template, index) => (
-                      <div key={template.id} className="flex">
-                        <Input.TextArea 
-                          placeholder="请输入私信模板" 
-                          autoSize 
-                          className="flex-grow"
-                          value={template.content}
-                          onChange={(e) => {
-                            const newTemplates = [...messageTemplates];
-                            newTemplates[index].content = e.target.value;
-                            setMessageTemplates(newTemplates);
-                          }}
-                        />
-                        <div className="ml-2 flex items-start">
-                          <Upload
-                            listType="picture"
-                            maxCount={1}
-                            beforeUpload={(file) => {
-                              // You would typically upload to server here
-                              // For now just update the state with file info
+                      <div key={template.id} className="flex items-start">
+                        <div className="flex-grow">
+                          <Input.TextArea 
+                            placeholder="请输入私信模板" 
+                            autoSize 
+                            className="flex-grow"
+                            value={template.content}
+                            onChange={(e) => {
                               const newTemplates = [...messageTemplates];
-                              newTemplates[index].imageUrl = URL.createObjectURL(file);
+                              newTemplates[index].content = e.target.value;
                               setMessageTemplates(newTemplates);
-                              return false; // Prevent auto upload
                             }}
+                            disabled={!template.isEditing}
+                          />
+                          {/* Show image preview */}
+                          {template.imageUrl && (
+                            <div className="mt-2 relative">
+                              <Image 
+                                src={template.imageUrl} 
+                                alt="Template image" 
+                                width={100}
+                                height={100}
+                                style={{ objectFit: 'cover' }}
+                              />
+                              {/* Show delete button only in edit mode */}
+                              {template.isEditing && (
+                                <Button 
+                                  type="text" 
+                                  danger
+                                  icon={<DeleteOutlined />} 
+                                  size="small"
+                                  className="absolute top-0 right-0 bg-white bg-opacity-75"
+                                  onClick={() => {
+                                    const newTemplates = [...messageTemplates];
+                                    newTemplates[index].imageUrl = undefined;
+                                    setMessageTemplates(newTemplates);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-2 flex items-start">
+                          {template.isEditing && (
+                            <Upload
+                              listType="picture"
+                              maxCount={1}
+                              beforeUpload={(file) => {
+                                // You would typically upload to server here
+                                // For now just update the state with file info
+                                const newTemplates = [...messageTemplates];
+                                newTemplates[index].imageUrl = URL.createObjectURL(file);
+                                setMessageTemplates(newTemplates);
+                                return false; // Prevent auto upload
+                              }}
+                              showUploadList={false} // Hide the default upload list
+                            >
+                              <Button type="text" icon={<UploadOutlined />} className="text-blue-500 hover:text-blue-700">
+                                上传图片(可选)
+                              </Button>
+                            </Upload>
+                          )}
+                          <Button 
+                            type="text" 
+                            icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
+                            onClick={() => toggleTemplateEditMode('message', template.id)}
+                            className={template.isEditing ? "text-green-500 hover:text-green-700" : "text-blue-500 hover:text-blue-700"}
                           >
-                            <Button type="text" icon={<UploadOutlined />} className="text-blue-500 hover:text-blue-700">
-                              上传图片(可选)
-                            </Button>
-                          </Upload>
+                            {template.isEditing ? '保存' : '编辑'}
+                          </Button>
+                          <Button
+                            type="text"
+                            danger
+                            onClick={() => deleteTemplate('message', template.id)}
+                          >
+                            删除
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -575,19 +878,20 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                       <Button 
                         type="text" 
                         icon={<PlusOutlined />} 
-                        className="text-gray-500"
                         onClick={() => {
+                          const newId = (messageTemplates.length + 1).toString();
                           setMessageTemplates([
                             ...messageTemplates, 
-                            { id: Date.now().toString(), content: '' }
+                            { id: newId, content: '', isEditing: true }
                           ]);
                         }}
                       >
-                        新增
+                        添加模板
                       </Button>
                     </div>
                   </div>
                 </div>
+              
               </div>
             </Form>
           </div>
