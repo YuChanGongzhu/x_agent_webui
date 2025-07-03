@@ -922,7 +922,7 @@ const DataAnalyze: React.FC = () => {
       setLoading(true);
 
       const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
-      const newDagRunId = `xhs_comments_template_replier_${timestamp}`;
+      const newDagRunId = `comments_template_replier_${timestamp}`;
 
       // 从 localStorage 中获取目标邮箱
       const targetEmail = localStorage.getItem('xhs_target_email') || '';
@@ -934,7 +934,7 @@ const DataAnalyze: React.FC = () => {
       };
 
       const response = await triggerDagRun(
-        "xhs_comments_template_replier",
+        "comments_template_replier",
         newDagRunId,
         conf
       );
@@ -964,7 +964,7 @@ const DataAnalyze: React.FC = () => {
     try {
       setLoading(true);
 
-      const response = await getDagRuns("xhs_comments_template_replier", 10, "-start_date");
+      const response = await getDagRuns("comments_template_replier", 10, "-start_date");
 
       if (response && response.dag_runs) {
         const dagRun = response.dag_runs.find((run: any) => run.dag_run_id === dagRunId);

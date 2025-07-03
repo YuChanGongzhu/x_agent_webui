@@ -65,7 +65,7 @@ const GenerateMsg: React.FC = () => {
       };
 
       const response = await triggerDagRun(
-        "xhs_msg_reply",
+        "msg_reply",
         dag_run_id,
         conf
       );
