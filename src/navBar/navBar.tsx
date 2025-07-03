@@ -40,6 +40,7 @@ interface NavItemWithIcons extends NavItem {
 const initialMenuItems: NavItemWithIcons[] = [
   { name: '系统管理', icon: systemSVG, activeIcon: systemActiveSVG, url: '/manage', adminOnly: true },
   { name: '设备管理', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/devices', adminOnly: false },
+  { name: '自动化任务', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/xhs/dashboard', adminOnly: false },
   {
     name: '智能获客',
     icon: xhsSVG,
