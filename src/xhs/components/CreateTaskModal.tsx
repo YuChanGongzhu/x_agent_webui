@@ -39,12 +39,13 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState<TaskCreationStep>('采集任务');
-  // Add state for template items
+  // Add state for comment templates
   const [commentTemplates, setCommentTemplates] = useState<TemplateItem[]>([
     { id: '1', content: '', isEditing: true },
     { id: '2', content: '', isEditing: false },
     { id: '3', content: '', isEditing: false }
   ]);
+  // Add state for message templates
   const [messageTemplates, setMessageTemplates] = useState<TemplateItem[]>([
     { id: '1', content: '', isEditing: true },
     { id: '2', content: '', isEditing: false }
@@ -133,19 +134,19 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
   
-  // Add state for image upload
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [currentImageFile, setCurrentImageFile] = useState<{index: number, file: File} | null>(null);
+  // Add state for comment template image upload
+  const [commentUploadLoading, setCommentUploadLoading] = useState(false);
+  const [commentImageFile, setCommentImageFile] = useState<{index: number, file: File} | null>(null);
 
-  // Fetch templates from backend when modal is opened
+  // Fetch comment templates from backend when modal is opened
   useEffect(() => {
     if (visible && email && currentStep === '回复模板') {
-      fetchTemplates();
+      fetchCommentTemplates();
     }
   }, [visible, email, currentStep]);
 
-  // Fetch templates from backend
-  const fetchTemplates = async () => {
+  // Fetch comment templates from backend
+  const fetchCommentTemplates = async () => {
     if (!email) {
       message.error('用户邮箱不能为空，无法获取模板');
       return;
@@ -174,6 +175,204 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     } catch (error) {
       console.error('获取模板失败:', error);
       message.error('获取模板失败');
+    }
+  };
+
+  // Toggle comment template edit mode
+  const toggleCommentTemplateEditMode = (id: string) => {
+    const template = commentTemplates.find(t => t.id === id);
+    
+    // If we're saving a template that was in edit mode
+    if (template && template.isEditing) {
+      // Save the template to backend
+      saveCommentTemplate(template);
+    } else {
+      // Just toggle edit mode
+      setCommentTemplates(prev => 
+        prev.map(template => 
+          template.id === id 
+            ? { ...template, isEditing: !template.isEditing } 
+            : template
+        )
+      );
+    }
+  };
+  
+  // Toggle message template edit mode
+  const toggleMessageTemplateEditMode = (id: string) => {
+    setMessageTemplates(prev => 
+      prev.map(template => 
+        template.id === id 
+          ? { ...template, isEditing: !template.isEditing } 
+          : template
+      )
+    );
+  };
+  
+  // Save comment template to backend
+  const saveCommentTemplate = async (template: TemplateItem) => {
+    if (!email) {
+      message.error('用户邮箱不能为空，无法保存模板');
+      return;
+    }
+    
+    try {
+      // If template has a backend ID, update it
+      if (template.templateId) {
+        // If we have a new image file to upload
+        let imageUrl = template.imageUrl;
+        if (commentImageFile && commentImageFile.index.toString() === template.id) {
+          imageUrl = await uploadCommentImageToCOS(template.templateId, commentImageFile.file);
+          setCommentImageFile(null);
+        }
+        
+        const response = await updateReplyTemplateApi(template.templateId, {
+          content: template.content,
+          email: email,
+          image_urls: imageUrl
+        });
+        
+        if (response.code === 0) {
+          message.success('更新模板成功');
+          // Toggle edit mode off
+          setCommentTemplates(prev => 
+            prev.map(t => 
+              t.id === template.id 
+                ? { ...t, isEditing: false } 
+                : t
+            )
+          );
+        } else {
+          message.error(response.message || '更新模板失败');
+        }
+      } 
+      // Otherwise create a new template
+      else {
+        const response = await createReplyTemplateApi({
+          content: template.content,
+          email: email
+        });
+        
+        if (response.code !== 0) {
+          message.error(response.message || '添加模板失败');
+          return;
+        }
+        
+        // If we have an image to upload, we need to get the new template ID
+        if (commentImageFile && commentImageFile.index.toString() === template.id) {
+          const templatesResponse = await getReplyTemplatesApi({
+            page: 1,
+            page_size: 10,
+            email: email
+          });
+          
+          if (!templatesResponse.data?.records || templatesResponse.data.records.length === 0) {
+            message.warning('创建模板成功，但无法上传图片');
+            setCommentImageFile(null);
+            return;
+          }
+          
+          // Get the latest template (should be the one we just created)
+          const latestTemplate = templatesResponse.data.records[0];
+          
+          // Upload the image
+          const imageUrl = await uploadCommentImageToCOS(latestTemplate.id, commentImageFile.file);
+          setCommentImageFile(null);
+          
+          if (!imageUrl) {
+            message.warning('模板创建成功，但图片上传失败');
+            return;
+          }
+          
+          // Update the template with the image URL
+          const updateResponse = await updateReplyTemplateApi(latestTemplate.id, {
+            content: template.content,
+            email: email,
+            image_urls: imageUrl
+          });
+          
+          if (updateResponse.code === 0) {
+            message.success('添加模板成功');
+          } else {
+            message.warning('模板创建成功，但更新图片失败');
+          }
+        } else {
+          message.success('添加模板成功');
+        }
+        
+        // Toggle edit mode off
+        setCommentTemplates(prev => 
+          prev.map(t => 
+            t.id === template.id 
+              ? { ...t, isEditing: false } 
+              : t
+          )
+        );
+      }
+      
+      // Refresh templates
+      fetchCommentTemplates();
+    } catch (error) {
+      console.error('保存模板失败:', error);
+      message.error('保存模板失败');
+    }
+  };
+  
+  // Delete comment template
+  const deleteCommentTemplate = async (id: string) => {
+    const template = commentTemplates.find(t => t.id === id);
+    
+    // If it has a backend ID, delete it from backend
+    if (template && template.templateId && email) {
+      try {
+        const response = await deleteReplyTemplateApi(template.templateId, email);
+        
+        if (response.code === 0) {
+          message.success('删除模板成功');
+          setCommentTemplates(prev => prev.filter(t => t.id !== id));
+        } else {
+          message.error(response.message || '删除模板失败');
+        }
+      } catch (error) {
+        console.error('删除模板失败:', error);
+        message.error('删除模板失败');
+        return;
+      }
+    } else {
+      // Just remove from local state
+      setCommentTemplates(prev => prev.filter(t => t.id !== id));
+    }
+  };
+  
+  // Delete message template
+  const deleteMessageTemplate = (id: string) => {
+    // For message templates, just remove from local state
+    setMessageTemplates(prev => prev.filter(template => template.id !== id));
+  };
+  
+  // Upload comment image to COS
+  const uploadCommentImageToCOS = async (templateId: number, file: File): Promise<string> => {
+    if (!file || !email) return '';
+
+    try {
+      setCommentUploadLoading(true);
+
+      // Create Tencent COS service instance
+      const cosService = tencentCOSService;
+
+      // Build upload path: email/templateId
+      const uploadPath = `${email}/${templateId}`;
+
+      // Upload file to Tencent COS
+      const result = await cosService.uploadFile(file, uploadPath);
+
+      return result.url;
+    } catch (error) {
+      console.error('上传图片到腾讯云COS失败:', error);
+      message.error('上传图片失败');
+      return '';
+    } finally {
+      setCommentUploadLoading(false);
     }
   };
 
@@ -228,202 +427,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     }
   };
   
-  // Toggle template edit mode
-  const toggleTemplateEditMode = (templateType: 'comment' | 'message', id: string) => {
-    if (templateType === 'comment') {
-      const template = commentTemplates.find(t => t.id === id);
-      
-      // If we're saving a template that was in edit mode
-      if (template && template.isEditing) {
-        // Save the template to backend
-        saveTemplate(template);
-      } else {
-        // Just toggle edit mode
-        setCommentTemplates(prev => 
-          prev.map(template => 
-            template.id === id 
-              ? { ...template, isEditing: !template.isEditing } 
-              : template
-          )
-        );
-      }
-    } else {
-      setMessageTemplates(prev => 
-        prev.map(template => 
-          template.id === id 
-            ? { ...template, isEditing: !template.isEditing } 
-            : template
-        )
-      );
-    }
-  };
-  
-  // Save template to backend
-  const saveTemplate = async (template: TemplateItem) => {
-    if (!email) {
-      message.error('用户邮箱不能为空，无法保存模板');
-      return;
-    }
-    
-    try {
-      // If template has a backend ID, update it
-      if (template.templateId) {
-        // If we have a new image file to upload
-        let imageUrl = template.imageUrl;
-        if (currentImageFile && currentImageFile.index.toString() === template.id) {
-          imageUrl = await uploadImageToCOS(template.templateId, currentImageFile.file);
-          setCurrentImageFile(null);
-        }
-        
-        const response = await updateReplyTemplateApi(template.templateId, {
-          content: template.content,
-          email: email,
-          image_urls: imageUrl
-        });
-        
-        if (response.code === 0) {
-          message.success('更新模板成功');
-          // Toggle edit mode off
-          setCommentTemplates(prev => 
-            prev.map(t => 
-              t.id === template.id 
-                ? { ...t, isEditing: false } 
-                : t
-            )
-          );
-        } else {
-          message.error(response.message || '更新模板失败');
-        }
-      } 
-      // Otherwise create a new template
-      else {
-        const response = await createReplyTemplateApi({
-          content: template.content,
-          email: email
-        });
-        
-        if (response.code !== 0) {
-          message.error(response.message || '添加模板失败');
-          return;
-        }
-        
-        // If we have an image to upload, we need to get the new template ID
-        if (currentImageFile && currentImageFile.index.toString() === template.id) {
-          const templatesResponse = await getReplyTemplatesApi({
-            page: 1,
-            page_size: 10,
-            email: email
-          });
-          
-          if (!templatesResponse.data?.records || templatesResponse.data.records.length === 0) {
-            message.warning('创建模板成功，但无法上传图片');
-            setCurrentImageFile(null);
-            return;
-          }
-          
-          // Get the latest template (should be the one we just created)
-          const latestTemplate = templatesResponse.data.records[0];
-          
-          // Upload the image
-          const imageUrl = await uploadImageToCOS(latestTemplate.id, currentImageFile.file);
-          setCurrentImageFile(null);
-          
-          if (!imageUrl) {
-            message.warning('模板创建成功，但图片上传失败');
-            return;
-          }
-          
-          // Update the template with the image URL
-          const updateResponse = await updateReplyTemplateApi(latestTemplate.id, {
-            content: template.content,
-            email: email,
-            image_urls: imageUrl
-          });
-          
-          if (updateResponse.code === 0) {
-            message.success('添加模板成功');
-          } else {
-            message.warning('模板创建成功，但更新图片失败');
-          }
-        } else {
-          message.success('添加模板成功');
-        }
-        
-        // Toggle edit mode off
-        setCommentTemplates(prev => 
-          prev.map(t => 
-            t.id === template.id 
-              ? { ...t, isEditing: false } 
-              : t
-          )
-        );
-      }
-      
-      // Refresh templates
-      fetchTemplates();
-    } catch (error) {
-      console.error('保存模板失败:', error);
-      message.error('保存模板失败');
-    }
-  };
-  
-  // Function to delete a template
-  const deleteTemplate = async (templateType: 'comment' | 'message', id: string) => {
-    if (templateType === 'comment') {
-      const template = commentTemplates.find(t => t.id === id);
-      
-      // If it has a backend ID, delete it from backend
-      if (template && template.templateId && email) {
-        try {
-          const response = await deleteReplyTemplateApi(template.templateId, email);
-          
-          if (response.code === 0) {
-            message.success('删除模板成功');
-            setCommentTemplates(prev => prev.filter(t => t.id !== id));
-          } else {
-            message.error(response.message || '删除模板失败');
-          }
-        } catch (error) {
-          console.error('删除模板失败:', error);
-          message.error('删除模板失败');
-          return;
-        }
-      } else {
-        // Just remove from local state
-        setCommentTemplates(prev => prev.filter(t => t.id !== id));
-      }
-    } else {
-      // For message templates, just remove from local state
-      setMessageTemplates(prev => prev.filter(t => t.id !== id));
-    }
-  };
-  
-  // Upload image to COS
-  const uploadImageToCOS = async (templateId: number, file: File): Promise<string> => {
-    if (!file || !email) return '';
-
-    try {
-      setUploadLoading(true);
-
-      // Create Tencent COS service instance
-      const cosService = tencentCOSService;
-
-      // Build upload path: email/templateId
-      const uploadPath = `${email}/${templateId}`;
-
-      // Upload file to Tencent COS
-      const result = await cosService.uploadFile(file, uploadPath);
-
-      return result.url;
-    } catch (error) {
-      console.error('上传图片到腾讯云COS失败:', error);
-      message.error('上传图片失败');
-      return '';
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-
   // Render the current step content
   const renderStepContent = () => {
     switch (currentStep) {
@@ -724,7 +727,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                               maxCount={1}
                               beforeUpload={(file) => {
                                 // Store the file for later upload when saving
-                                setCurrentImageFile({
+                                setCommentImageFile({
                                   index,
                                   file
                                 });
@@ -742,7 +745,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                                 type="text" 
                                 icon={<UploadOutlined />} 
                                 className="text-blue-500 hover:text-blue-700"
-                                loading={uploadLoading}
+                                loading={commentUploadLoading}
                               >
                                 上传图片(可选)
                               </Button>
@@ -751,16 +754,16 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                           <Button 
                             type="text" 
                             icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
-                            onClick={() => toggleTemplateEditMode('comment', template.id)}
+                            onClick={() => toggleCommentTemplateEditMode(template.id)}
                             className={template.isEditing ? "text-green-500 hover:text-green-700" : "text-blue-500 hover:text-blue-700"}
-                            loading={template.isEditing && uploadLoading}
+                            loading={template.isEditing && commentUploadLoading}
                           >
                             {template.isEditing ? '保存' : '编辑'}
                           </Button>
                           <Button
                             type="text"
                             danger
-                            onClick={() => deleteTemplate('comment', template.id)}
+                            onClick={() => deleteCommentTemplate(template.id)}
                           >
                             删除
                           </Button>
@@ -859,7 +862,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                           <Button 
                             type="text" 
                             icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
-                            onClick={() => toggleTemplateEditMode('message', template.id)}
+                            onClick={() => toggleMessageTemplateEditMode(template.id)}
                             className={template.isEditing ? "text-green-500 hover:text-green-700" : "text-blue-500 hover:text-blue-700"}
                           >
                             {template.isEditing ? '保存' : '编辑'}
@@ -867,7 +870,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                           <Button
                             type="text"
                             danger
-                            onClick={() => deleteTemplate('message', template.id)}
+                            onClick={() => deleteMessageTemplate(template.id)}
                           >
                             删除
                           </Button>
