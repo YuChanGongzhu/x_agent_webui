@@ -4,6 +4,7 @@ import type { StepsProps, UploadProps } from 'antd';
 import { QuestionCircleOutlined, PlusOutlined, UploadOutlined, EditOutlined, SaveOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useUser } from '../../context/UserContext';
 import { UserProfileService } from '../../management/userManagement/userProfileService';
+import { triggerDagRun } from '../../api/airflow';
 import {
   getReplyTemplatesApi,
   createReplyTemplateApi,
@@ -375,7 +376,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       setCommentUploadLoading(false);
     }
   };
-
+  
   // Handle next step button click
   const handleNextStep = async () => {
     try {
@@ -389,11 +390,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         setCurrentStep('回复模板');
       } else {
         // Final step, submit the form
-        const values = await form.validateFields();
-        onFinish(values);
+        handleFinish();
       }
     } catch (error) {
       console.error('Form validation failed:', error);
+      message.error('表单验证失败，请检查必填字段');
     }
   };
   
@@ -412,8 +413,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       const values = await form.validateFields();
       console.log('Saved progress:', values);
       // Here you would typically save the progress
+      message.success('进度已保存');
     } catch (error) {
       console.error('Form validation failed:', error);
+      message.error('保存进度失败，请检查表单');
     }
   };
   
@@ -421,15 +424,68 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const handleFinish = async () => {
     try {
       const values = await form.validateFields();
-      onFinish(values);
+      
+      // Get all form values for DAG configuration
+      const formValues = form.getFieldsValue(true);
+      
+      // Create timestamp for unique DAG run ID
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+      const dag_run_id = `xhs_auto_progress_${timestamp}`;
+      
+      // Extract template IDs from comment templates that have backend IDs
+      const templateIds = commentTemplates
+        .filter(template => template.templateId)
+        .map(template => template.templateId as number);
+      
+      // Prepare configuration object for Airflow DAG
+      const conf = {
+        email: formValues.targetEmail,
+        keyword: formValues.keyword,
+        max_notes: parseInt(formValues.noteCount || '10'),
+        note_type: formValues.noteType || '图文',
+        time_range: formValues.timeRange || '',
+        search_scope: formValues.searchScope || '',
+        sort_by: formValues.sortBy || '综合',
+        profile_sentence: formValues.profileSentence || '',
+        intent_type: formValues.intentType || [],
+        template_ids: templateIds
+      };
+      
+      try {
+        // Trigger the Airflow DAG with the configuration
+        const response = await triggerDagRun(
+          "xhs_auto_progress",
+          dag_run_id,
+          conf
+        );
+        
+        if (response && response.dag_run_id) {
+          message.success(`成功创建自动化任务，任务ID: ${response.dag_run_id}`);
+          // Pass the response to the parent component
+          onFinish({
+            ...values,
+            dagResponse: response,
+            conf: conf
+          });
+          // Close the modal
+          onClose();
+        } else {
+          message.error('创建任务失败，请重试');
+        }
+      } catch (err) {
+        console.error('Error triggering DAG run:', err);
+        message.error('创建任务失败，请检查网络连接');
+      }
     } catch (error) {
       console.error('Form validation failed:', error);
+      message.error('表单验证失败，请检查必填字段');
     }
   };
-  
-  // Render the current step content
-  const renderStepContent = () => {
-    switch (currentStep) {
+
+// Render the current step content
+const renderStepContent = () => {
+  switch (currentStep) {
+    // ... (rest of the code remains the same)
       case '采集任务':
         return (
           <div className="p-4">
