@@ -149,7 +149,7 @@ const TemplateMessage = () => {
           icon={<EditOutlined />}
           size="small"
           style={{
-            color: "#1890ff",
+            color: "#8389FC",
             padding: "4px",
             minWidth: "28px",
             height: "28px",
@@ -543,10 +543,17 @@ const TemplateMessage = () => {
                 setIsModalVisible(true);
               }}
               style={{
-                border: "1px solid #d9d9d9",
-                borderRadius: "6px",
-                padding: "6px 16px",
-                height: "32px",
+                border: "1px solid #999999",
+                color: "#333333",
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.color = "#8389fc";
+                e.currentTarget.style.borderColor = "#8389fc";
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.color = "#333333";
+                e.currentTarget.style.borderColor = "#999999";
               }}
             >
               添加模板
@@ -557,11 +564,17 @@ const TemplateMessage = () => {
                 console.log("一键回复");
               }}
               style={{
-                backgroundColor: "#facc7e",
-                borderColor: "#facc7e",
                 borderRadius: "6px",
                 padding: "6px 16px",
                 height: "32px",
+                border: "1px solid #8389FC",
+                background: "linear-gradient(135deg, #8389FC, #D477E1)",
+              }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
               }}
             >
               一键回复
@@ -723,7 +736,19 @@ const Message: React.FC = () => {
           }}
         >
           <span className="font-medium text-sm">私信管理</span>
-          <Button type="primary" className="text-sm">
+          <Button
+            type="primary"
+            style={{
+              border: "1px solid #8389FC",
+              background: "linear-gradient(135deg, #8389FC, #D477E1)",
+            }}
+            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+            }}
+            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+            }}
+          >
             字体待定
           </Button>
         </div>
