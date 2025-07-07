@@ -1,21 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form, Input, Select, DatePicker, TimePicker, Tooltip, Checkbox, Steps, Popover, Upload, Image, message } from 'antd';
-import type { StepsProps, UploadProps } from 'antd';
-import { QuestionCircleOutlined, PlusOutlined, UploadOutlined, EditOutlined, SaveOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useUser } from '../../context/UserContext';
-import { UserProfileService } from '../../management/userManagement/userProfileService';
-import { triggerDagRun } from '../../api/airflow';
+import React, { useState, useEffect } from "react";
+import {
+  Modal,
+  Button,
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  TimePicker,
+  Tooltip,
+  Checkbox,
+  Steps,
+  Popover,
+  Upload,
+  Image,
+  message,
+} from "antd";
+import type { StepsProps, UploadProps } from "antd";
+import {
+  QuestionCircleOutlined,
+  PlusOutlined,
+  UploadOutlined,
+  EditOutlined,
+  SaveOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+import { useUser } from "../../context/UserContext";
+import { UserProfileService } from "../../management/userManagement/userProfileService";
+import { triggerDagRun } from "../../api/airflow";
 import {
   getReplyTemplatesApi,
   createReplyTemplateApi,
   updateReplyTemplateApi,
   deleteReplyTemplateApi,
-  ReplyTemplate
-} from '../../api/mysql';
-import { tencentCOSService } from '../../api/tencent_cos';
-
+  ReplyTemplate,
+} from "../../api/mysql";
+import { tencentCOSService } from "../../api/tencent_cos";
+import exclamation2 from "../../img/exclamation2.svg";
 // Define the steps of the task creation process
-type TaskCreationStep = '采集任务' | '分析要求' | '回复模板';
+type TaskCreationStep = "采集任务" | "分析要求" | "回复模板";
 
 // Props for the CreateTaskModal component
 interface CreateTaskModalProps {
@@ -33,76 +55,72 @@ interface TemplateItem {
   templateId?: number; // Backend template ID
 }
 
-const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
-  visible,
-  onClose,
-  onFinish
-}) => {
+const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onFinish }) => {
   const [form] = Form.useForm();
-  const [currentStep, setCurrentStep] = useState<TaskCreationStep>('采集任务');
+  const [currentStep, setCurrentStep] = useState<TaskCreationStep>("采集任务");
   // Add state for comment templates
   const [commentTemplates, setCommentTemplates] = useState<TemplateItem[]>([
-    { id: '1', content: '', isEditing: true },
-    { id: '2', content: '', isEditing: false },
-    { id: '3', content: '', isEditing: false }
+    { id: "1", content: "", isEditing: true },
+    { id: "2", content: "", isEditing: false },
+    { id: "3", content: "", isEditing: false },
   ]);
   // Add state for message templates
   const [messageTemplates, setMessageTemplates] = useState<TemplateItem[]>([
-    { id: '1', content: '', isEditing: true },
-    { id: '2', content: '', isEditing: false }
+    { id: "1", content: "", isEditing: true },
+    { id: "2", content: "", isEditing: false },
   ]);
-  
+
   // Add state for data collection options (from DataCollect.tsx)
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
-  const [keyword, setKeyword] = useState('');
-  const [noteTypes] = useState<{value: string, label: string}[]>([
-    { value: '图文', label: '图文' },
-    { value: '视频', label: '视频' }
+  const [keyword, setKeyword] = useState("");
+  const [noteTypes] = useState<{ value: string; label: string }[]>([
+    { value: "图文", label: "图文" },
+    { value: "视频", label: "视频" },
   ]);
-  const [sortOptions] = useState<{value: string, label: string}[]>([
-    { value: '综合', label: '综合' },
-    { value: '最新', label: '最新' },
-    { value: '最多点赞', label: '最多点赞' },
-    { value: '最多评论', label: '最多评论' },
-    { value: '最多收藏', label: '最多收藏' }
+  const [sortOptions] = useState<{ value: string; label: string }[]>([
+    { value: "综合", label: "综合" },
+    { value: "最新", label: "最新" },
+    { value: "最多点赞", label: "最多点赞" },
+    { value: "最多评论", label: "最多评论" },
+    { value: "最多收藏", label: "最多收藏" },
   ]);
-  const [timeRanges] = useState<{value: string, label: string}[]>([
-    { value: '不限', label: '不限' },
-    { value: '一天内', label: '一天内' },
-    { value: '一周内', label: '一周内' },
-    { value: '一月内', label: '一月内' }
+  const [timeRanges] = useState<{ value: string; label: string }[]>([
+    { value: "不限", label: "不限" },
+    { value: "一天内", label: "一天内" },
+    { value: "一周内", label: "一周内" },
+    { value: "一月内", label: "一月内" },
   ]);
-  const [noteCounts] = useState<{value: number, label: string}[]>([
-    { value: 10, label: '10篇' },
-    { value: 20, label: '20篇' },
-    { value: 50, label: '50篇' },
-    { value: 100, label: '100篇' }
+  const [noteCounts] = useState<{ value: number; label: string }[]>([
+    { value: 10, label: "10篇" },
+    { value: 20, label: "20篇" },
+    { value: 50, label: "50篇" },
+    { value: 100, label: "100篇" },
   ]);
-  
+
   // Add state for 分析要求 step
-  const [intentTypes] = useState<{value: string, label: string}[]>([
-    { value: 'high', label: '高意向' },
-    { value: 'medium', label: '中意向' },
-    { value: 'low', label: '低意向' }
+  const [intentTypes] = useState<{ value: string; label: string }[]>([
+    { value: "high", label: "高意向" },
+    { value: "medium", label: "中意向" },
+    { value: "low", label: "低意向" },
   ]);
   const [selectedIntentTypes, setSelectedIntentTypes] = useState<string[]>([]);
-  const [profileSentence, setProfileSentence] = useState('');
-  
+  const [profileSentence, setProfileSentence] = useState("");
+
   // Get user context
   const { isAdmin, email } = useUser();
-  
+
   // Steps configuration
   const steps = [
-    { key: '采集任务', title: '采集任务' },
-    { key: '分析要求', title: '分析要求' },
-    { key: '回复模板', title: '回复模板' }
+    { key: "采集任务", title: "采集任务" },
+    { key: "分析要求", title: "分析要求" },
+    { key: "回复模板", title: "回复模板" },
   ];
-  
+
   // Fetch available emails and keywords on component mount
   useEffect(() => {
     fetchAvailableEmails();
   }, [isAdmin, email]);
-  
+
   // Fetch available emails
   const fetchAvailableEmails = async () => {
     if (isAdmin) {
@@ -115,14 +133,14 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             .map((user: { email?: string }) => user.email as string);
           setAvailableEmails(emails);
         } else {
-          console.error('获取用户列表失败');
+          console.error("获取用户列表失败");
           // 如果获取失败，至少添加当前用户的邮箱
           if (email) {
             setAvailableEmails([email]);
           }
         }
       } catch (err) {
-        console.error('获取用户列表出错:', err);
+        console.error("获取用户列表出错:", err);
         if (email) {
           setAvailableEmails([email]);
         }
@@ -134,14 +152,16 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       }
     }
   };
-  
+
   // Add state for comment template image upload
   const [commentUploadLoading, setCommentUploadLoading] = useState(false);
-  const [commentImageFile, setCommentImageFile] = useState<{index: number, file: File} | null>(null);
+  const [commentImageFile, setCommentImageFile] = useState<{ index: number; file: File } | null>(
+    null
+  );
 
   // Fetch comment templates from backend when modal is opened
   useEffect(() => {
-    if (visible && email && currentStep === '回复模板') {
+    if (visible && email && currentStep === "回复模板") {
       fetchCommentTemplates();
     }
   }, [visible, email, currentStep]);
@@ -149,7 +169,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   // Fetch comment templates from backend
   const fetchCommentTemplates = async () => {
     if (!email) {
-      message.error('用户邮箱不能为空，无法获取模板');
+      message.error("用户邮箱不能为空，无法获取模板");
       return;
     }
 
@@ -157,66 +177,62 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       const response = await getReplyTemplatesApi({
         page: 1,
         page_size: 20,
-        email: email
+        email: email,
       });
 
       if (response.data?.records && response.data.records.length > 0) {
         // Map backend templates to our format
         const templates = response.data.records.map((template: ReplyTemplate) => ({
           id: template.id.toString(),
-          content: template.content || '',
+          content: template.content || "",
           imageUrl: template.image_urls || undefined,
           isEditing: false,
-          templateId: template.id
+          templateId: template.id,
         }));
-        
+
         // Update our template state
         setCommentTemplates(templates);
       }
     } catch (error) {
-      console.error('获取模板失败:', error);
-      message.error('获取模板失败');
+      console.error("获取模板失败:", error);
+      message.error("获取模板失败");
     }
   };
 
   // Toggle comment template edit mode
   const toggleCommentTemplateEditMode = (id: string) => {
-    const template = commentTemplates.find(t => t.id === id);
-    
+    const template = commentTemplates.find((t) => t.id === id);
+
     // If we're saving a template that was in edit mode
     if (template && template.isEditing) {
       // Save the template to backend
       saveCommentTemplate(template);
     } else {
       // Just toggle edit mode
-      setCommentTemplates(prev => 
-        prev.map(template => 
-          template.id === id 
-            ? { ...template, isEditing: !template.isEditing } 
-            : template
+      setCommentTemplates((prev) =>
+        prev.map((template) =>
+          template.id === id ? { ...template, isEditing: !template.isEditing } : template
         )
       );
     }
   };
-  
+
   // Toggle message template edit mode
   const toggleMessageTemplateEditMode = (id: string) => {
-    setMessageTemplates(prev => 
-      prev.map(template => 
-        template.id === id 
-          ? { ...template, isEditing: !template.isEditing } 
-          : template
+    setMessageTemplates((prev) =>
+      prev.map((template) =>
+        template.id === id ? { ...template, isEditing: !template.isEditing } : template
       )
     );
   };
-  
+
   // Save comment template to backend
   const saveCommentTemplate = async (template: TemplateItem) => {
     if (!email) {
-      message.error('用户邮箱不能为空，无法保存模板');
+      message.error("用户邮箱不能为空，无法保存模板");
       return;
     }
-    
+
     try {
       // If template has a backend ID, update it
       if (template.templateId) {
@@ -226,134 +242,126 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           imageUrl = await uploadCommentImageToCOS(template.templateId, commentImageFile.file);
           setCommentImageFile(null);
         }
-        
+
         const response = await updateReplyTemplateApi(template.templateId, {
           content: template.content,
           email: email,
-          image_urls: imageUrl
+          image_urls: imageUrl,
         });
-        
+
         if (response.code === 0) {
-          message.success('更新模板成功');
+          message.success("更新模板成功");
           // Toggle edit mode off
-          setCommentTemplates(prev => 
-            prev.map(t => 
-              t.id === template.id 
-                ? { ...t, isEditing: false } 
-                : t
-            )
+          setCommentTemplates((prev) =>
+            prev.map((t) => (t.id === template.id ? { ...t, isEditing: false } : t))
           );
         } else {
-          message.error(response.message || '更新模板失败');
+          message.error(response.message || "更新模板失败");
         }
-      } 
+      }
       // Otherwise create a new template
       else {
         const response = await createReplyTemplateApi({
           content: template.content,
-          email: email
+          email: email,
         });
-        
+
         if (response.code !== 0) {
-          message.error(response.message || '添加模板失败');
+          message.error(response.message || "添加模板失败");
           return;
         }
-        
+
         // If we have an image to upload, we need to get the new template ID
         if (commentImageFile && commentImageFile.index.toString() === template.id) {
           const templatesResponse = await getReplyTemplatesApi({
             page: 1,
             page_size: 10,
-            email: email
+            email: email,
           });
-          
+
           if (!templatesResponse.data?.records || templatesResponse.data.records.length === 0) {
-            message.warning('创建模板成功，但无法上传图片');
+            message.warning("创建模板成功，但无法上传图片");
             setCommentImageFile(null);
             return;
           }
-          
+
           // Get the latest template (should be the one we just created)
           const latestTemplate = templatesResponse.data.records[0];
-          
+
           // Upload the image
           const imageUrl = await uploadCommentImageToCOS(latestTemplate.id, commentImageFile.file);
           setCommentImageFile(null);
-          
+
           if (!imageUrl) {
-            message.warning('模板创建成功，但图片上传失败');
+            message.warning("模板创建成功，但图片上传失败");
             return;
           }
-          
+
           // Update the template with the image URL
           const updateResponse = await updateReplyTemplateApi(latestTemplate.id, {
             content: template.content,
             email: email,
-            image_urls: imageUrl
+            image_urls: imageUrl,
           });
-          
+
           if (updateResponse.code === 0) {
-            message.success('添加模板成功');
+            message.success("添加模板成功");
           } else {
-            message.warning('模板创建成功，但更新图片失败');
+            message.warning("模板创建成功，但更新图片失败");
           }
         } else {
-          message.success('添加模板成功');
+          message.success("添加模板成功");
         }
-        
+
         // Toggle edit mode off
-        setCommentTemplates(prev => 
-          prev.map(t => 
-            t.id === template.id 
-              ? { ...t, isEditing: false } 
-              : t
-          )
+        setCommentTemplates((prev) =>
+          prev.map((t) => (t.id === template.id ? { ...t, isEditing: false } : t))
         );
       }
-      
+
       // Refresh templates
       fetchCommentTemplates();
     } catch (error) {
-      console.error('保存模板失败:', error);
-      message.error('保存模板失败');
+      console.error("保存模板失败:", error);
+      message.error("保存模板失败");
     }
   };
-  
+
   // Delete comment template
   const deleteCommentTemplate = async (id: string) => {
-    const template = commentTemplates.find(t => t.id === id);
-    
+    const template = commentTemplates.find((t) => t.id === id);
+
     // If it has a backend ID, delete it from backend
     if (template && template.templateId && email) {
       try {
         const response = await deleteReplyTemplateApi(template.templateId, email);
-        
+
         if (response.code === 0) {
-          message.success('删除模板成功');
-          setCommentTemplates(prev => prev.filter(t => t.id !== id));
+          message.success("删除模板成功");
+          setCommentTemplates((prev) => prev.filter((t) => t.id !== id));
         } else {
-          message.error(response.message || '删除模板失败');
+          message.error(response.message || "删除模板失败");
         }
       } catch (error) {
-        console.error('删除模板失败:', error);
-        message.error('删除模板失败');
+        console.error("删除模板失败:", error);
+        message.error("删除模板失败");
         return;
       }
     } else {
       // Just remove from local state
-      setCommentTemplates(prev => prev.filter(t => t.id !== id));
+      setCommentTemplates((prev) => prev.filter((t) => t.id !== id));
     }
   };
-  
+
   // Delete message template
   const deleteMessageTemplate = (id: string) => {
     // For message templates, just remove from local state
-    setMessageTemplates(prev => prev.filter(template => template.id !== id));
+    setMessageTemplates((prev) => prev.filter((template) => template.id !== id));
   };
-  
+
   // Upload comment image to COS
   const uploadCommentImageToCOS = async (templateId: number, file: File): Promise<string> => {
-    if (!file || !email) return '';
+    if (!file || !email) return "";
 
     try {
       setCommentUploadLoading(true);
@@ -369,280 +377,321 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
       return result.url;
     } catch (error) {
-      console.error('上传图片到腾讯云COS失败:', error);
-      message.error('上传图片失败');
-      return '';
+      console.error("上传图片到腾讯云COS失败:", error);
+      message.error("上传图片失败");
+      return "";
     } finally {
       setCommentUploadLoading(false);
     }
   };
-  
+
   // Handle next step button click
   const handleNextStep = async () => {
     try {
       // Validate form fields for current step
       await form.validateFields();
-      
+
       // Move to next step based on current step
-      if (currentStep === '采集任务') {
-        setCurrentStep('分析要求');
-      } else if (currentStep === '分析要求') {
-        setCurrentStep('回复模板');
+      if (currentStep === "采集任务") {
+        setCurrentStep("分析要求");
+      } else if (currentStep === "分析要求") {
+        setCurrentStep("回复模板");
       } else {
         // Final step, submit the form
         handleFinish();
       }
     } catch (error) {
-      console.error('Form validation failed:', error);
-      message.error('表单验证失败，请检查必填字段');
+      console.error("Form validation failed:", error);
+      message.error("表单验证失败，请检查必填字段");
     }
   };
-  
+
   // Handle previous step button click
   const handlePrevStep = () => {
-    if (currentStep === '分析要求') {
-      setCurrentStep('采集任务');
-    } else if (currentStep === '回复模板') {
-      setCurrentStep('分析要求');
+    if (currentStep === "分析要求") {
+      setCurrentStep("采集任务");
+    } else if (currentStep === "回复模板") {
+      setCurrentStep("分析要求");
     }
   };
-  
+
   // Handle save progress button click
   const handleSaveProgress = async () => {
     try {
       const values = await form.validateFields();
-      console.log('Saved progress:', values);
+      console.log("Saved progress:", values);
       // Here you would typically save the progress
-      message.success('进度已保存');
+      message.success("进度已保存");
     } catch (error) {
-      console.error('Form validation failed:', error);
-      message.error('保存进度失败，请检查表单');
+      console.error("Form validation failed:", error);
+      message.error("保存进度失败，请检查表单");
     }
   };
-  
+
   // Handle finish button click
   const handleFinish = async () => {
     try {
       const values = await form.validateFields();
-      
+
       // Get all form values for DAG configuration
       const formValues = form.getFieldsValue(true);
-      
+
       // Create timestamp for unique DAG run ID
-      const timestamp = new Date().toISOString().replace(/[-:.]/g, '_');
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
       const dag_run_id = `xhs_auto_progress_${timestamp}`;
-      
+
       // Extract template IDs from comment templates that have backend IDs
       const templateIds = commentTemplates
-        .filter(template => template.templateId)
-        .map(template => template.templateId as number);
-      
+        .filter((template) => template.templateId)
+        .map((template) => template.templateId as number);
+
       // Prepare configuration object for Airflow DAG
       const conf = {
         email: formValues.targetEmail,
         keyword: formValues.keyword,
-        max_notes: parseInt(formValues.noteCount || '10'),
-        note_type: formValues.noteType || '图文',
-        time_range: formValues.timeRange || '',
-        search_scope: formValues.searchScope || '',
-        sort_by: formValues.sortBy || '综合',
-        profile_sentence: formValues.profileSentence || '',
+        max_notes: parseInt(formValues.noteCount || "10"),
+        note_type: formValues.noteType || "图文",
+        time_range: formValues.timeRange || "",
+        search_scope: formValues.searchScope || "",
+        sort_by: formValues.sortBy || "综合",
+        profile_sentence: formValues.profileSentence || "",
         intent_type: formValues.intentType || [],
-        template_ids: templateIds
+        template_ids: templateIds,
       };
-      
+
       try {
         // Trigger the Airflow DAG with the configuration
-        const response = await triggerDagRun(
-          "xhs_auto_progress",
-          dag_run_id,
-          conf
-        );
-        
+        const response = await triggerDagRun("xhs_auto_progress", dag_run_id, conf);
+
         if (response && response.dag_run_id) {
           message.success(`成功创建自动化任务，任务ID: ${response.dag_run_id}`);
           // Pass the response to the parent component
           onFinish({
             ...values,
             dagResponse: response,
-            conf: conf
+            conf: conf,
           });
           // Close the modal
           onClose();
         } else {
-          message.error('创建任务失败，请重试');
+          message.error("创建任务失败，请重试");
         }
       } catch (err) {
-        console.error('Error triggering DAG run:', err);
-        message.error('创建任务失败，请检查网络连接');
+        console.error("Error triggering DAG run:", err);
+        message.error("创建任务失败，请检查网络连接");
       }
     } catch (error) {
-      console.error('Form validation failed:', error);
-      message.error('表单验证失败，请检查必填字段');
+      console.error("Form validation failed:", error);
+      message.error("表单验证失败，请检查必填字段");
     }
   };
 
-// Render the current step content
-const renderStepContent = () => {
-  switch (currentStep) {
-    // ... (rest of the code remains the same)
-      case '采集任务':
+  // Render the current step content
+  const renderStepContent = () => {
+    switch (currentStep) {
+      // ... (rest of the code remains the same)
+      case "采集任务":
         return (
           <div className="p-4">
             <Form
               form={form}
               layout="vertical"
               initialValues={{
-                targetEmail: email || (availableEmails.length > 0 ? availableEmails[0] : ''),
-                sortBy: sortOptions.length > 0 ? sortOptions[0].value : '',
-                timeRange: timeRanges.length > 0 ? timeRanges[0].value : '',
+                targetEmail: email || (availableEmails.length > 0 ? availableEmails[0] : ""),
+                sortBy: sortOptions.length > 0 ? sortOptions[0].value : "",
+                timeRange: timeRanges.length > 0 ? timeRanges[0].value : "",
                 noteCount: noteCounts.length > 0 ? noteCounts[0].value : 10,
-                noteType: noteTypes.length > 0 ? noteTypes[0].value : ''
+                noteType: noteTypes.length > 0 ? noteTypes[0].value : "",
               }}
             >
               <div className="grid grid-cols-2 gap-4">
-                <Form.Item 
-                  name="targetEmail" 
+                <Form.Item
+                  name="targetEmail"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       目标邮箱
                       <Tooltip title="选择目标邮箱">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择目标邮箱' }]}
+                  rules={[{ required: true, message: "请选择目标邮箱" }]}
                 >
                   <Select placeholder="请选择目标邮箱">
-                    {availableEmails.map(email => (
-                      <Select.Option key={email} value={email}>{email}</Select.Option>
+                    {availableEmails.map((email) => (
+                      <Select.Option key={email} value={email}>
+                        {email}
+                      </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
-                
-                <Form.Item 
-                  name="sortBy" 
+
+                <Form.Item
+                  name="sortBy"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       排序依据
                       <Tooltip title="选择排序方式">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择排序依据' }]}
+                  rules={[{ required: true, message: "请选择排序依据" }]}
                 >
                   <Select placeholder="请选择排序方式">
-                    {sortOptions.map(option => (
-                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    {sortOptions.map((option) => (
+                      <Select.Option key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
-                
-                <Form.Item 
-                  name="keyword" 
+
+                <Form.Item
+                  name="keyword"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       采集关键词
                       <Tooltip title="输入要采集的关键词">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请输入采集关键词' }]}
+                  rules={[{ required: true, message: "请输入采集关键词" }]}
                 >
-                  <Input 
-                    placeholder="请输入采集关键词" 
+                  <Input
+                    placeholder="请输入采集关键词"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                   />
                 </Form.Item>
-                
-                <Form.Item 
-                  name="timeRange" 
+
+                <Form.Item
+                  name="timeRange"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       发布时间
                       <Tooltip title="选择发布时间范围">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择发布时间' }]}
+                  rules={[{ required: true, message: "请选择发布时间" }]}
                 >
                   <Select placeholder="请选择发布时间范围">
-                    {timeRanges.map(option => (
-                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    {timeRanges.map((option) => (
+                      <Select.Option key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
-                
-                <Form.Item 
-                  name="noteCount" 
+
+                <Form.Item
+                  name="noteCount"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       采集笔记数量
                       <Tooltip title="选择要采集的笔记数量">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择采集笔记数量' }]}
+                  rules={[{ required: true, message: "请选择采集笔记数量" }]}
                 >
                   <Select placeholder="请选择采集笔记数量">
-                    {noteCounts.map(option => (
-                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    {noteCounts.map((option) => (
+                      <Select.Option key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
-                
-                <Form.Item 
-                  name="taskTime" 
+
+                <Form.Item
+                  name="taskTime"
                   label={
                     <span className="flex items-center">
                       任务定时
                       <Tooltip title="选择任务执行时间（可选）">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                       <span className="text-gray-400 ml-1">(optional)</span>
                     </span>
                   }
                 >
                   <div className="flex space-x-2">
-                    <DatePicker 
-                      className="flex-1" 
-                      placeholder="2020/05/06"
-                      format="YYYY/MM/DD"
-                    />
-                    <TimePicker 
-                      className="flex-1" 
-                      placeholder="Select time" 
-                      format="HH:mm"
-                    />
+                    <DatePicker className="flex-1" placeholder="2020/05/06" format="YYYY/MM/DD" />
+                    <TimePicker className="flex-1" placeholder="Select time" format="HH:mm" />
                   </div>
                 </Form.Item>
-                
-                <Form.Item 
-                  name="noteType" 
+
+                <Form.Item
+                  name="noteType"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       笔记类型
                       <Tooltip title="选择笔记类型">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择笔记类型' }]}
+                  rules={[{ required: true, message: "请选择笔记类型" }]}
                 >
                   <Select placeholder="请选择笔记类型">
-                    {noteTypes.map(option => (
-                      <Select.Option key={option.value} value={option.value}>{option.label}</Select.Option>
+                    {noteTypes.map((option) => (
+                      <Select.Option key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
@@ -650,8 +699,8 @@ const renderStepContent = () => {
             </Form>
           </div>
         );
-      
-      case '分析要求':
+
+      case "分析要求":
         return (
           <div className="p-4">
             <Form
@@ -659,7 +708,7 @@ const renderStepContent = () => {
               layout="vertical"
               initialValues={{
                 userProfileLevel: selectedIntentTypes,
-                filterKeywords: profileSentence
+                filterKeywords: profileSentence,
               }}
             >
               <div className="space-y-6">
@@ -668,43 +717,58 @@ const renderStepContent = () => {
                   name="userProfileLevel"
                   label={
                     <span className="flex items-center">
-                      <span className="text-red-500 mr-1">*</span>
                       用户意向等级
                       <Tooltip title="选择用户意向等级">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
-                  rules={[{ required: true, message: '请选择用户意向等级' }]}
+                  rules={[{ required: true, message: "请选择用户意向等级" }]}
                 >
                   <div className="flex space-x-4">
-                    <Checkbox.Group 
+                    <Checkbox.Group
                       onChange={(checkedValues) => {
                         setSelectedIntentTypes(checkedValues as string[]);
                       }}
                     >
                       <div className="flex space-x-4">
-                        {intentTypes.map(type => (
-                          <Checkbox key={type.value} value={type.value}>{type.label}</Checkbox>
+                        {intentTypes.map((type) => (
+                          <Checkbox key={type.value} value={type.value}>
+                            {type.label}
+                          </Checkbox>
                         ))}
                       </div>
                     </Checkbox.Group>
                   </div>
                 </Form.Item>
-                
+
                 <Form.Item
                   name="filterKeywords"
                   label={
                     <span className="flex items-center">
                       输入用户画像
                       <Tooltip title="输入用户画像，例如我是做医美的，想找有意向买面膜的客户">
-                        <QuestionCircleOutlined className="ml-1 text-gray-400" />
+                        <Image
+                          src={exclamation2}
+                          alt="exclamation2"
+                          width={14}
+                          height={14}
+                          style={{ marginLeft: "4px" }}
+                          preview={false}
+                        />
                       </Tooltip>
                     </span>
                   }
                 >
-                  <Input.TextArea 
-                    placeholder="例如：品牌，价格，评价，等等" 
+                  <Input.TextArea
+                    placeholder="例如：品牌，价格，评价，等等"
                     rows={4}
                     maxLength={100}
                     showCount
@@ -717,28 +781,25 @@ const renderStepContent = () => {
             </Form>
           </div>
         );
-      
-      case '回复模板':
+
+      case "回复模板":
         return (
           <div className="p-4">
-            <Form
-              form={form}
-              layout="vertical"
-            >
+            <Form form={form} layout="vertical">
               <div className="space-y-6">
                 {/* 评论区模版 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-base font-medium">评论区模版</h3>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {commentTemplates.map((template, index) => (
                       <div key={template.id} className="flex items-start">
                         <div className="flex-grow">
-                          <Input.TextArea 
-                            placeholder="请输入评论模板" 
-                            autoSize 
+                          <Input.TextArea
+                            placeholder="请输入评论模板"
+                            autoSize
                             className="flex-grow"
                             value={template.content}
                             onChange={(e) => {
@@ -751,19 +812,19 @@ const renderStepContent = () => {
                           {/* Show image preview */}
                           {template.imageUrl && (
                             <div className="mt-2 relative">
-                              <Image 
-                                src={template.imageUrl} 
-                                alt="Template image" 
+                              <Image
+                                src={template.imageUrl}
+                                alt="Template image"
                                 width={100}
                                 height={100}
-                                style={{ objectFit: 'cover' }}
+                                style={{ objectFit: "cover" }}
                               />
                               {/* Show delete button only in edit mode */}
                               {template.isEditing && (
-                                <Button 
-                                  type="text" 
+                                <Button
+                                  type="text"
                                   danger
-                                  icon={<DeleteOutlined />} 
+                                  icon={<DeleteOutlined />}
                                   size="small"
                                   className="absolute top-0 right-0 bg-white bg-opacity-75"
                                   onClick={() => {
@@ -785,21 +846,21 @@ const renderStepContent = () => {
                                 // Store the file for later upload when saving
                                 setCommentImageFile({
                                   index,
-                                  file
+                                  file,
                                 });
-                                
+
                                 // Create a preview URL
                                 const newTemplates = [...commentTemplates];
                                 newTemplates[index].imageUrl = URL.createObjectURL(file);
                                 setCommentTemplates(newTemplates);
-                                
+
                                 return false; // Prevent auto upload
                               }}
                               showUploadList={false} // Hide the default upload list
                             >
-                              <Button 
-                                type="text" 
-                                icon={<UploadOutlined />} 
+                              <Button
+                                type="text"
+                                icon={<UploadOutlined />}
                                 className="text-blue-500 hover:text-blue-700"
                                 loading={commentUploadLoading}
                               >
@@ -807,14 +868,18 @@ const renderStepContent = () => {
                               </Button>
                             </Upload>
                           )}
-                          <Button 
-                            type="text" 
+                          <Button
+                            type="text"
                             icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
                             onClick={() => toggleCommentTemplateEditMode(template.id)}
-                            className={template.isEditing ? "text-green-500 hover:text-green-700" : "text-blue-500 hover:text-blue-700"}
+                            className={
+                              template.isEditing
+                                ? "text-green-500 hover:text-green-700"
+                                : "text-blue-500 hover:text-blue-700"
+                            }
                             loading={template.isEditing && commentUploadLoading}
                           >
-                            {template.isEditing ? '保存' : '编辑'}
+                            {template.isEditing ? "保存" : "编辑"}
                           </Button>
                           <Button
                             type="text"
@@ -826,16 +891,16 @@ const renderStepContent = () => {
                         </div>
                       </div>
                     ))}
-                    
+
                     <div className="flex justify-center">
-                      <Button 
-                        type="text" 
-                        icon={<PlusOutlined />} 
+                      <Button
+                        type="text"
+                        icon={<PlusOutlined />}
                         onClick={() => {
                           const newId = (commentTemplates.length + 1).toString();
                           setCommentTemplates([
-                            ...commentTemplates, 
-                            { id: newId, content: '', isEditing: true }
+                            ...commentTemplates,
+                            { id: newId, content: "", isEditing: true },
                           ]);
                         }}
                       >
@@ -844,20 +909,20 @@ const renderStepContent = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* 私信回复模版 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-base font-medium">私信回复模版</h3>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {messageTemplates.map((template, index) => (
                       <div key={template.id} className="flex items-start">
                         <div className="flex-grow">
-                          <Input.TextArea 
-                            placeholder="请输入私信模板" 
-                            autoSize 
+                          <Input.TextArea
+                            placeholder="请输入私信模板"
+                            autoSize
                             className="flex-grow"
                             value={template.content}
                             onChange={(e) => {
@@ -870,19 +935,19 @@ const renderStepContent = () => {
                           {/* Show image preview */}
                           {template.imageUrl && (
                             <div className="mt-2 relative">
-                              <Image 
-                                src={template.imageUrl} 
-                                alt="Template image" 
+                              <Image
+                                src={template.imageUrl}
+                                alt="Template image"
                                 width={100}
                                 height={100}
-                                style={{ objectFit: 'cover' }}
+                                style={{ objectFit: "cover" }}
                               />
                               {/* Show delete button only in edit mode */}
                               {template.isEditing && (
-                                <Button 
-                                  type="text" 
+                                <Button
+                                  type="text"
                                   danger
-                                  icon={<DeleteOutlined />} 
+                                  icon={<DeleteOutlined />}
                                   size="small"
                                   className="absolute top-0 right-0 bg-white bg-opacity-75"
                                   onClick={() => {
@@ -910,18 +975,26 @@ const renderStepContent = () => {
                               }}
                               showUploadList={false} // Hide the default upload list
                             >
-                              <Button type="text" icon={<UploadOutlined />} className="text-blue-500 hover:text-blue-700">
+                              <Button
+                                type="text"
+                                icon={<UploadOutlined />}
+                                className="text-blue-500 hover:text-blue-700"
+                              >
                                 上传图片(可选)
                               </Button>
                             </Upload>
                           )}
-                          <Button 
-                            type="text" 
+                          <Button
+                            type="text"
                             icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
                             onClick={() => toggleMessageTemplateEditMode(template.id)}
-                            className={template.isEditing ? "text-green-500 hover:text-green-700" : "text-blue-500 hover:text-blue-700"}
+                            className={
+                              template.isEditing
+                                ? "text-green-500 hover:text-green-700"
+                                : "text-blue-500 hover:text-blue-700"
+                            }
                           >
-                            {template.isEditing ? '保存' : '编辑'}
+                            {template.isEditing ? "保存" : "编辑"}
                           </Button>
                           <Button
                             type="text"
@@ -933,16 +1006,16 @@ const renderStepContent = () => {
                         </div>
                       </div>
                     ))}
-                    
+
                     <div className="flex justify-center">
-                      <Button 
-                        type="text" 
-                        icon={<PlusOutlined />} 
+                      <Button
+                        type="text"
+                        icon={<PlusOutlined />}
                         onClick={() => {
                           const newId = (messageTemplates.length + 1).toString();
                           setMessageTemplates([
-                            ...messageTemplates, 
-                            { id: newId, content: '', isEditing: true }
+                            ...messageTemplates,
+                            { id: newId, content: "", isEditing: true },
                           ]);
                         }}
                       >
@@ -951,47 +1024,38 @@ const renderStepContent = () => {
                     </div>
                   </div>
                 </div>
-              
               </div>
             </Form>
           </div>
         );
-      
+
       default:
         return null;
     }
   };
-  
+
   // Custom dot render function with popover
-  const customDot: StepsProps['progressDot'] = (dot, { status, index }) => (
-    <Popover
-      content={
-        <span>
-          {steps[index]?.title || ''}
-        </span>
-      }
-    >
-      {dot}
-    </Popover>
+  const customDot: StepsProps["progressDot"] = (dot, { status, index }) => (
+    <Popover content={<span>{steps[index]?.title || ""}</span>}>{dot}</Popover>
   );
 
   // Render step indicators using Ant Design Steps component with dots
   const renderStepIndicators = () => {
-    const currentIndex = steps.findIndex(step => step.key === currentStep);
-    
+    const currentIndex = steps.findIndex((step) => step.key === currentStep);
+
     return (
       <div className="mb-8">
-        <Steps 
+        <Steps
           current={currentIndex}
           progressDot={customDot}
-          items={steps.map(step => ({
+          items={steps.map((step) => ({
             title: step.title,
           }))}
         />
       </div>
     );
   };
-  
+
   return (
     <Modal
       title="创建任务"
@@ -1003,41 +1067,50 @@ const renderStepContent = () => {
     >
       {renderStepIndicators()}
       {renderStepContent()}
-      
+
       <div className="flex justify-end p-2 border-t border-gray-100">
         <div className="flex space-x-2">
-          {currentStep === '回复模板' && (
-            <Button 
+          {currentStep === "回复模板" && (
+            <Button
               onClick={handleSaveProgress}
               className="border border-gray-300 rounded"
-              style={{ backgroundColor: 'white' }}
+              style={{ backgroundColor: "white" }}
             >
               保存为任务模版
             </Button>
           )}
-          <Button 
+          <Button
             onClick={handleSaveProgress}
             className="border border-gray-300 rounded"
-            style={{ backgroundColor: 'white' }}
+            style={{ backgroundColor: "white" }}
           >
             保存当前进度
           </Button>
-          {currentStep !== '采集任务' && (
-            <Button 
+          {currentStep !== "采集任务" && (
+            <Button
               onClick={handlePrevStep}
               className="border border-gray-300 rounded"
-              style={{ backgroundColor: 'white' }}
+              style={{ backgroundColor: "white" }}
             >
               上一步
             </Button>
           )}
-          <Button 
-            type="primary" 
-            onClick={currentStep === '回复模板' ? handleFinish : handleNextStep}
+          <Button
+            type="primary"
+            onClick={currentStep === "回复模板" ? handleFinish : handleNextStep}
             className="rounded"
-            style={{ backgroundColor: '#7c3aed' }}
+            style={{
+              border: "1px solid #8389FC",
+              background: "linear-gradient(135deg, #8389FC, #D477E1)",
+            }}
+            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+            }}
+            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+            }}
           >
-            {currentStep === '回复模板' ? '提交任务' : '下一步'}
+            {currentStep === "回复模板" ? "提交任务" : "下一步"}
           </Button>
         </div>
       </div>
