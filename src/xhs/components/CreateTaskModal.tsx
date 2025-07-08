@@ -16,6 +16,7 @@ import {
   message,
 } from "antd";
 import type { StepsProps, UploadProps } from "antd";
+import dayjs from "dayjs";
 import {
   QuestionCircleOutlined,
   PlusOutlined,
@@ -35,6 +36,7 @@ import {
   ReplyTemplate,
 } from "../../api/mysql";
 import { tencentCOSService } from "../../api/tencent_cos";
+import { useDashBoardStore, dashBoardSelectors } from "../../store/dashBoardStore";
 import exclamation2 from "../../img/exclamation2.svg";
 // Define the steps of the task creation process
 type TaskCreationStep = "采集任务" | "分析要求" | "回复模板";
@@ -57,22 +59,32 @@ interface TemplateItem {
 
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onFinish }) => {
   const [form] = Form.useForm();
-  const [currentStep, setCurrentStep] = useState<TaskCreationStep>("采集任务");
-  // Add state for comment templates
-  const [commentTemplates, setCommentTemplates] = useState<TemplateItem[]>([
-    { id: "1", content: "", isEditing: true },
-    { id: "2", content: "", isEditing: false },
-    { id: "3", content: "", isEditing: false },
-  ]);
-  // Add state for message templates
-  const [messageTemplates, setMessageTemplates] = useState<TemplateItem[]>([
-    { id: "1", content: "", isEditing: true },
-    { id: "2", content: "", isEditing: false },
-  ]);
 
-  // Add state for data collection options (from DataCollect.tsx)
+  // 统一使用 useUserStore 获取用户信息
+  const { isAdmin, email } = useUser();
+
+  // 使用Zustand store管理状态（传入用户邮箱）
+  // 使用Zustand store管理状态
+  const currentStep = useDashBoardStore((state) => state.currentStep);
+  const formData = useDashBoardStore((state) => state.formData);
+  const setCurrentStep = useDashBoardStore((state) => state.setCurrentStep);
+  const updateFormData = useDashBoardStore((state) => state.updateFormData);
+  const updateField = useDashBoardStore((state) => state.updateField);
+  const updateCommentTemplate = useDashBoardStore((state) => state.updateCommentTemplate);
+  const addCommentTemplate = useDashBoardStore((state) => state.addCommentTemplate);
+  const deleteCommentTemplate = useDashBoardStore((state) => state.deleteCommentTemplate);
+  const updateMessageTemplate = useDashBoardStore((state) => state.updateMessageTemplate);
+  const addMessageTemplate = useDashBoardStore((state) => state.addMessageTemplate);
+  const deleteMessageTemplate = useDashBoardStore((state) => state.deleteMessageTemplate);
+  const saveProgress = useDashBoardStore((state) => state.saveProgress);
+  const resetForm = useDashBoardStore((state) => state.resetForm);
+
+  // 从store获取数据（仅用于初始化和保存）
+  const commentTemplates = formData.commentTemplates;
+  const messageTemplates = formData.messageTemplates;
+
+  // 本地state（不需要持久化的）
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
-  const [keyword, setKeyword] = useState("");
   const [noteTypes] = useState<{ value: string; label: string }[]>([
     { value: "图文", label: "图文" },
     { value: "视频", label: "视频" },
@@ -99,15 +111,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
 
   // Add state for 分析要求 step
   const [intentTypes] = useState<{ value: string; label: string }[]>([
-    { value: "high", label: "高意向" },
-    { value: "medium", label: "中意向" },
-    { value: "low", label: "低意向" },
+    { value: "高意向", label: "高意向" },
+    { value: "中意向", label: "中意向" },
+    { value: "低意向", label: "低意向" },
   ]);
-  const [selectedIntentTypes, setSelectedIntentTypes] = useState<string[]>([]);
-  const [profileSentence, setProfileSentence] = useState("");
-
-  // Get user context
-  const { isAdmin, email } = useUser();
 
   // Steps configuration
   const steps = [
@@ -120,6 +127,108 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
   useEffect(() => {
     fetchAvailableEmails();
   }, [isAdmin, email]);
+
+  // 安全地处理日期时间数据的辅助函数
+  const parseDate = (dateString: string | undefined) => {
+    if (!dateString) return undefined;
+    try {
+      const parsed = dayjs(dateString);
+      if (parsed.isValid()) {
+        return parsed;
+      } else {
+        console.warn("❌ 日期格式无效:", dateString);
+        return undefined;
+      }
+    } catch (error) {
+      console.warn("❌ 解析日期失败:", dateString, error);
+      return undefined;
+    }
+  };
+
+  const parseTime = (timeString: string | undefined, taskDate: string | undefined) => {
+    if (!timeString) return undefined;
+    try {
+      // 使用当前日期 + 时间字符串的方式来创建 dayjs 对象
+      const parsed = dayjs(`${taskDate} ${timeString}`, "YYYY-MM-DD HH:mm");
+
+      if (parsed.isValid()) {
+        return parsed;
+      } else {
+        console.warn("❌ 时间格式无效:", timeString, "清理后:", timeString);
+        return undefined;
+      }
+    } catch (error) {
+      console.warn("❌ 解析时间失败:", timeString, error);
+      return undefined;
+    }
+  };
+
+  // Initialize form when modal opens
+  useEffect(() => {
+    if (visible) {
+      // 清理可能存在的错误时间格式数据
+      if (
+        formData.taskTime &&
+        typeof formData.taskTime === "string" &&
+        formData.taskTime.includes("mM")
+      ) {
+        console.log("🔧 检测到错误的时间格式，清理数据:", formData.taskTime);
+        updateFormData({ taskTime: undefined });
+      }
+
+      // 只有当有保存的进度时才使用store数据，否则使用默认值
+      if (hasSavedProgress()) {
+        // 恢复保存的进度
+        form.setFieldsValue({
+          targetEmail:
+            formData.targetEmail || email || (availableEmails.length > 0 ? availableEmails[0] : ""),
+          sortBy: formData.sortBy || sortOptions[0]?.value || "",
+          timeRange: formData.timeRange || timeRanges[0]?.value || "",
+          noteCount: formData.noteCount || noteCounts[0]?.value || 10,
+          noteType: formData.noteType || noteTypes[0]?.value || "",
+          keyword: formData.keyword || "",
+          taskDate: parseDate(formData.taskDate),
+          taskTime: parseTime(formData.taskTime, formData.taskDate),
+          userProfileLevel: formData.userProfileLevel || [],
+          profileSentence: formData.profileSentence || "",
+        });
+        // 恢复当前步骤
+        if (formData.currentStep) {
+          setCurrentStep(formData.currentStep);
+        }
+      } else {
+        // 使用默认值重置表单
+        form.setFieldsValue({
+          targetEmail: email || (availableEmails.length > 0 ? availableEmails[0] : ""),
+          sortBy: sortOptions[0]?.value || "",
+          timeRange: timeRanges[0]?.value || "",
+          noteCount: noteCounts[0]?.value || 10,
+          noteType: noteTypes[0]?.value || "",
+          keyword: "",
+          taskDate: undefined,
+          taskTime: undefined,
+          userProfileLevel: [],
+          profileSentence: "",
+        });
+        // 重置到第一步
+        setCurrentStep("采集任务");
+      }
+    }
+  }, [visible, form, email, availableEmails, sortOptions, timeRanges, noteCounts, noteTypes]);
+
+  // 检查是否有保存的进度数据
+  const hasSavedProgress = () => {
+    return !!(
+      formData.keyword ||
+      formData.profileSentence ||
+      formData.targetEmail ||
+      formData.taskDate ||
+      formData.taskTime ||
+      formData.userProfileLevel?.length > 0 ||
+      formData.commentTemplates?.some((t: TemplateItem) => t.content.trim()) ||
+      formData.messageTemplates?.some((t: TemplateItem) => t.content.trim())
+    );
+  };
 
   // Fetch available emails
   const fetchAvailableEmails = async () => {
@@ -191,7 +300,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         }));
 
         // Update our template state
-        setCommentTemplates(templates);
+        updateFormData({ commentTemplates: templates });
       }
     } catch (error) {
       console.error("获取模板失败:", error);
@@ -201,7 +310,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
 
   // Toggle comment template edit mode
   const toggleCommentTemplateEditMode = (id: string) => {
-    const template = commentTemplates.find((t) => t.id === id);
+    const template = commentTemplates.find((t: TemplateItem) => t.id === id);
 
     // If we're saving a template that was in edit mode
     if (template && template.isEditing) {
@@ -209,21 +318,20 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
       saveCommentTemplate(template);
     } else {
       // Just toggle edit mode
-      setCommentTemplates((prev) =>
-        prev.map((template) =>
-          template.id === id ? { ...template, isEditing: !template.isEditing } : template
-        )
-      );
+      const templateIndex = commentTemplates.findIndex((t: TemplateItem) => t.id === id);
+      if (templateIndex !== -1) {
+        updateCommentTemplate(templateIndex, { isEditing: !template?.isEditing });
+      }
     }
   };
 
   // Toggle message template edit mode
   const toggleMessageTemplateEditMode = (id: string) => {
-    setMessageTemplates((prev) =>
-      prev.map((template) =>
-        template.id === id ? { ...template, isEditing: !template.isEditing } : template
-      )
-    );
+    const templateIndex = messageTemplates.findIndex((t: TemplateItem) => t.id === id);
+    if (templateIndex !== -1) {
+      const template = messageTemplates[templateIndex];
+      updateMessageTemplate(templateIndex, { isEditing: !template.isEditing });
+    }
   };
 
   // Save comment template to backend
@@ -238,7 +346,18 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
       if (template.templateId) {
         // If we have a new image file to upload
         let imageUrl = template.imageUrl;
-        if (commentImageFile && commentImageFile.index.toString() === template.id) {
+        const updateTemplateIndex = commentTemplates.findIndex(
+          (t: TemplateItem) => t.id === template.id
+        );
+        console.log("更新模板图片上传检查:", {
+          hasImageFile: !!commentImageFile,
+          imageFileIndex: commentImageFile?.index,
+          updateTemplateIndex,
+          templateId: template.id,
+          hasBackendId: !!template.templateId,
+          match: commentImageFile?.index === updateTemplateIndex,
+        });
+        if (commentImageFile && commentImageFile.index === updateTemplateIndex) {
           imageUrl = await uploadCommentImageToCOS(template.templateId, commentImageFile.file);
           setCommentImageFile(null);
         }
@@ -252,9 +371,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         if (response.code === 0) {
           message.success("更新模板成功");
           // Toggle edit mode off
-          setCommentTemplates((prev) =>
-            prev.map((t) => (t.id === template.id ? { ...t, isEditing: false } : t))
+          const templateIndex = commentTemplates.findIndex(
+            (t: TemplateItem) => t.id === template.id
           );
+          if (templateIndex !== -1) {
+            updateCommentTemplate(templateIndex, { isEditing: false });
+          }
         } else {
           message.error(response.message || "更新模板失败");
         }
@@ -272,7 +394,17 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         }
 
         // If we have an image to upload, we need to get the new template ID
-        if (commentImageFile && commentImageFile.index.toString() === template.id) {
+        const currentTemplateIndex = commentTemplates.findIndex(
+          (t: TemplateItem) => t.id === template.id
+        );
+        console.log("新模板图片上传检查:", {
+          hasImageFile: !!commentImageFile,
+          imageFileIndex: commentImageFile?.index,
+          currentTemplateIndex,
+          templateId: template.id,
+          match: commentImageFile?.index === currentTemplateIndex,
+        });
+        if (commentImageFile && commentImageFile.index === currentTemplateIndex) {
           const templatesResponse = await getReplyTemplatesApi({
             page: 1,
             page_size: 10,
@@ -314,9 +446,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         }
 
         // Toggle edit mode off
-        setCommentTemplates((prev) =>
-          prev.map((t) => (t.id === template.id ? { ...t, isEditing: false } : t))
+        const saveTemplateIndex = commentTemplates.findIndex(
+          (t: TemplateItem) => t.id === template.id
         );
+        if (saveTemplateIndex !== -1) {
+          updateCommentTemplate(saveTemplateIndex, { isEditing: false });
+        }
       }
 
       // Refresh templates
@@ -327,9 +462,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
     }
   };
 
-  // Delete comment template
-  const deleteCommentTemplate = async (id: string) => {
-    const template = commentTemplates.find((t) => t.id === id);
+  // Delete comment template (handles backend API)
+  const handleDeleteCommentTemplate = async (id: string) => {
+    const template = commentTemplates.find((t: TemplateItem) => t.id === id);
 
     // If it has a backend ID, delete it from backend
     if (template && template.templateId && email) {
@@ -338,7 +473,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
 
         if (response.code === 0) {
           message.success("删除模板成功");
-          setCommentTemplates((prev) => prev.filter((t) => t.id !== id));
+          deleteCommentTemplate(id);
         } else {
           message.error(response.message || "删除模板失败");
         }
@@ -349,14 +484,14 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
       }
     } else {
       // Just remove from local state
-      setCommentTemplates((prev) => prev.filter((t) => t.id !== id));
+      deleteCommentTemplate(id);
     }
   };
 
-  // Delete message template
-  const deleteMessageTemplate = (id: string) => {
+  // Delete message template (handles backend API)
+  const handleDeleteMessageTemplate = (id: string) => {
     // For message templates, just remove from local state
-    setMessageTemplates((prev) => prev.filter((template) => template.id !== id));
+    deleteMessageTemplate(id);
   };
 
   // Upload comment image to COS
@@ -418,13 +553,44 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
   // Handle save progress button click
   const handleSaveProgress = async () => {
     try {
-      const values = await form.validateFields();
-      console.log("Saved progress:", values);
-      // Here you would typically save the progress
-      message.success("进度已保存");
+      // 获取当前表单数据（不验证必填项）
+      const formValues = form.getFieldsValue();
+      console.log("🔍 保存进度 - 表单数据:", formValues);
+      console.log("🔍 保存进度 - profileSentence:", formValues.profileSentence);
+      console.log("🔍 保存进度 - taskDate:", formValues.taskDate);
+      console.log("🔍 保存进度 - taskTime:", formValues.taskTime);
+      console.log("🔍 保存进度 - userProfileLevel:", formValues.userProfileLevel);
+      // 处理日期和时间格式，将 dayjs 对象转换为字符串
+      const processedFormValues = {
+        ...formValues,
+        taskDate:
+          formValues.taskDate && dayjs.isDayjs(formValues.taskDate)
+            ? formValues.taskDate.format("YYYY-MM-DD")
+            : undefined,
+        taskTime:
+          formValues.taskTime && dayjs.isDayjs(formValues.taskTime)
+            ? formValues.taskTime.format("HH:mm")
+            : undefined,
+      };
+
+      // 保存到store
+      updateFormData({
+        ...processedFormValues,
+        commentTemplates,
+        messageTemplates,
+        currentStep,
+      });
+
+      console.log("✅ 已保存到store:", {
+        ...processedFormValues,
+        commentTemplates,
+        messageTemplates,
+        currentStep,
+      });
+      message.success("进度已保存到本地");
     } catch (error) {
-      console.error("Form validation failed:", error);
-      message.error("保存进度失败，请检查表单");
+      console.error("❌ 保存进度失败:", error);
+      message.error("保存进度失败");
     }
   };
 
@@ -442,8 +608,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
 
       // Extract template IDs from comment templates that have backend IDs
       const templateIds = commentTemplates
-        .filter((template) => template.templateId)
-        .map((template) => template.templateId as number);
+        .filter((template: TemplateItem) => template.templateId)
+        .map((template: TemplateItem) => template.templateId as number);
 
       // Prepare configuration object for Airflow DAG
       const conf = {
@@ -455,16 +621,28 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         search_scope: formValues.searchScope || "",
         sort_by: formValues.sortBy || "综合",
         profile_sentence: formValues.profileSentence || "",
-        intent_type: formValues.intentType || [],
+        intent_type: formValues.userProfileLevel || [],
         template_ids: templateIds,
+        task_date:
+          formValues.taskDate && dayjs.isDayjs(formValues.taskDate)
+            ? formValues.taskDate.format("YYYY-MM-DD")
+            : "",
+        task_time:
+          formValues.taskTime && dayjs.isDayjs(formValues.taskTime)
+            ? formValues.taskTime.format("HH:mm")
+            : "",
       };
 
       try {
         // Trigger the Airflow DAG with the configuration
         const response = await triggerDagRun("xhs_auto_progress", dag_run_id, conf);
-
+        console.log("🔍 创建任务 - 响应:", response);
         if (response && response.dag_run_id) {
           message.success(`成功创建自动化任务，任务ID: ${response.dag_run_id}`);
+
+          // 提交成功后清空保存的进度数据
+          resetForm();
+
           // Pass the response to the parent component
           onFinish({
             ...values,
@@ -497,11 +675,17 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
               form={form}
               layout="vertical"
               initialValues={{
-                targetEmail: email || (availableEmails.length > 0 ? availableEmails[0] : ""),
-                sortBy: sortOptions.length > 0 ? sortOptions[0].value : "",
-                timeRange: timeRanges.length > 0 ? timeRanges[0].value : "",
-                noteCount: noteCounts.length > 0 ? noteCounts[0].value : 10,
-                noteType: noteTypes.length > 0 ? noteTypes[0].value : "",
+                targetEmail:
+                  formData.targetEmail ||
+                  email ||
+                  (availableEmails.length > 0 ? availableEmails[0] : ""),
+                sortBy: formData.sortBy || sortOptions[0]?.value || "",
+                timeRange: formData.timeRange || timeRanges[0]?.value || "",
+                noteCount: formData.noteCount || noteCounts[0]?.value || 10,
+                noteType: formData.noteType || noteTypes[0]?.value || "",
+                keyword: formData.keyword || "",
+                taskDate: parseDate(formData.taskDate),
+                taskTime: parseTime(formData.taskTime, formData.taskDate),
               }}
             >
               <div className="grid grid-cols-2 gap-4">
@@ -580,11 +764,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                   }
                   rules={[{ required: true, message: "请输入采集关键词" }]}
                 >
-                  <Input
-                    placeholder="请输入采集关键词"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
+                  <Input placeholder="请输入采集关键词" />
                 </Form.Item>
 
                 <Form.Item
@@ -643,30 +823,53 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                   </Select>
                 </Form.Item>
 
-                <Form.Item
-                  name="taskTime"
-                  label={
-                    <span className="flex items-center">
-                      任务定时
-                      <Tooltip title="选择任务执行时间（可选）">
-                        <Image
-                          src={exclamation2}
-                          alt="exclamation2"
-                          width={14}
-                          height={14}
-                          style={{ marginLeft: "4px" }}
-                          preview={false}
-                        />
-                      </Tooltip>
-                      <span className="text-gray-400 ml-1">(optional)</span>
-                    </span>
-                  }
-                >
-                  <div className="flex space-x-2">
-                    <DatePicker className="flex-1" placeholder="2020/05/06" format="YYYY/MM/DD" />
-                    <TimePicker className="flex-1" placeholder="Select time" format="HH:mm" />
-                  </div>
-                </Form.Item>
+                <div className="flex space-x-2">
+                  <Form.Item
+                    name="taskDate"
+                    label={
+                      <span className="flex items-center">
+                        任务日期
+                        <Tooltip title="选择任务执行日期（可选）">
+                          <Image
+                            src={exclamation2}
+                            alt="exclamation2"
+                            width={14}
+                            height={14}
+                            style={{ marginLeft: "4px" }}
+                            preview={false}
+                          />
+                        </Tooltip>
+                        <span className="text-gray-400 ml-1">(optional)</span>
+                      </span>
+                    }
+                    className="flex-1"
+                  >
+                    <DatePicker className="w-full" placeholder="2020/05/06" format="YYYY/MM/DD" />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="taskTime"
+                    label={
+                      <span className="flex items-center">
+                        任务时间
+                        <Tooltip title="选择任务执行时间（可选）">
+                          <Image
+                            src={exclamation2}
+                            alt="exclamation2"
+                            width={14}
+                            height={14}
+                            style={{ marginLeft: "4px" }}
+                            preview={false}
+                          />
+                        </Tooltip>
+                        <span className="text-gray-400 ml-1">(optional)</span>
+                      </span>
+                    }
+                    className="flex-1"
+                  >
+                    <TimePicker className="w-full" placeholder="Select time" format="HH:mm" />
+                  </Form.Item>
+                </div>
 
                 <Form.Item
                   name="noteType"
@@ -707,8 +910,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
               form={form}
               layout="vertical"
               initialValues={{
-                userProfileLevel: selectedIntentTypes,
-                filterKeywords: profileSentence,
+                userProfileLevel: formData.userProfileLevel || [],
+                profileSentence: formData.profileSentence || "",
               }}
             >
               <div className="space-y-6">
@@ -732,25 +935,19 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                   }
                   rules={[{ required: true, message: "请选择用户意向等级" }]}
                 >
-                  <div className="flex space-x-4">
-                    <Checkbox.Group
-                      onChange={(checkedValues) => {
-                        setSelectedIntentTypes(checkedValues as string[]);
-                      }}
-                    >
-                      <div className="flex space-x-4">
-                        {intentTypes.map((type) => (
-                          <Checkbox key={type.value} value={type.value}>
-                            {type.label}
-                          </Checkbox>
-                        ))}
-                      </div>
-                    </Checkbox.Group>
-                  </div>
+                  <Checkbox.Group>
+                    <div className="flex space-x-4">
+                      {intentTypes.map((type) => (
+                        <Checkbox key={type.value} value={type.value}>
+                          {type.label}
+                        </Checkbox>
+                      ))}
+                    </div>
+                  </Checkbox.Group>
                 </Form.Item>
 
                 <Form.Item
-                  name="filterKeywords"
+                  name="profileSentence"
                   label={
                     <span className="flex items-center">
                       输入用户画像
@@ -772,9 +969,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                     rows={4}
                     maxLength={100}
                     showCount
-                    onChange={(e) => {
-                      setProfileSentence(e.target.value);
-                    }}
                   />
                 </Form.Item>
               </div>
@@ -794,7 +988,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                   </div>
 
                   <div className="space-y-3">
-                    {commentTemplates.map((template, index) => (
+                    {commentTemplates.map((template: TemplateItem, index: number) => (
                       <div key={template.id} className="flex items-start">
                         <div className="flex-grow">
                           <Input.TextArea
@@ -803,9 +997,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                             className="flex-grow"
                             value={template.content}
                             onChange={(e) => {
-                              const newTemplates = [...commentTemplates];
-                              newTemplates[index].content = e.target.value;
-                              setCommentTemplates(newTemplates);
+                              updateCommentTemplate(index, { content: e.target.value });
                             }}
                             disabled={!template.isEditing}
                           />
@@ -828,9 +1020,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                                   size="small"
                                   className="absolute top-0 right-0 bg-white bg-opacity-75"
                                   onClick={() => {
-                                    const newTemplates = [...commentTemplates];
-                                    newTemplates[index].imageUrl = undefined;
-                                    setCommentTemplates(newTemplates);
+                                    updateCommentTemplate(index, { imageUrl: undefined });
                                   }}
                                 />
                               )}
@@ -850,9 +1040,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                                 });
 
                                 // Create a preview URL
-                                const newTemplates = [...commentTemplates];
-                                newTemplates[index].imageUrl = URL.createObjectURL(file);
-                                setCommentTemplates(newTemplates);
+                                updateCommentTemplate(index, {
+                                  imageUrl: URL.createObjectURL(file),
+                                });
 
                                 return false; // Prevent auto upload
                               }}
@@ -884,7 +1074,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                           <Button
                             type="text"
                             danger
-                            onClick={() => deleteCommentTemplate(template.id)}
+                            onClick={() => handleDeleteCommentTemplate(template.id)}
                           >
                             删除
                           </Button>
@@ -897,11 +1087,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                         type="text"
                         icon={<PlusOutlined />}
                         onClick={() => {
-                          const newId = (commentTemplates.length + 1).toString();
-                          setCommentTemplates([
-                            ...commentTemplates,
-                            { id: newId, content: "", isEditing: true },
-                          ]);
+                          const newId = Date.now().toString(); // 使用时间戳作为唯一ID
+                          addCommentTemplate({ id: newId, content: "", isEditing: true });
                         }}
                       >
                         添加模板
@@ -917,7 +1104,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                   </div>
 
                   <div className="space-y-3">
-                    {messageTemplates.map((template, index) => (
+                    {messageTemplates.map((template: TemplateItem, index: number) => (
                       <div key={template.id} className="flex items-start">
                         <div className="flex-grow">
                           <Input.TextArea
@@ -926,9 +1113,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                             className="flex-grow"
                             value={template.content}
                             onChange={(e) => {
-                              const newTemplates = [...messageTemplates];
-                              newTemplates[index].content = e.target.value;
-                              setMessageTemplates(newTemplates);
+                              updateMessageTemplate(index, { content: e.target.value });
                             }}
                             disabled={!template.isEditing}
                           />
@@ -951,9 +1136,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                                   size="small"
                                   className="absolute top-0 right-0 bg-white bg-opacity-75"
                                   onClick={() => {
-                                    const newTemplates = [...messageTemplates];
-                                    newTemplates[index].imageUrl = undefined;
-                                    setMessageTemplates(newTemplates);
+                                    updateMessageTemplate(index, { imageUrl: undefined });
                                   }}
                                 />
                               )}
@@ -966,11 +1149,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                               listType="picture"
                               maxCount={1}
                               beforeUpload={(file) => {
-                                // You would typically upload to server here
-                                // For now just update the state with file info
-                                const newTemplates = [...messageTemplates];
-                                newTemplates[index].imageUrl = URL.createObjectURL(file);
-                                setMessageTemplates(newTemplates);
+                                // Convert file to base64 for persistent storage
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                  const base64Url = e.target?.result as string;
+                                  updateMessageTemplate(index, {
+                                    imageUrl: base64Url,
+                                  });
+                                };
+                                reader.readAsDataURL(file);
                                 return false; // Prevent auto upload
                               }}
                               showUploadList={false} // Hide the default upload list
@@ -999,7 +1186,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                           <Button
                             type="text"
                             danger
-                            onClick={() => deleteMessageTemplate(template.id)}
+                            onClick={() => handleDeleteMessageTemplate(template.id)}
                           >
                             删除
                           </Button>
@@ -1013,10 +1200,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
                         icon={<PlusOutlined />}
                         onClick={() => {
                           const newId = (messageTemplates.length + 1).toString();
-                          setMessageTemplates([
-                            ...messageTemplates,
-                            { id: newId, content: "", isEditing: true },
-                          ]);
+                          addMessageTemplate({ id: newId, content: "", isEditing: true });
                         }}
                       >
                         添加模板
