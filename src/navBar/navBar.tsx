@@ -1,21 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../auth/supabaseConfig';
-import { logoutUser } from '../auth/authService';
-import { useUser } from '../context/UserContext';
-import lucyaiLogo from '../img/lucyai.png';
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../auth/supabaseConfig";
+import { logoutUser } from "../auth/authService";
+import { useUser } from "../context/UserContext";
+import lucyaiLogo from "../img/lucyai.png";
 
 // 仅保留系统管理图标
 // Import regular SVG icons
-import systemSVG from '../img/nav/system.svg';
-import xhsSVG from '../img/nav/wechat.svg'; // 临时使用现有图标
-import deviceSVG from '../img/nav/employee.svg'; // 临时使用现有图标
+import systemSVG from "../img/nav/system.svg";
+import xhsSVG from "../img/nav/wechat.svg"; // 临时使用现有图标
+import deviceSVG from "../img/nav/employee.svg"; // 临时使用现有图标
 
 // 仅保留系统管理激活图标
 // Import active SVG icons
-import systemActiveSVG from '../img/active/system.svg';
-import xhsActiveSVG from '../img/active/wechat.svg'; // 临时使用现有图标
-import deviceActiveSVG from '../img/active/employee.svg'; // 临时使用现有图标
+import systemActiveSVG from "../img/active/system.svg";
+import xhsActiveSVG from "../img/active/wechat.svg"; // 临时使用现有图标
+import deviceActiveSVG from "../img/active/employee.svg"; // 临时使用现有图标
+import { useUserStore } from "../store/userStore";
 
 interface SubNavItem {
   name: string;
@@ -38,23 +39,41 @@ interface NavItemWithIcons extends NavItem {
 
 // 菜单项配置
 const initialMenuItems: NavItemWithIcons[] = [
-  { name: '系统管理', icon: systemSVG, activeIcon: systemActiveSVG, url: '/manage', adminOnly: true },
-  { name: '设备管理', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/devices', adminOnly: false },
-  { name: '自动化任务', icon: deviceSVG, activeIcon: deviceActiveSVG, url: '/xhs/dashboard', adminOnly: false },
   {
-    name: '智能获客',
+    name: "系统管理",
+    icon: systemSVG,
+    activeIcon: systemActiveSVG,
+    url: "/manage",
+    adminOnly: true,
+  },
+  {
+    name: "设备管理",
+    icon: deviceSVG,
+    activeIcon: deviceActiveSVG,
+    url: "/devices",
+    adminOnly: false,
+  },
+  {
+    name: "自动化任务",
+    icon: deviceSVG,
+    activeIcon: deviceActiveSVG,
+    url: "/xhs/dashboard",
+    adminOnly: false,
+  },
+  {
+    name: "智能获客",
     icon: xhsSVG,
     activeIcon: xhsActiveSVG,
     adminOnly: false,
     subItems: [
       // { name: '自动化任务', url: '/xhs' },
-      { name: '数据采集', url: '/xhs/collect' },
+      { name: "数据采集", url: "/xhs/collect" },
       // { name: '数据筛选', url: '/xhs/filter' },
-      { name: '数据分析', url: '/xhs/analyze' },
+      { name: "数据分析", url: "/xhs/analyze" },
       // { name: '触达用户', url: '/xhs/templates' },
-      { name: '私信管理', url: '/xhs/generate' },
+      { name: "私信管理", url: "/xhs/generate" },
     ],
-    expanded: false
+    expanded: false,
   },
 ];
 
@@ -62,19 +81,18 @@ const NavBar: React.FC = () => {
   const [menuItems, setMenuItems] = useState<NavItemWithIcons[]>(initialMenuItems);
 
   // Combine all navigation items for route matching
-  const allNavItems: NavItemWithIcons[] = [
-    ...menuItems
-  ];
+  const allNavItems: NavItemWithIcons[] = [...menuItems];
 
   const findSelectedNavItem = (path: string) => {
-    const currentPath = path.endsWith('/') ? path.slice(0, -1) : path;
+    const currentPath = path.endsWith("/") ? path.slice(0, -1) : path;
     // Find a matching item in all navigation categories
-    const matchingItem = allNavItems.find(item =>
-      currentPath === item.url ||
-      (item.url && currentPath.startsWith(item.url) && item.url !== '/dashboard') ||
-      (item.subItems?.some(subItem => currentPath === subItem.url))
+    const matchingItem = allNavItems.find(
+      (item) =>
+        currentPath === item.url ||
+        (item.url && currentPath.startsWith(item.url) && item.url !== "/dashboard") ||
+        item.subItems?.some((subItem) => currentPath === subItem.url)
     );
-    return matchingItem ? matchingItem.name : '系统管理';
+    return matchingItem ? matchingItem.name : "系统管理";
   };
   const location = useLocation();
   const navigate = useNavigate();
@@ -83,95 +101,57 @@ const NavBar: React.FC = () => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  // 使用UserContext获取用户信息和管理员状态
-  const { userProfile, isAdmin } = useUser();
-  const [userData, setUserData] = useState<{ displayName: string | null; email: string | null }>({
-    displayName: null,
-    email: null
-  });
+
+  // ✅ 只从 userStore 获取数据，移除本地状态和监听器
+  const { userProfile, isAdmin, email } = useUserStore();
+
+  // ✅ 直接使用 userStore 的数据，无需本地状态
+  const displayName = userProfile?.display_name || email?.split("@")[0] || "用户";
 
   useEffect(() => {
     setSelected(findSelectedNavItem(location.pathname));
 
     // Update expanded state based on current path
-    setMenuItems(prevItems =>
+    setMenuItems((prevItems) =>
       prevItems.map((item: NavItemWithIcons) => {
-        const shouldExpand = item.subItems?.some((subItem: SubNavItem) =>
-          location.pathname === subItem.url || location.pathname.startsWith(subItem.url + '/')
+        const shouldExpand = item.subItems?.some(
+          (subItem: SubNavItem) =>
+            location.pathname === subItem.url || location.pathname.startsWith(subItem.url + "/")
         );
         return shouldExpand ? { ...item, expanded: true } : item;
       })
     );
   }, [location.pathname]);
 
-  // 不再需要嗅探用户是否为管理员，现在从上下文中获取
+  // ❌ 移除这些重复的 useEffect
+  // useEffect(() => {
+  //   // 订阅认证状态变化（重复！）
+  //   const { data: { subscription } } = supabase.auth.onAuthStateChange(...)
+  // }, []);
 
-  // 结合认证状态和用户上下文
-  useEffect(() => {
-    // 订阅认证状态变化（仅用于基本登录信息）
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const user = session.user;
-          setUserData({
-            displayName: user.user_metadata?.name || user.email?.split('@')[0] || null,
-            email: user.email || null
-          });
-        } else if (event === 'SIGNED_OUT') {
-          setUserData({
-            displayName: null,
-            email: null
-          });
-        }
-      }
-    );
+  // useEffect(() => {
+  //   if (userProfile) {
+  //     setUserData((prev) => ({...})); // 重复！
+  //   }
+  // }, [userProfile]);
 
-    // 初始化当前用户的基本信息（仅在上下文加载之前使用）
-    const initBasicUserInfo = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserData({
-          displayName: user.user_metadata?.name || user.email?.split('@')[0] || null,
-          email: user.email || null
-        });
-      }
-    };
-
-    initBasicUserInfo();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // 使用UserContext中的用户配置信息
-  useEffect(() => {
-    if (userProfile) {
-      setUserData(prev => ({
-        ...prev,
-        displayName: userProfile.display_name || prev.displayName
-      }));
-    }
-  }, [userProfile]);
-
+  // 其他业务逻辑保持不变...
   const handleClick = (item: NavItem) => {
     setSelected(item.name);
     // Toggle expanded state if item has subitems
     if (item.subItems && item.subItems.length > 0) {
       const currentPath = location.pathname;
       const newMenuItems = menuItems.map((menuItem: NavItemWithIcons) =>
-        menuItem.name === item.name
-          ? { ...menuItem, expanded: !menuItem.expanded }
-          : menuItem
+        menuItem.name === item.name ? { ...menuItem, expanded: !menuItem.expanded } : menuItem
       );
       setMenuItems(newMenuItems);
-      if (item.subItems.some(subItem => currentPath === subItem.url)) {
+      if (item.subItems.some((subItem) => currentPath === subItem.url)) {
         return;
       } else {
         navigate(item.subItems[0].url);
       }
     } else {
-      navigate(item.url || '/');
+      navigate(item.url || "/");
     }
   };
 
@@ -179,9 +159,9 @@ const NavBar: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logoutUser();
-      navigate('/login');
+      navigate("/login");
     } catch (error) {
-      console.error('退出登录失败:', error);
+      console.error("退出登录失败:", error);
     }
   };
 
@@ -197,9 +177,9 @@ const NavBar: React.FC = () => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -211,9 +191,9 @@ const NavBar: React.FC = () => {
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
   }, [isMobileMenuOpen]);
 
@@ -226,8 +206,19 @@ const NavBar: React.FC = () => {
           className="text-black hover:text-gray-800 p-4"
           aria-label="Open navigation menu"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-7 h-7">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+            className="w-7 h-7"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+            />
           </svg>
         </button>
       </div>
@@ -247,7 +238,14 @@ const NavBar: React.FC = () => {
                 className="text-black/70 hover:text-black"
                 aria-label="Close navigation menu"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-7 h-7">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="w-7 h-7"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -257,18 +255,26 @@ const NavBar: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-2">
               <div className="flex flex-col items-start space-y-1 mb-4 mt-2">
                 {menuItems
-                  .filter(item => !item.adminOnly || (item.adminOnly && isAdmin))
+                  .filter((item) => !item.adminOnly || (item.adminOnly && isAdmin))
                   .map((item) => (
                     <div key={item.name} className="w-full px-2">
                       <div
                         className={`flex items-center space-x-3 cursor-pointer p-3 rounded-lg w-full
-                          ${selected === item.name ? 'bg-white text-[rgba(248,213,126,1)]' : 'text-black hover:bg-[rgba(255,255,255,0.3)]'}`}
+                          ${
+                            selected === item.name
+                              ? "bg-white text-[rgba(248,213,126,1)]"
+                              : "text-black hover:bg-[rgba(255,255,255,0.3)]"
+                          }`}
                         onClick={() => {
                           handleClick(item);
                           setIsMobileMenuOpen(false);
                         }}
                       >
-                        <img src={selected === item.name ? item.activeIcon : item.icon} alt={item.name} className="w-5 h-5" />
+                        <img
+                          src={selected === item.name ? item.activeIcon : item.icon}
+                          alt={item.name}
+                          className="w-5 h-5"
+                        />
                         <span className="text-sm font-medium">{item.name}</span>
                       </div>
                     </div>
@@ -284,20 +290,16 @@ const NavBar: React.FC = () => {
                   onClick={() => setShowLogoutDialog(!showLogoutDialog)}
                   title="点击显示选项"
                 >
+                  {/* 在所有需要显示用户信息的地方直接使用 */}
                   <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.displayName || userData.email || 'User'}`}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`}
                     alt="User"
                     className="w-8 h-8 rounded-full bg-white"
                   />
                   <div className="overflow-hidden">
-                    <div className="text-sm font-medium truncate text-black">
-                      {userData.displayName || userData.email?.split('@')[0] || '用户'}
-                    </div>
-                    <div
-                      className="text-xs text-black/70 truncate"
-                      title={userData.email || '账号'}
-                    >
-                      {userData.email || '账号'}
+                    <div className="text-sm font-medium truncate text-black">{displayName}</div>
+                    <div className="text-xs text-black/70 truncate" title={email || "账号"}>
+                      {email || "账号"}
                     </div>
                   </div>
                 </div>
@@ -315,7 +317,7 @@ const NavBar: React.FC = () => {
                     退出登录
                   </button>
                   <button
-                    onClick={() => navigate('/charge')}
+                    onClick={() => navigate("/charge")}
                     className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(248,213,126,1)]"
                   >
                     充值中心
@@ -328,23 +330,38 @@ const NavBar: React.FC = () => {
       )}
 
       {/* Desktop Navigation */}
-      <div className={`hidden md:flex bg-[rgba(248,213,126,1)] ${isCollapsed ? 'w-[100px]' : 'w-[200px]'} rounded-lg shadow-lg  flex-col transition-all duration-300 text-base text-black my-4 ml-3 p-2`}>
+      <div
+        className={`hidden md:flex bg-[rgba(248,213,126,1)] ${
+          isCollapsed ? "w-[100px]" : "w-[200px]"
+        } rounded-lg shadow-lg  flex-col transition-all duration-300 text-base text-black my-4 ml-3 p-2`}
+      >
         {/* Logo Section */}
         <div className="flex items-center justify-between mb-2 px-2">
           <div className="flex items-center space-x-2">
             <img src={lucyaiLogo} alt="LUCYAI" className="w-8 h-8" />
             {!isCollapsed && <span className="text-2xl font-semibold text-black">LUCYAI</span>}
           </div>
-          <button
-            onClick={toggleCollapse}
-            className="text-black/70 hover:text-black"
-          >
+          <button onClick={toggleCollapse} className="text-black/70 hover:text-black">
             {isCollapsed ? (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="m15 19.5-7.5-7.5 7.5-7.5" />
               </svg>
             )}
@@ -355,19 +372,27 @@ const NavBar: React.FC = () => {
         <div className="flex-1 overflow-y-auto">
           <div className="flex flex-col items-start space-y-1 mb-4 mt-2">
             {menuItems
-              .filter(item => !item.adminOnly || (item.adminOnly && isAdmin))
+              .filter((item) => !item.adminOnly || (item.adminOnly && isAdmin))
               .map((item) => (
                 <div key={item.name} className="w-full px-2">
                   <div
-                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} cursor-pointer p-2 rounded-lg w-full
-                      ${selected === item.name ? 'bg-white text-[rgba(248,213,126,1)]' : 'text-black hover:bg-[rgba(255,255,255,0.3)]'}`}
+                    className={`flex items-center ${
+                      isCollapsed ? "justify-center" : "justify-between"
+                    } cursor-pointer p-2 rounded-lg w-full
+                      ${
+                        selected === item.name
+                          ? "bg-white text-[rgba(248,213,126,1)]"
+                          : "text-black hover:bg-[rgba(255,255,255,0.3)]"
+                      }`}
                     onClick={() => handleClick(item)}
                   >
                     <div className="flex items-center space-x-3">
-                      <img src={selected === item.name ? item.activeIcon : item.icon} alt={item.name} className="w-5 h-5" />
-                      {!isCollapsed && (
-                        <span className="text-sm font-medium">{item.name}</span>
-                      )}
+                      <img
+                        src={selected === item.name ? item.activeIcon : item.icon}
+                        alt={item.name}
+                        className="w-5 h-5"
+                      />
+                      {!isCollapsed && <span className="text-sm font-medium">{item.name}</span>}
                     </div>
                     {!isCollapsed && item.subItems && item.subItems.length > 0 && (
                       <svg
@@ -376,9 +401,15 @@ const NavBar: React.FC = () => {
                         viewBox="0 0 24 24"
                         strokeWidth="1.5"
                         stroke="currentColor"
-                        className={`w-4 h-4 transition-transform ${item.expanded ? 'rotate-90' : ''}`}
+                        className={`w-4 h-4 transition-transform ${
+                          item.expanded ? "rotate-90" : ""
+                        }`}
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                        />
                       </svg>
                     )}
                   </div>
@@ -390,9 +421,13 @@ const NavBar: React.FC = () => {
                         <div
                           key={subItem.name}
                           className={`flex items-center space-x-3 cursor-pointer p-2 rounded-lg w-full
-                            ${location.pathname === subItem.url ? 'bg-white/40 text-black font-medium' : 'text-black/80 hover:bg-white/30'}`}
+                            ${
+                              location.pathname === subItem.url
+                                ? "bg-white/40 text-black font-medium"
+                                : "text-black/80 hover:bg-white/30"
+                            }`}
                           onClick={(e) => {
-                            console.log('触发了')
+                            console.log("触发了");
                             e.stopPropagation();
                             navigate(subItem.url);
                           }}
@@ -415,21 +450,17 @@ const NavBar: React.FC = () => {
               onClick={() => setShowLogoutDialog(!showLogoutDialog)}
               title="点击显示选项"
             >
+              {/* 在所有需要显示用户信息的地方直接使用 */}
               <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.displayName || userData.email || 'User'}`}
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`}
                 alt="User"
                 className="w-8 h-8 rounded-full bg-white"
               />
               {!isCollapsed && (
                 <div className="max-w-[10vw] overflow-hidden">
-                  <div className="text-sm font-medium truncate text-black">
-                    {userData.displayName || userData.email?.split('@')[0] || '用户'}
-                  </div>
-                  <div
-                    className="text-xs text-black/70 truncate"
-                    title={userData.email || '账号'}
-                  >
-                    {userData.email || '账号'}
+                  <div className="text-sm font-medium truncate text-black">{displayName}</div>
+                  <div className="text-xs text-black/70 truncate" title={email || "账号"}>
+                    {email || "账号"}
                   </div>
                 </div>
               )}
@@ -448,7 +479,7 @@ const NavBar: React.FC = () => {
                 退出登录
               </button>
               <button
-                onClick={() => navigate('/charge')}
+                onClick={() => navigate("/charge")}
                 className="w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-[rgba(248,213,126,1)]"
               >
                 充值中心

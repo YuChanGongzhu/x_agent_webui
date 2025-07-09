@@ -3,6 +3,7 @@ import { Avatar, Button } from "antd";
 import { useUser } from "../../context/UserContext";
 import { getDagRuns } from "../../api/airflow";
 import { supabase } from "../../auth/supabaseConfig";
+import { useUserStore } from "../../store/userStore";
 // 样式系统
 const styles = {
   // 主容器样式
@@ -129,65 +130,12 @@ const styles = {
 };
 
 const TopUserMessage = () => {
-  const { email, isAdmin, userProfile } = useUser();
+  // const { email, isAdmin, userProfile } = useUser();
+  const { email, isAdmin, userProfile } = useUserStore();
   const [tasks, setTasks] = useState<number>(0);
-  const [userData, setUserData] = useState<{ displayName: string | null; email: string | null }>({
-    displayName: null,
-    email: null,
-  });
-  useEffect(() => {
-    // 订阅认证状态变化（仅用于基本登录信息）
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        const user = session.user;
-        setUserData({
-          displayName: user.user_metadata?.name || user.email?.split("@")[0] || null,
-          email: user.email || null,
-        });
-      } else if (event === "SIGNED_OUT") {
-        setUserData({
-          displayName: null,
-          email: null,
-        });
-      }
-    });
-
-    // 初始化当前用户的基本信息（仅在上下文加载之前使用）
-    const initBasicUserInfo = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserData({
-          displayName: user.user_metadata?.name || user.email?.split("@")[0] || null,
-          email: user.email || null,
-        });
-      }
-    };
-
-    initBasicUserInfo();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-  useEffect(() => {
-    if (userProfile) {
-      setUserData((prev) => ({
-        ...prev,
-        displayName: userProfile.display_name || prev.displayName,
-      }));
-    }
-  }, [userProfile]);
+  const displayname = userProfile?.display_name || email?.split("@")[0] || "User";
   const AvatorIcon = (
-    <img
-      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${
-        userData.displayName || userData.email || "User"
-      }`}
-      alt="User"
-    />
+    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayname}`} alt="User" />
   );
 
   useEffect(() => {

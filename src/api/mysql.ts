@@ -11,7 +11,7 @@ const getIntentCustomersUrl = process.env.REACT_APP_TECENT_GET_INTENT_CUSTOMERS;
 const getReplyTemplatesUrl = process.env.REACT_APP_TECENT_GET_REPLY_TEMPLATES;
 const updateReplyTemplateUrl = process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLATE;
 const getXhsDevicesMsgListUrl = process.env.REACT_APP_TECENT_GET_XHS_DEVICES_MSG_LIST;
-
+const updateTaskTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_TASK_TEMPLATES;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -51,7 +51,7 @@ export const getChatMessagesApi = async (params: {
 
   const response = await fetch(`${roomMsgListUrl}/messages?${queryParams.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch chat messages');
+    throw new Error("Failed to fetch chat messages");
   }
   return response.json() as Promise<ChatMessagesResponse>;
 };
@@ -76,17 +76,15 @@ export interface RoomListMessagesResponse {
   data: RoomListMessage[];
 }
 
-export const getRoomListMessagesApi = async (params: {
-  wx_user_id?: string;
-}) => {
+export const getRoomListMessagesApi = async (params: { wx_user_id?: string }) => {
   const queryParams = new URLSearchParams();
   if (params.wx_user_id) {
-    queryParams.append('wx_user_id', params.wx_user_id);
+    queryParams.append("wx_user_id", params.wx_user_id);
   }
 
   const response = await fetch(`${roomListUrl}?${queryParams.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch chat messages');
+    throw new Error("Failed to fetch chat messages");
   }
   return response.json() as Promise<RoomListMessagesResponse>;
 };
@@ -107,22 +105,20 @@ export const getChatMpMessagesApi = async (params: {
 
   const response = await fetch(`${roomMpMsgListUrl}/messages?${queryParams.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch chat MP messages');
+    throw new Error("Failed to fetch chat MP messages");
   }
   return response.json() as Promise<ChatMessagesResponse>;
 };
 
-export const getRoomMpListMessagesApi = async (params: {
-  wx_user_id?: string;
-}) => {
+export const getRoomMpListMessagesApi = async (params: { wx_user_id?: string }) => {
   const queryParams = new URLSearchParams();
   if (params.wx_user_id) {
-    queryParams.append('wx_user_id', params.wx_user_id);
+    queryParams.append("wx_user_id", params.wx_user_id);
   }
 
   const response = await fetch(`${roomMpListUrl}?${queryParams.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch chat MP room messages');
+    throw new Error("Failed to fetch chat MP room messages");
   }
   return response.json() as Promise<RoomListMessagesResponse>;
 };
@@ -175,27 +171,23 @@ export interface MpRoomListResponse {
  * @param params Optional parameters
  * @param params.gh_user_id Optional public account ID to filter results
  */
-export const getMpRoomListApi = async (params?: {
-  gh_user_id?: string;
-}) => {
+export const getMpRoomListApi = async (params?: { gh_user_id?: string }) => {
   try {
     const queryParams = new URLSearchParams();
     if (params?.gh_user_id) {
-      queryParams.append('gh_user_id', params.gh_user_id);
+      queryParams.append("gh_user_id", params.gh_user_id);
     }
 
-    const baseUrl = roomMpListUrl || '';
-    const url = queryParams.toString()
-      ? `${baseUrl}?${queryParams.toString()}`
-      : baseUrl;
+    const baseUrl = roomMpListUrl || "";
+    const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch WeChat public account room list');
+      throw new Error("Failed to fetch WeChat public account room list");
     }
     return response.json() as Promise<MpRoomListResponse>;
   } catch (error) {
-    console.error('Error fetching WeChat public account room list:', error);
+    console.error("Error fetching WeChat public account room list:", error);
     throw error;
   }
 };
@@ -229,19 +221,17 @@ export const getMpChatMessageApi = async (params: {
       }
     });
 
-    const baseUrl = roomMpMsgListUrl || '';
-    const url = queryParams.toString()
-      ? `${baseUrl}?${queryParams.toString()}`
-      : baseUrl;
+    const baseUrl = roomMpMsgListUrl || "";
+    const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch WeChat public account chat messages');
+      throw new Error("Failed to fetch WeChat public account chat messages");
     }
 
     return response.json() as Promise<MpChatMessagesResponse>;
   } catch (error) {
-    console.error('Error fetching WeChat public account chat messages:', error);
+    console.error("Error fetching WeChat public account chat messages:", error);
     throw error;
   }
 };
@@ -374,19 +364,19 @@ export interface KeywordsResponse {
  */
 export const getKeywordsApi = async (email?: string): Promise<KeywordsResponse> => {
   try {
-    const baseUrl = getKeywordUrl || '';
+    const baseUrl = getKeywordUrl || "";
 
     // Add email parameter to query if provided
     const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch keywords');
+      throw new Error("Failed to fetch keywords");
     }
 
-    return await response.json() as Promise<KeywordsResponse>;
+    return (await response.json()) as Promise<KeywordsResponse>;
   } catch (error) {
-    console.error('Error fetching keywords:', error);
+    console.error("Error fetching keywords:", error);
     throw error;
   }
 };
@@ -397,38 +387,43 @@ export const getKeywordsApi = async (email?: string): Promise<KeywordsResponse> 
  * @param email Optional email to filter comments by user
  * @returns Promise with the comments response
  */
-export const getXhsCommentsByKeywordApi = async (keyword: string, email?: string,page?: number,page_size?: number): Promise<XhsCommentsResponse> => {
+export const getXhsCommentsByKeywordApi = async (
+  keyword: string,
+  email?: string,
+  page?: number,
+  page_size?: number
+): Promise<XhsCommentsResponse> => {
   try {
     if (!keyword) {
-      throw new Error('Missing required parameter: keyword');
+      throw new Error("Missing required parameter: keyword");
     }
 
     const queryParams = new URLSearchParams();
-    queryParams.append('keyword', keyword);
+    queryParams.append("keyword", keyword);
 
     if (email) {
-      queryParams.append('email', email);
+      queryParams.append("email", email);
     }
 
     if (page) {
-      queryParams.append('page', page.toString());
+      queryParams.append("page", page.toString());
     }
 
     if (page_size) {
-      queryParams.append('page_size', page_size.toString());
+      queryParams.append("page_size", page_size.toString());
     }
 
-    const baseUrl = getCommentsUrl || '';
+    const baseUrl = getCommentsUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch Xiaohongshu comments by keyword');
+      throw new Error("Failed to fetch Xiaohongshu comments by keyword");
     }
 
-    return await response.json() as Promise<XhsCommentsResponse>;
+    return (await response.json()) as Promise<XhsCommentsResponse>;
   } catch (error) {
-    console.error('Error fetching Xiaohongshu comments by keyword:', error);
+    console.error("Error fetching Xiaohongshu comments by keyword:", error);
     throw error;
   }
 };
@@ -486,40 +481,38 @@ export const getIntentCustomersApi = async (params?: {
 
     // Add optional filters to query parameters
     if (params?.keyword) {
-      queryParams.append('keyword', params.keyword);
+      queryParams.append("keyword", params.keyword);
     }
 
     if (params?.intent) {
-      queryParams.append('intent', params.intent);
+      queryParams.append("intent", params.intent);
     }
 
     // Add email filter if provided
     if (params?.email) {
-      queryParams.append('email', params.email);
+      queryParams.append("email", params.email);
     }
 
     // Add flags for getting keywords or intents lists
     if (params?.get_keywords) {
-      queryParams.append('get_keywords', 'true');
+      queryParams.append("get_keywords", "true");
     }
 
     if (params?.get_intents) {
-      queryParams.append('get_intents', 'true');
+      queryParams.append("get_intents", "true");
     }
 
-    const baseUrl = getIntentCustomersUrl || '';
-    const url = queryParams.toString()
-      ? `${baseUrl}?${queryParams.toString()}`
-      : baseUrl;
+    const baseUrl = getIntentCustomersUrl || "";
+    const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch customer intent data');
+      throw new Error("Failed to fetch customer intent data");
     }
 
-    return await response.json() as Promise<CustomerIntentResponse>;
+    return (await response.json()) as Promise<CustomerIntentResponse>;
   } catch (error) {
-    console.error('Error fetching customer intent data:', error);
+    console.error("Error fetching customer intent data:", error);
     throw error;
   }
 };
@@ -532,23 +525,23 @@ export const getIntentCustomersApi = async (params?: {
 export const getXhsCommentsByUrlsApi = async (urls: string[]): Promise<XhsCommentsResponse> => {
   try {
     if (!urls || urls.length === 0) {
-      throw new Error('Missing required parameter: urls');
+      throw new Error("Missing required parameter: urls");
     }
 
     const queryParams = new URLSearchParams();
-    queryParams.append('urls', JSON.stringify(urls));
+    queryParams.append("urls", JSON.stringify(urls));
 
-    const baseUrl = getCommentsUrl || '';
+    const baseUrl = getCommentsUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch Xiaohongshu comments by URLs');
+      throw new Error("Failed to fetch Xiaohongshu comments by URLs");
     }
 
-    return await response.json() as Promise<XhsCommentsResponse>;
+    return (await response.json()) as Promise<XhsCommentsResponse>;
   } catch (error) {
-    console.error('Error fetching Xiaohongshu comments by URLs:', error);
+    console.error("Error fetching Xiaohongshu comments by URLs:", error);
     throw error;
   }
 };
@@ -561,19 +554,19 @@ export const getXhsCommentsByUrlsApi = async (urls: string[]): Promise<XhsCommen
 export const getXhsCommentsApi = async (limit: number = 100): Promise<XhsCommentsResponse> => {
   try {
     const queryParams = new URLSearchParams();
-    queryParams.append('limit', limit.toString());
+    queryParams.append("limit", limit.toString());
 
-    const baseUrl = getCommentsUrl || '';
+    const baseUrl = getCommentsUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch Xiaohongshu comments');
+      throw new Error("Failed to fetch Xiaohongshu comments");
     }
 
-    return await response.json() as Promise<XhsCommentsResponse>;
+    return (await response.json()) as Promise<XhsCommentsResponse>;
   } catch (error) {
-    console.error('Error fetching Xiaohongshu comments:', error);
+    console.error("Error fetching Xiaohongshu comments:", error);
     throw error;
   }
 };
@@ -583,38 +576,43 @@ export const getXhsCommentsApi = async (limit: number = 100): Promise<XhsComment
  * @param keyword The keyword to filter notes by
  * @returns Promise with the notes response
  */
-export const getXhsNotesByKeywordApi = async (keyword: string,email?: string,page?: number,page_size?: number): Promise<XhsNotesResponse> => {
+export const getXhsNotesByKeywordApi = async (
+  keyword: string,
+  email?: string,
+  page?: number,
+  page_size?: number
+): Promise<XhsNotesResponse> => {
   try {
     if (!keyword) {
-      throw new Error('Missing required parameter: keyword');
+      throw new Error("Missing required parameter: keyword");
     }
 
     const queryParams = new URLSearchParams();
-    queryParams.append('keyword', keyword);
+    queryParams.append("keyword", keyword);
 
     if (email) {
-      queryParams.append('email', email);
+      queryParams.append("email", email);
     }
 
     if (page) {
-      queryParams.append('page', page.toString());
+      queryParams.append("page", page.toString());
     }
 
     if (page_size) {
-      queryParams.append('page_size', page_size.toString());
+      queryParams.append("page_size", page_size.toString());
     }
 
-    const baseUrl = getNoteUrl || '';
+    const baseUrl = getNoteUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch Xiaohongshu notes');
+      throw new Error("Failed to fetch Xiaohongshu notes");
     }
 
-    return await response.json() as Promise<XhsNotesResponse>;
+    return (await response.json()) as Promise<XhsNotesResponse>;
   } catch (error) {
-    console.error('Error fetching Xiaohongshu notes:', error);
+    console.error("Error fetching Xiaohongshu notes:", error);
     throw error;
   }
 };
@@ -630,38 +628,36 @@ export const getTokenUsageApi = async (params: {
 }): Promise<TokenUsageResponse> => {
   try {
     if (!params || !params.token_source_platform) {
-      throw new Error('Missing required parameter: token_source_platform');
+      throw new Error("Missing required parameter: token_source_platform");
     }
 
     if (!params.wx_user_id) {
-      throw new Error('Missing required parameter: wx_user_id');
+      throw new Error("Missing required parameter: wx_user_id");
     }
 
     const queryParams = new URLSearchParams();
 
-    queryParams.append('token_source_platform', params.token_source_platform);
-    queryParams.append('wx_user_id', params.wx_user_id);
+    queryParams.append("token_source_platform", params.token_source_platform);
+    queryParams.append("wx_user_id", params.wx_user_id);
 
-    if (params.room_id) queryParams.append('room_id', params.room_id);
-    if (params.start_time) queryParams.append('start_time', params.start_time);
-    if (params.end_time) queryParams.append('end_time', params.end_time);
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.offset) queryParams.append('offset', params.offset.toString());
+    if (params.room_id) queryParams.append("room_id", params.room_id);
+    if (params.start_time) queryParams.append("start_time", params.start_time);
+    if (params.end_time) queryParams.append("end_time", params.end_time);
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.offset) queryParams.append("offset", params.offset.toString());
 
-    const baseUrl = tokenUsageUrl || '';
-    const url = queryParams.toString()
-      ? `${baseUrl}?${queryParams.toString()}`
-      : baseUrl;
+    const baseUrl = tokenUsageUrl || "";
+    const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error('Failed to fetch token usage records');
+      throw new Error("Failed to fetch token usage records");
     }
 
-    return await response.json() as TokenUsageResponse;
+    return (await response.json()) as TokenUsageResponse;
   } catch (error) {
-    console.error('Error fetching token usage records:', error);
+    console.error("Error fetching token usage records:", error);
     throw error;
   }
 };
@@ -747,27 +743,30 @@ export interface ChatHistorySummaryResponse {
 
 /**
  * Fetches chat history summary for a specific WeChat user and room
- * 
+ *
  * @param wxid WeChat user ID
  * @param room_id Room ID
  * @returns Promise with the chat history summary response
  */
-export const getWxChatHistorySummaryApi = async (wxid: string, room_id: string): Promise<ChatHistorySummaryResponse> => {
+export const getWxChatHistorySummaryApi = async (
+  wxid: string,
+  room_id: string
+): Promise<ChatHistorySummaryResponse> => {
   try {
     const queryParams = new URLSearchParams();
-    queryParams.append('wx_user_id', wxid);
-    queryParams.append('room_id', room_id);
+    queryParams.append("wx_user_id", wxid);
+    queryParams.append("room_id", room_id);
 
-    const baseUrl = chatSummaryUrl || '';
+    const baseUrl = chatSummaryUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch chat history summary');
+      throw new Error("Failed to fetch chat history summary");
     }
     return response.json() as Promise<ChatHistorySummaryResponse>;
   } catch (error) {
-    console.error('Error fetching chat history summary:', error);
+    console.error("Error fetching chat history summary:", error);
     throw error;
   }
 };
@@ -797,7 +796,7 @@ export interface ReplyTemplatesResponse {
 
 /**
  * Retrieves reply templates with pagination and optional user filtering
- * 
+ *
  * @param params Optional parameters for filtering and pagination
  * @param params.user_id Optional user ID to filter templates by
  * @param params.page Page number for pagination (default: 1)
@@ -812,40 +811,38 @@ export const getReplyTemplatesApi = async (params?: {
 }): Promise<ReplyTemplatesResponse> => {
   try {
     if (!params?.email) {
-      console.error('Error: email parameter is required for getReplyTemplatesApi');
-      throw new Error('email parameter is required');
+      console.error("Error: email parameter is required for getReplyTemplatesApi");
+      throw new Error("email parameter is required");
     }
 
     const queryParams = new URLSearchParams();
 
     // Send email parameter to backend
-    queryParams.append('email', params.email);
+    queryParams.append("email", params.email);
     console.log(`Fetching templates with email: ${params.email}`);
 
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.page_size) queryParams.append("page_size", params.page_size.toString());
 
-    const baseUrl = getReplyTemplatesUrl || '';
-    const url = queryParams.toString()
-      ? `${baseUrl}?${queryParams.toString()}`
-      : baseUrl;
+    const baseUrl = getReplyTemplatesUrl || "";
+    const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error('Failed to fetch reply templates');
+      throw new Error("Failed to fetch reply templates");
     }
 
-    return await response.json() as ReplyTemplatesResponse;
+    return (await response.json()) as ReplyTemplatesResponse;
   } catch (error) {
-    console.error('Error fetching reply templates:', error);
+    console.error("Error fetching reply templates:", error);
     throw error;
   }
 };
 
 /**
  * Creates a new reply template
- * 
+ *
  * @param data Template data to create
  * @param data.content Template content
  * @param data.user_id User ID who owns the template
@@ -858,42 +855,42 @@ export const createReplyTemplateApi = async (data: {
 }): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
     if (!data.email) {
-      console.error('Error: email parameter is required for createReplyTemplateApi');
-      throw new Error('email parameter is required');
+      console.error("Error: email parameter is required for createReplyTemplateApi");
+      throw new Error("email parameter is required");
     }
 
-    const baseUrl = updateReplyTemplateUrl || '';
+    const baseUrl = updateReplyTemplateUrl || "";
     console.log(`Creating template with email: ${data.email}`);
 
     // Send email parameter directly to backend
     const userIdentifier = { email: data.email };
 
     const response = await fetch(baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        action: 'add',
+        action: "add",
         content: data.content,
-        ...userIdentifier
+        ...userIdentifier,
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create reply template');
+      throw new Error("Failed to create reply template");
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error creating reply template:', error);
+    console.error("Error creating reply template:", error);
     throw error;
   }
 };
 
 /**
  * Updates an existing reply template
- * 
+ *
  * @param id Template ID to update
  * @param data Template data to update
  * @param data.content Updated template content
@@ -911,37 +908,37 @@ export const updateReplyTemplateApi = async (
 ): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
     if (!data.email) {
-      console.error('Error: email parameter is required for updateReplyTemplateApi');
-      throw new Error('email parameter is required');
+      console.error("Error: email parameter is required for updateReplyTemplateApi");
+      throw new Error("email parameter is required");
     }
 
-    const baseUrl = updateReplyTemplateUrl || '';
+    const baseUrl = updateReplyTemplateUrl || "";
     console.log(`Updating template ${id} with email: ${data.email}`);
 
     // Send email parameter directly to backend
     const userIdentifier = { email: data.email };
 
     const response = await fetch(baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        action: 'update',
+        action: "update",
         template_id: id,
         content: data.content,
         image_urls: data.image_urls,
-        ...userIdentifier
+        ...userIdentifier,
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to update reply template');
+      throw new Error("Failed to update reply template");
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error updating reply template:', error);
+    console.error("Error updating reply template:", error);
     throw error;
   }
 };
@@ -953,77 +950,105 @@ export const updateReplyTemplateApi = async (
  */
 export const getCommentsKeyword = async (email?: string): Promise<KeywordsResponse> => {
   try {
-    const baseUrl = getCommentsKeywordUrl || '';
+    const baseUrl = getCommentsKeywordUrl || "";
 
     // Add email parameter to query if provided
     const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch comments keywords');
+      throw new Error("Failed to fetch comments keywords");
     }
 
-    return await response.json() as Promise<KeywordsResponse>;
+    return (await response.json()) as Promise<KeywordsResponse>;
   } catch (error) {
-    console.error('Error fetching comments keywords:', error);
+    console.error("Error fetching comments keywords:", error);
     throw error;
   }
 };
 
 /**
  * Deletes a reply template
- * 
+ *
  * @param id Template ID to delete
  * @returns Promise with the deletion response
  */
-export const deleteReplyTemplateApi = async (id: number, email: string): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
+export const deleteReplyTemplateApi = async (
+  id: number,
+  email: string
+): Promise<{ code: number; message: string; data?: { affected_rows: number } }> => {
   try {
     if (!email) {
-      console.error('Error: email parameter is required for deleteReplyTemplateApi');
-      throw new Error('email parameter is required');
+      console.error("Error: email parameter is required for deleteReplyTemplateApi");
+      throw new Error("email parameter is required");
     }
 
-    const baseUrl = updateReplyTemplateUrl || '';
+    const baseUrl = updateReplyTemplateUrl || "";
     console.log(`Deleting template ${id} with email: ${email}`);
 
     const response = await fetch(baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        action: 'delete',
+        action: "delete",
         template_id: id,
-        email: email // Send email parameter directly to backend
+        email: email, // Send email parameter directly to backend
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to delete reply template');
+      throw new Error("Failed to delete reply template");
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error deleting reply template:', error);
+    console.error("Error deleting reply template:", error);
     throw error;
   }
 };
 
-export const getXhsDevicesMsgList = async (email: string = '') => {
+export const getXhsDevicesMsgList = async (email: string = "") => {
   try {
-    const baseUrl = getXhsDevicesMsgListUrl || '';
+    const baseUrl = getXhsDevicesMsgListUrl || "";
 
     // Add email parameter to query if provided
     const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch getXhsDevicesMsgList');
+      throw new Error("Failed to fetch getXhsDevicesMsgList");
     }
 
-    return await response.json() as Promise<KeywordsResponse>;
+    return (await response.json()) as Promise<KeywordsResponse>;
   } catch (error) {
-    console.error('Error fetching getXhsDevicesMsgList:', error);
+    console.error("Error fetching getXhsDevicesMsgList:", error);
     throw error;
   }
-}
+};
+
+export const addTaskTemplateAPI = async (content: {}): Promise<any> => {
+  try {
+    console.log("addTaskTemplateAPI内容", content);
+
+    const baseUrl = updateTaskTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "add",
+        ...content,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error("保存为任务模版失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error adding task template:", error);
+    throw error;
+  }
+};

@@ -34,9 +34,14 @@ import {
   updateReplyTemplateApi,
   deleteReplyTemplateApi,
   ReplyTemplate,
+  addTaskTemplateAPI,
 } from "../../api/mysql";
 import { tencentCOSService } from "../../api/tencent_cos";
-import { useDashBoardStore, dashBoardSelectors } from "../../store/dashBoardStore";
+import {
+  useDashBoardStore,
+  dashBoardSelectors,
+  hasSavedProgress,
+} from "../../store/dashBoardStore";
 import exclamation2 from "../../img/exclamation2.svg";
 // Define the steps of the task creation process
 type TaskCreationStep = "采集任务" | "分析要求" | "回复模板";
@@ -63,7 +68,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
   // 统一使用 useUserStore 获取用户信息
   const { isAdmin, email } = useUser();
 
-  // 使用Zustand store管理状态（传入用户邮箱）
   // 使用Zustand store管理状态
   const currentStep = useDashBoardStore((state) => state.currentStep);
   const formData = useDashBoardStore((state) => state.formData);
@@ -77,6 +81,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
   const addMessageTemplate = useDashBoardStore((state) => state.addMessageTemplate);
   const deleteMessageTemplate = useDashBoardStore((state) => state.deleteMessageTemplate);
   const saveProgress = useDashBoardStore((state) => state.saveProgress);
+  const loadProgress = useDashBoardStore((state) => state.loadProgress);
+  const clearSavedProgress = useDashBoardStore((state) => state.clearSavedProgress);
   const resetForm = useDashBoardStore((state) => state.resetForm);
 
   // 从store获取数据（仅用于初始化和保存）
@@ -85,6 +91,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
 
   // 本地state（不需要持久化的）
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [noteTypes] = useState<{ value: string; label: string }[]>([
     { value: "图文", label: "图文" },
     { value: "视频", label: "视频" },
@@ -165,7 +172,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
 
   // Initialize form when modal opens
   useEffect(() => {
-    if (visible) {
+    if (visible && !isInitialized) {
       // 清理可能存在的错误时间格式数据
       if (
         formData.taskTime &&
@@ -177,25 +184,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
       }
 
       // 只有当有保存的进度时才使用store数据，否则使用默认值
-      if (hasSavedProgress()) {
-        // 恢复保存的进度
-        form.setFieldsValue({
-          targetEmail:
-            formData.targetEmail || email || (availableEmails.length > 0 ? availableEmails[0] : ""),
-          sortBy: formData.sortBy || sortOptions[0]?.value || "",
-          timeRange: formData.timeRange || timeRanges[0]?.value || "",
-          noteCount: formData.noteCount || noteCounts[0]?.value || 10,
-          noteType: formData.noteType || noteTypes[0]?.value || "",
-          keyword: formData.keyword || "",
-          taskDate: parseDate(formData.taskDate),
-          taskTime: parseTime(formData.taskTime, formData.taskDate),
-          userProfileLevel: formData.userProfileLevel || [],
-          profileSentence: formData.profileSentence || "",
-        });
-        // 恢复当前步骤
-        if (formData.currentStep) {
-          setCurrentStep(formData.currentStep);
-        }
+      if (checkHasSavedProgress()) {
+        // 加载保存的进度
+        loadProgress();
+        console.log("🔍 已调用 loadProgress()，formData 将在下一个 useEffect 中更新表单");
       } else {
         // 使用默认值重置表单
         form.setFieldsValue({
@@ -212,22 +204,96 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         });
         // 重置到第一步
         setCurrentStep("采集任务");
+        setIsInitialized(true);
       }
     }
-  }, [visible, form, email, availableEmails, sortOptions, timeRanges, noteCounts, noteTypes]);
 
-  // 检查是否有保存的进度数据
-  const hasSavedProgress = () => {
-    return !!(
-      formData.keyword ||
-      formData.profileSentence ||
-      formData.targetEmail ||
-      formData.taskDate ||
-      formData.taskTime ||
-      formData.userProfileLevel?.length > 0 ||
-      formData.commentTemplates?.some((t: TemplateItem) => t.content.trim()) ||
-      formData.messageTemplates?.some((t: TemplateItem) => t.content.trim())
-    );
+    // 当弹窗关闭时重置初始化状态
+    if (!visible) {
+      setIsInitialized(false);
+    }
+  }, [
+    visible,
+    isInitialized,
+    form,
+    email,
+    availableEmails,
+    sortOptions,
+    timeRanges,
+    noteCounts,
+    noteTypes,
+  ]);
+
+  // 监听特定 formData 字段变化，当数据加载完成后更新表单
+  useEffect(() => {
+    if (visible && formData && !isInitialized) {
+      console.log("🔍 formData 更新，当前数据:", formData);
+      console.log("🔍 是否有保存的进度:", checkHasSavedProgress());
+
+      // 如果有保存的进度数据，并且 formData 中有实际内容，则更新表单
+      if (
+        checkHasSavedProgress() &&
+        (formData.keyword || formData.targetEmail || formData.profileSentence)
+      ) {
+        console.log("🔍 开始设置表单值");
+
+        form.setFieldsValue({
+          targetEmail:
+            formData.targetEmail || email || (availableEmails.length > 0 ? availableEmails[0] : ""),
+          sortBy: formData.sortBy || sortOptions[0]?.value || "",
+          timeRange: formData.timeRange || timeRanges[0]?.value || "",
+          noteCount: formData.noteCount || noteCounts[0]?.value || 10,
+          noteType: formData.noteType || noteTypes[0]?.value || "",
+          keyword: formData.keyword || "",
+          taskDate: parseDate(formData.taskDate),
+          taskTime: parseTime(formData.taskTime, formData.taskDate),
+          userProfileLevel: formData.userProfileLevel || [],
+          profileSentence: formData.profileSentence || "",
+        });
+
+        setIsInitialized(true);
+        console.log("✅ 表单值设置完成");
+      }
+    }
+  }, [
+    visible,
+    isInitialized,
+    formData.keyword,
+    formData.targetEmail,
+    formData.profileSentence,
+    formData.taskDate,
+    formData.taskTime,
+    formData.sortBy,
+    formData.timeRange,
+    formData.noteCount,
+    formData.noteType,
+    formData.userProfileLevel,
+    form,
+    email,
+    availableEmails,
+    sortOptions,
+    timeRanges,
+    noteCounts,
+    noteTypes,
+  ]);
+
+  // 单独处理 currentStep 的恢复，避免无限循环
+  useEffect(() => {
+    if (
+      visible &&
+      checkHasSavedProgress() &&
+      formData.currentStep &&
+      currentStep !== formData.currentStep &&
+      !isInitialized
+    ) {
+      console.log("🔍 恢复当前步骤:", formData.currentStep);
+      setCurrentStep(formData.currentStep);
+    }
+  }, [visible, formData.currentStep, currentStep, isInitialized]);
+
+  // 检查是否有保存的进度数据 - 现在使用 store 的方法
+  const checkHasSavedProgress = () => {
+    return hasSavedProgress();
   };
 
   // Fetch available emails
@@ -553,40 +619,44 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
   // Handle save progress button click
   const handleSaveProgress = async () => {
     try {
-      // 获取当前表单数据（不验证必填项）
-      const formValues = form.getFieldsValue();
-      console.log("🔍 保存进度 - 表单数据:", formValues);
-      console.log("🔍 保存进度 - profileSentence:", formValues.profileSentence);
-      console.log("🔍 保存进度 - taskDate:", formValues.taskDate);
-      console.log("🔍 保存进度 - taskTime:", formValues.taskTime);
-      console.log("🔍 保存进度 - userProfileLevel:", formValues.userProfileLevel);
+      // 🔑 由于现在有了 onValuesChange 实时同步，store 中的数据就是最新的
+      const latestFormData = useDashBoardStore.getState().formData;
+      console.log("🔍 保存进度 - Store 中的最新数据:", latestFormData);
+
+      // 🔑 为了确保数据最新，也获取一次当前表单的值并合并
+      const currentFormValues = form.getFieldsValue(true);
+      console.log("🔍 保存进度 - 当前表单值:", currentFormValues);
+
       // 处理日期和时间格式，将 dayjs 对象转换为字符串
       const processedFormValues = {
-        ...formValues,
+        ...currentFormValues,
         taskDate:
-          formValues.taskDate && dayjs.isDayjs(formValues.taskDate)
-            ? formValues.taskDate.format("YYYY-MM-DD")
+          currentFormValues.taskDate && dayjs.isDayjs(currentFormValues.taskDate)
+            ? currentFormValues.taskDate.format("YYYY-MM-DD")
             : undefined,
         taskTime:
-          formValues.taskTime && dayjs.isDayjs(formValues.taskTime)
-            ? formValues.taskTime.format("HH:mm")
+          currentFormValues.taskTime && dayjs.isDayjs(currentFormValues.taskTime)
+            ? currentFormValues.taskTime.format("HH:mm")
             : undefined,
       };
 
-      // 保存到store
-      updateFormData({
+      // 🔑 合并 store 数据和当前表单数据，确保获取最新的完整数据
+      const completeFormData = {
+        ...latestFormData,
         ...processedFormValues,
+      };
+
+      // 先更新到store
+      updateFormData({
+        ...completeFormData,
         commentTemplates,
         messageTemplates,
         currentStep,
       });
 
-      console.log("✅ 已保存到store:", {
-        ...processedFormValues,
-        commentTemplates,
-        messageTemplates,
-        currentStep,
-      });
+      // 🔑 手动保存进度到本地存储
+      saveProgress();
+
       message.success("进度已保存到本地");
     } catch (error) {
       console.error("❌ 保存进度失败:", error);
@@ -641,6 +711,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
           message.success(`成功创建自动化任务，任务ID: ${response.dag_run_id}`);
 
           // 提交成功后清空保存的进度数据
+          clearSavedProgress();
           resetForm();
 
           // Pass the response to the parent component
@@ -664,29 +735,56 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
     }
   };
 
+  // 🔑 添加表单值变化处理函数，实时同步到 store
+  const handleFormValuesChange = (changedValues: any, allValues: any) => {
+    console.log("🔍 表单值变化:", changedValues);
+    console.log("🔍 所有表单值:", allValues);
+
+    // 处理日期和时间格式
+    const processedValues = {
+      ...allValues,
+      taskDate:
+        allValues.taskDate && dayjs.isDayjs(allValues.taskDate)
+          ? allValues.taskDate.format("YYYY-MM-DD")
+          : allValues.taskDate,
+      taskTime:
+        allValues.taskTime && dayjs.isDayjs(allValues.taskTime)
+          ? allValues.taskTime.format("HH:mm")
+          : allValues.taskTime,
+    };
+
+    // 实时同步到 store
+    updateFormData(processedValues);
+  };
+
+  // 🔑 统一的 initialValues - 所有步骤都使用相同的完整数据
+  const getUnifiedInitialValues = () => ({
+    targetEmail:
+      formData.targetEmail || email || (availableEmails.length > 0 ? availableEmails[0] : ""),
+    sortBy: formData.sortBy || sortOptions[0]?.value || "",
+    timeRange: formData.timeRange || timeRanges[0]?.value || "",
+    noteCount: formData.noteCount || noteCounts[0]?.value || 10,
+    noteType: formData.noteType || noteTypes[0]?.value || "",
+    keyword: formData.keyword || "",
+    taskDate: parseDate(formData.taskDate),
+    taskTime: parseTime(formData.taskTime, formData.taskDate),
+    userProfileLevel: formData.userProfileLevel || [],
+    profileSentence: formData.profileSentence || "",
+  });
+
   // Render the current step content
   const renderStepContent = () => {
+    const unifiedInitialValues = getUnifiedInitialValues();
+
     switch (currentStep) {
-      // ... (rest of the code remains the same)
       case "采集任务":
         return (
           <div className="p-4">
             <Form
               form={form}
               layout="vertical"
-              initialValues={{
-                targetEmail:
-                  formData.targetEmail ||
-                  email ||
-                  (availableEmails.length > 0 ? availableEmails[0] : ""),
-                sortBy: formData.sortBy || sortOptions[0]?.value || "",
-                timeRange: formData.timeRange || timeRanges[0]?.value || "",
-                noteCount: formData.noteCount || noteCounts[0]?.value || 10,
-                noteType: formData.noteType || noteTypes[0]?.value || "",
-                keyword: formData.keyword || "",
-                taskDate: parseDate(formData.taskDate),
-                taskTime: parseTime(formData.taskTime, formData.taskDate),
-              }}
+              initialValues={unifiedInitialValues}
+              onValuesChange={handleFormValuesChange}
             >
               <div className="grid grid-cols-2 gap-4">
                 <Form.Item
@@ -909,10 +1007,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
             <Form
               form={form}
               layout="vertical"
-              initialValues={{
-                userProfileLevel: formData.userProfileLevel || [],
-                profileSentence: formData.profileSentence || "",
-              }}
+              initialValues={unifiedInitialValues}
+              onValuesChange={handleFormValuesChange}
             >
               <div className="space-y-6">
                 {/* 用户意向等级 */}
@@ -979,7 +1075,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
       case "回复模板":
         return (
           <div className="p-4">
-            <Form form={form} layout="vertical">
+            <Form
+              form={form}
+              layout="vertical"
+              initialValues={unifiedInitialValues}
+              onValuesChange={handleFormValuesChange}
+            >
               <div className="space-y-6">
                 {/* 评论区模版 */}
                 <div>
@@ -1239,7 +1340,93 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
       </div>
     );
   };
+  const addTaskTemplate = async () => {
+    const messageKey = "addTaskTemplate";
 
+    // 使用唯一 key 显示加载中消息
+    message.loading({
+      content: "正在保存任务模板...",
+      key: messageKey,
+    });
+
+    try {
+      //  由于现在有了 onValuesChange 实时同步，store 中的数据就是最新的
+      const latestFormData = useDashBoardStore.getState().formData;
+      console.log("🔍 Store 中的最新数据:", latestFormData);
+
+      // 为了确保数据最新，也获取一次当前表单的值并合并
+      const currentFormValues = form.getFieldsValue(true);
+      console.log("🔍 当前表单值:", currentFormValues);
+
+      // 处理日期和时间格式
+      const processedFormValues = {
+        ...currentFormValues,
+        taskDate:
+          currentFormValues.taskDate && dayjs.isDayjs(currentFormValues.taskDate)
+            ? currentFormValues.taskDate.format("YYYY-MM-DD")
+            : currentFormValues.taskDate,
+        taskTime:
+          currentFormValues.taskTime && dayjs.isDayjs(currentFormValues.taskTime)
+            ? currentFormValues.taskTime.format("HH:mm")
+            : currentFormValues.taskTime,
+      };
+
+      //  合并 store 数据和当前表单数据，确保获取最新的完整数据
+      const completeFormData = {
+        ...latestFormData,
+        ...processedFormValues,
+      };
+
+      // 构建任务模板内容（包含表单数据和模板数据）
+      const templateContent = {
+        ...completeFormData,
+        commentTemplates: commentTemplates,
+        messageTemplates: messageTemplates,
+        currentStep: currentStep,
+      };
+      console.log("🔍 完整的任务模板内容:", templateContent);
+      const templateIds = commentTemplates.map((template) => Number(template.id));
+      const content = {
+        userInfo: templateContent.targetEmail,
+        keyword: templateContent.keyword,
+        max_notes: templateContent.noteCount,
+        // max_comments: 15,
+        note_type: templateContent.noteType,
+        time_range: templateContent.timeRange,
+        // search_scope: templateContent.searchScope,
+        sort_by: templateContent.sortBy,
+        profile_sentence: templateContent.profileSentence,
+        template_ids: templateIds,
+        intent_type: templateContent.userProfileLevel,
+      };
+      console.log("🔍 上传参数:", content);
+      const response = await addTaskTemplateAPI(content);
+
+      if (response.code === 0) {
+        // 使用相同的 key 更新消息为成功状态
+        message.success({
+          content: "任务模板保存成功！",
+          key: messageKey,
+          duration: 2,
+        });
+      } else {
+        // 使用相同的 key 更新消息为错误状态
+        message.error({
+          content: response.message || "保存任务模板失败",
+          key: messageKey,
+          duration: 2,
+        });
+      }
+    } catch (error) {
+      console.error("保存任务模板失败:", error);
+      // 使用相同的 key 更新消息为错误状态
+      message.error({
+        content: "保存任务模板失败，请重试",
+        key: messageKey,
+        duration: 2,
+      });
+    }
+  };
   return (
     <Modal
       title="创建任务"
@@ -1256,7 +1443,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ visible, onClose, onF
         <div className="flex space-x-2">
           {currentStep === "回复模板" && (
             <Button
-              onClick={handleSaveProgress}
+              onClick={addTaskTemplate}
               className="border border-gray-300 rounded"
               style={{ backgroundColor: "white" }}
             >
