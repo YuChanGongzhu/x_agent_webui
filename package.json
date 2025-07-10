@@ -24,6 +24,7 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "firebase": "^10.10.0",
+    "rc-virtual-list": "^3.19.1",
     "react": "^19.0.0",
     "react-big-calendar": "^1.17.1",
     "react-dom": "^19.0.0",

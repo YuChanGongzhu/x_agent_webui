@@ -6,14 +6,15 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { Button, message, Image } from "antd";
+import VirtualList from "rc-virtual-list";
 import CreateTaskModal from "./CreateTaskModal";
 import { getDagRuns } from "../../api/airflow";
 import { useUser } from "../../context/UserContext";
 import stopIcon from "../../img/stop.svg";
 import refreshIcon from "../../img/refresh.svg";
+
 // Define the status types
 type TaskStatus = "running" | "success" | "failed" | "queued";
-
 // Define the task interface
 interface Task {
   dag_run_id: string;
@@ -233,14 +234,22 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       {/* Task List */}
       <div>
         {tasks.length > 0 ? (
-          tasks.map((task, index) => (
-            <TaskRow
-              key={task.dag_run_id}
-              task={task}
-              isHighlighted={index === 0}
-              onViewTask={onViewTask}
-            />
-          ))
+          <VirtualList
+            data={tasks}
+            height={840}
+            itemHeight={70}
+            itemKey={(task: Task) => task.dag_run_id}
+            style={{ paddingRight: "12px" }}
+          >
+            {(task: Task, index: number) => (
+              <TaskRow
+                key={task.dag_run_id}
+                task={task}
+                isHighlighted={index === 0}
+                onViewTask={onViewTask}
+              />
+            )}
+          </VirtualList>
         ) : (
           <div className="p-4 text-center text-gray-500">
             {loading ? "加载中..." : "暂无任务数据"}

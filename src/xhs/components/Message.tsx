@@ -14,6 +14,7 @@ import {
   message,
   Tag,
 } from "antd";
+import VirtualList from "rc-virtual-list";
 import BaseCollapse from "../../components/BaseComponents/BaseCollapse";
 import BaseList from "../../components/BaseComponents/BaseList";
 import BaseListUserItem from "../../components/BaseComponents/BaseListUserItem";
@@ -511,7 +512,117 @@ const TemplateMessage = () => {
             }}
           >
             {templates.length > 0 ? (
-              templates.map((template) => renderTemplateItem(template))
+              <VirtualList
+                data={templates}
+                height={370}
+                itemHeight={80}
+                itemKey="id"
+                style={{ paddingRight: "12px" }}
+              >
+                {(item: ReplyTemplate) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 0",
+                      borderBottom: "1px solid #f0f0f0",
+                      minHeight: "48px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                      <Checkbox
+                        checked={selectedTemplateIds.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTemplateIds([...selectedTemplateIds, item.id]);
+                          } else {
+                            setSelectedTemplateIds(
+                              selectedTemplateIds.filter((id) => id !== item.id)
+                            );
+                          }
+                        }}
+                        style={{ marginRight: "12px" }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            color: "#333",
+                            fontSize: "14px",
+                            lineHeight: "1.4",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {item.content}
+                        </div>
+                        {item.image_urls && (
+                          <div style={{ marginTop: "8px" }}>
+                            <img
+                              src={item.image_urls}
+                              alt="模板图片"
+                              style={{
+                                maxWidth: "80px",
+                                maxHeight: "60px",
+                                objectFit: "contain",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        marginLeft: "12px",
+                      }}
+                    >
+                      <Button
+                        type="text"
+                        icon={<EditOutlined />}
+                        size="small"
+                        style={{
+                          color: "#8389FC",
+                          padding: "4px",
+                          minWidth: "28px",
+                          height: "28px",
+                        }}
+                        onClick={() => {
+                          setEditingTemplate(item);
+                          setTemplateContent(item.content);
+
+                          // 如果模板有图片URL，加载图片
+                          if (item.image_urls) {
+                            loadImageFromCOS(item.image_urls);
+                          } else {
+                            // 清空之前可能存在的图片
+                            setImageUrl("");
+                            setImageFile(null);
+                          }
+
+                          setIsModalVisible(true);
+                        }}
+                      />
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        style={{
+                          color: "#ff4d4f",
+                          padding: "4px",
+                          minWidth: "28px",
+                          height: "28px",
+                        }}
+                        onClick={() => handleDeleteTemplate(item.id)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </VirtualList>
             ) : (
               <div
                 style={{
@@ -650,17 +761,17 @@ const TemplateMessage = () => {
 };
 
 const PrivateMessage: React.FC = () => {
-  const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<any[]>([]);
+  // ✅ 修复：正确的类型定义
+  const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<Record<string, any[]>>({});
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
-  // const [deviceMsgList, setDeviceMsgList] = useState<any[]>([]);
   const { email } = useUser();
-  // const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     fetchDeviceMsgList();
   }, [email]);
+
   const fetchDeviceMsgList = async () => {
     try {
-      // setLoading(true)
       const data = (await getXhsDevicesMsgList(email ? email : "")).data;
       console.log(data, "=====");
       const filterData = data.filter((device: any) => device.device_id);
@@ -672,50 +783,72 @@ const PrivateMessage: React.FC = () => {
         return acc;
       }, {});
       console.log(formatData, "=====");
-      // setDeviceMsgList(filterData);
+
       setActiveKeys(filterData.map((device: any) => device.device_id));
       setFormatDeviceMsgList(formatData);
-      // setLoading(false)
     } catch (err) {
-      // setLoading(false)
+      console.error("获取设备消息列表失败:", err);
     }
   };
+
+  // 获取设备列表
+  const deviceIds = Object.keys(formatDeviceMsgList);
+
   return (
     <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
-      {Object.keys(formatDeviceMsgList).length ? (
+      {deviceIds.length ? (
         <>
-          <BaseCollapse
-            activeKey={activeKeys}
-            onChange={(keys) => {
-              setActiveKeys(keys as string[]);
-            }}
-            style={{ borderRadius: "0px" }}
-            items={Object.entries(formatDeviceMsgList).map(([device_id, device]) => ({
-              style: {
-                display: "block",
-              },
-              key: device_id,
-              label: `设备：  ${device_id}`,
-              children:
-                device.length > 0 ? (
-                  <BaseList
-                    dataSource={device}
-                    renderItem={(item, idx) => {
-                      return <BaseListUserItem idx={idx + 1} item={item} />;
-                    }}
-                  />
-                ) : (
-                  <div>暂无未回复用户</div>
-                ),
-            }))}
-          />
+          <VirtualList
+            data={deviceIds}
+            height={300}
+            itemHeight={151}
+            itemKey={(deviceId: string) => deviceId}
+            style={{ paddingRight: "12px" }}
+          >
+            {(deviceId: string) => (
+              <div key={deviceId} style={{ padding: "8px 0" }}>
+                <BaseCollapse
+                  activeKey={activeKeys.includes(deviceId) ? [deviceId] : []}
+                  onChange={(keys) => {
+                    const newKeys = keys as string[];
+                    if (newKeys.includes(deviceId)) {
+                      // 展开
+                      if (!activeKeys.includes(deviceId)) {
+                        setActiveKeys([...activeKeys, deviceId]);
+                      }
+                    } else {
+                      // 收起
+                      setActiveKeys(activeKeys.filter((key) => key !== deviceId));
+                    }
+                  }}
+                  style={{ borderRadius: "0px" }}
+                  items={[
+                    {
+                      style: { display: "block" },
+                      key: deviceId,
+                      label: `设备：${deviceId}`,
+                      children:
+                        formatDeviceMsgList[deviceId].length > 0 ? (
+                          <BaseList
+                            dataSource={formatDeviceMsgList[deviceId]}
+                            renderItem={(item, idx) => {
+                              return <BaseListUserItem idx={idx + 1} item={item} />;
+                            }}
+                          />
+                        ) : (
+                          <div>暂无未回复用户</div>
+                        ),
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </VirtualList>
         </>
       ) : (
-        <>
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6 h-[50vh] flex flex-col items-center justify-center">
-            <h2 className="text-lg font-semibold mb-4">暂无未回复用户</h2>
-          </div>
-        </>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col items-center justify-center">
+          <h2 className="text-lg font-semibold mb-4">暂无未回复用户</h2>
+        </div>
       )}
     </div>
   );
