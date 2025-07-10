@@ -40,6 +40,7 @@ import { tencentCOSService } from "../../api/tencent_cos";
 import { useDashBoardStore, hasSavedProgress } from "../../store/dashBoardStore";
 import exclamation2 from "../../img/exclamation2.svg";
 import { set } from "date-fns";
+import VirtualList from "rc-virtual-list";
 // Define the steps of the task creation process
 type TaskCreationStep = "采集任务" | "分析要求" | "回复模板";
 
@@ -1060,100 +1061,109 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   </div>
 
                   <div className="space-y-3">
-                    {commentTemplates.map((template: TemplateItem, index: number) => (
-                      <div key={template.id} className="flex items-start">
-                        <div className="flex-grow">
-                          <Input.TextArea
-                            placeholder="请输入评论模板"
-                            autoSize
-                            className="flex-grow"
-                            value={template.content}
-                            onChange={(e) => {
-                              updateCommentTemplate(index, { content: e.target.value });
-                            }}
-                            disabled={!template.isEditing}
-                          />
-                          {/* Show image preview */}
-                          {template.imageUrl && (
-                            <div className="mt-2 relative">
-                              <Image
-                                src={template.imageUrl}
-                                alt="Template image"
-                                width={100}
-                                height={100}
-                                style={{ objectFit: "cover" }}
-                              />
-                              {/* Show delete button only in edit mode */}
-                              {template.isEditing && (
+                    <VirtualList
+                      data={commentTemplates}
+                      height={300}
+                      itemHeight={80}
+                      itemKey={(item) => item.id}
+                    >
+                      {(template: TemplateItem, index: number) => (
+                        <div
+                          key={template.id}
+                          className="flex items-start py-2 border-b border-gray-200"
+                        >
+                          <div className="flex-grow">
+                            <Input.TextArea
+                              placeholder="请输入评论模板"
+                              autoSize
+                              className="flex-grow"
+                              value={template.content}
+                              onChange={(e) => {
+                                updateCommentTemplate(index, { content: e.target.value });
+                              }}
+                              disabled={!template.isEditing}
+                            />
+                            {/* Show image preview */}
+                            {template.imageUrl && (
+                              <div className="mt-2 relative">
+                                <Image
+                                  src={template.imageUrl}
+                                  alt="Template image"
+                                  width={100}
+                                  height={100}
+                                  style={{ objectFit: "cover" }}
+                                />
+                                {/* Show delete button only in edit mode */}
+                                {template.isEditing && (
+                                  <Button
+                                    type="text"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    size="small"
+                                    className="absolute top-0 right-0 bg-white bg-opacity-75"
+                                    onClick={() => {
+                                      updateCommentTemplate(index, { imageUrl: undefined });
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-2 flex items-start">
+                            {template.isEditing && (
+                              <Upload
+                                listType="picture"
+                                maxCount={1}
+                                beforeUpload={(file) => {
+                                  // Store the file for later upload when saving
+                                  setCommentImageFile({
+                                    index,
+                                    file,
+                                  });
+
+                                  // Create a preview URL
+                                  updateCommentTemplate(index, {
+                                    imageUrl: URL.createObjectURL(file),
+                                  });
+
+                                  return false; // Prevent auto upload
+                                }}
+                                showUploadList={false} // Hide the default upload list
+                              >
                                 <Button
                                   type="text"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                  size="small"
-                                  className="absolute top-0 right-0 bg-white bg-opacity-75"
-                                  onClick={() => {
-                                    updateCommentTemplate(index, { imageUrl: undefined });
-                                  }}
-                                />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-2 flex items-start">
-                          {template.isEditing && (
-                            <Upload
-                              listType="picture"
-                              maxCount={1}
-                              beforeUpload={(file) => {
-                                // Store the file for later upload when saving
-                                setCommentImageFile({
-                                  index,
-                                  file,
-                                });
-
-                                // Create a preview URL
-                                updateCommentTemplate(index, {
-                                  imageUrl: URL.createObjectURL(file),
-                                });
-
-                                return false; // Prevent auto upload
-                              }}
-                              showUploadList={false} // Hide the default upload list
+                                  icon={<UploadOutlined />}
+                                  className="text-blue-500 hover:text-blue-700"
+                                  loading={commentUploadLoading}
+                                >
+                                  上传图片(可选)
+                                </Button>
+                              </Upload>
+                            )}
+                            <Button
+                              type="text"
+                              icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
+                              onClick={() => toggleCommentTemplateEditMode(template.id)}
+                              className={
+                                template.isEditing
+                                  ? "text-green-500 hover:text-green-700"
+                                  : "text-blue-500 hover:text-blue-700"
+                              }
+                              loading={template.isEditing && commentUploadLoading}
                             >
-                              <Button
-                                type="text"
-                                icon={<UploadOutlined />}
-                                className="text-blue-500 hover:text-blue-700"
-                                loading={commentUploadLoading}
-                              >
-                                上传图片(可选)
-                              </Button>
-                            </Upload>
-                          )}
-                          <Button
-                            type="text"
-                            icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
-                            onClick={() => toggleCommentTemplateEditMode(template.id)}
-                            className={
-                              template.isEditing
-                                ? "text-green-500 hover:text-green-700"
-                                : "text-blue-500 hover:text-blue-700"
-                            }
-                            loading={template.isEditing && commentUploadLoading}
-                          >
-                            {template.isEditing ? "保存" : "编辑"}
-                          </Button>
-                          <Button
-                            type="text"
-                            danger
-                            onClick={() => handleDeleteCommentTemplate(template.id)}
-                          >
-                            删除
-                          </Button>
+                              {template.isEditing ? "保存" : "编辑"}
+                            </Button>
+                            <Button
+                              type="text"
+                              danger
+                              onClick={() => handleDeleteCommentTemplate(template.id)}
+                            >
+                              删除
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-
+                      )}
+                    </VirtualList>
                     <div className="flex justify-center">
                       <Button
                         type="text"
@@ -1176,96 +1186,105 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   </div>
 
                   <div className="space-y-3">
-                    {messageTemplates.map((template: TemplateItem, index: number) => (
-                      <div key={template.id} className="flex items-start">
-                        <div className="flex-grow">
-                          <Input.TextArea
-                            placeholder="请输入私信模板"
-                            autoSize
-                            className="flex-grow"
-                            value={template.content}
-                            onChange={(e) => {
-                              updateMessageTemplate(index, { content: e.target.value });
-                            }}
-                            disabled={!template.isEditing}
-                          />
-                          {/* Show image preview */}
-                          {template.imageUrl && (
-                            <div className="mt-2 relative">
-                              <Image
-                                src={template.imageUrl}
-                                alt="Template image"
-                                width={100}
-                                height={100}
-                                style={{ objectFit: "cover" }}
-                              />
-                              {/* Show delete button only in edit mode */}
-                              {template.isEditing && (
+                    <VirtualList
+                      data={messageTemplates}
+                      height={150}
+                      itemHeight={80}
+                      itemKey={(item) => item.id}
+                    >
+                      {(template: TemplateItem, index: number) => (
+                        <div
+                          key={template.id}
+                          className="flex items-start py-2 border-b border-gray-200"
+                        >
+                          <div className="flex-grow">
+                            <Input.TextArea
+                              placeholder="请输入私信模板"
+                              autoSize
+                              className="flex-grow"
+                              value={template.content}
+                              onChange={(e) => {
+                                updateMessageTemplate(index, { content: e.target.value });
+                              }}
+                              disabled={!template.isEditing}
+                            />
+                            {/* Show image preview */}
+                            {template.imageUrl && (
+                              <div className="mt-2 relative">
+                                <Image
+                                  src={template.imageUrl}
+                                  alt="Template image"
+                                  width={100}
+                                  height={100}
+                                  style={{ objectFit: "cover" }}
+                                />
+                                {/* Show delete button only in edit mode */}
+                                {template.isEditing && (
+                                  <Button
+                                    type="text"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    size="small"
+                                    className="absolute top-0 right-0 bg-white bg-opacity-75"
+                                    onClick={() => {
+                                      updateMessageTemplate(index, { imageUrl: undefined });
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-2 flex items-start">
+                            {template.isEditing && (
+                              <Upload
+                                listType="picture"
+                                maxCount={1}
+                                beforeUpload={(file) => {
+                                  // Convert file to base64 for persistent storage
+                                  const reader = new FileReader();
+                                  reader.onload = (e) => {
+                                    const base64Url = e.target?.result as string;
+                                    updateMessageTemplate(index, {
+                                      imageUrl: base64Url,
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                  return false; // Prevent auto upload
+                                }}
+                                showUploadList={false} // Hide the default upload list
+                              >
                                 <Button
                                   type="text"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                  size="small"
-                                  className="absolute top-0 right-0 bg-white bg-opacity-75"
-                                  onClick={() => {
-                                    updateMessageTemplate(index, { imageUrl: undefined });
-                                  }}
-                                />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-2 flex items-start">
-                          {template.isEditing && (
-                            <Upload
-                              listType="picture"
-                              maxCount={1}
-                              beforeUpload={(file) => {
-                                // Convert file to base64 for persistent storage
-                                const reader = new FileReader();
-                                reader.onload = (e) => {
-                                  const base64Url = e.target?.result as string;
-                                  updateMessageTemplate(index, {
-                                    imageUrl: base64Url,
-                                  });
-                                };
-                                reader.readAsDataURL(file);
-                                return false; // Prevent auto upload
-                              }}
-                              showUploadList={false} // Hide the default upload list
+                                  icon={<UploadOutlined />}
+                                  className="text-blue-500 hover:text-blue-700"
+                                >
+                                  上传图片(可选)
+                                </Button>
+                              </Upload>
+                            )}
+                            <Button
+                              type="text"
+                              icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
+                              onClick={() => toggleMessageTemplateEditMode(template.id)}
+                              className={
+                                template.isEditing
+                                  ? "text-green-500 hover:text-green-700"
+                                  : "text-blue-500 hover:text-blue-700"
+                              }
                             >
-                              <Button
-                                type="text"
-                                icon={<UploadOutlined />}
-                                className="text-blue-500 hover:text-blue-700"
-                              >
-                                上传图片(可选)
-                              </Button>
-                            </Upload>
-                          )}
-                          <Button
-                            type="text"
-                            icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
-                            onClick={() => toggleMessageTemplateEditMode(template.id)}
-                            className={
-                              template.isEditing
-                                ? "text-green-500 hover:text-green-700"
-                                : "text-blue-500 hover:text-blue-700"
-                            }
-                          >
-                            {template.isEditing ? "保存" : "编辑"}
-                          </Button>
-                          <Button
-                            type="text"
-                            danger
-                            onClick={() => handleDeleteMessageTemplate(template.id)}
-                          >
-                            删除
-                          </Button>
+                              {template.isEditing ? "保存" : "编辑"}
+                            </Button>
+                            <Button
+                              type="text"
+                              danger
+                              onClick={() => handleDeleteMessageTemplate(template.id)}
+                            >
+                              删除
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-
+                      )}
+                    </VirtualList>
                     <div className="flex justify-center">
                       <Button
                         type="text"

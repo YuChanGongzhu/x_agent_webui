@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   CheckCircleIcon,
   ClockIcon,
   ChatBubbleLeftRightIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
-import { Button, message, Image } from "antd";
+import { Button, message, Image, Input } from "antd";
 import VirtualList from "rc-virtual-list";
 import CreateTaskModal from "./CreateTaskModal";
 import { getDagRuns } from "../../api/airflow";
 import { useUser } from "../../context/UserContext";
 import stopIcon from "../../img/stop.svg";
 import refreshIcon from "../../img/refresh.svg";
-
+const { Search } = Input;
 // Define the status types
 type TaskStatus = "running" | "success" | "failed" | "queued";
 // Define the task interface
@@ -44,6 +44,7 @@ interface TaskBoardProps {
   onAddTask?: () => void;
   onRefresh?: () => void;
   loading?: boolean;
+  searchTasks: (value: string) => void;
 }
 
 // Helper function to get status icon and color
@@ -159,9 +160,9 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   onAddTask,
   onRefresh,
   loading = false,
+  searchTasks,
 }) => {
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
-
   const handleOpenCreateModal = () => {
     setIsCreateModalVisible(true);
     onAddTask && onAddTask();
@@ -182,6 +183,12 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
       <div className="flex justify-between items-center p-4 border-b border-gray-100">
         <h2 className="text-lg font-medium text-gray-800">任务</h2>
         <div className="flex space-x-2">
+          <Search
+            placeholder="请输入任务关键字"
+            loading={false}
+            enterButton={true}
+            onSearch={(value) => searchTasks(value)}
+          />
           <Button
             style={{
               border: "1px solid #999999",
@@ -199,6 +206,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
           >
             任务模板
           </Button>
+
           <Button
             type="primary"
             onClick={handleOpenCreateModal}
@@ -273,7 +281,7 @@ const ExampleTaskBoard: React.FC = () => {
   const { isAdmin, email } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const originalTasksRef = useRef<Task[]>([]);
   // Parse conf object from task
   const parseTaskConf = (tasks: Task[]): Task[] => {
     return tasks.map((task) => {
@@ -338,6 +346,7 @@ const ExampleTaskBoard: React.FC = () => {
 
         // Parse conf for display
         const parsedTasks = parseTaskConf(allTasks);
+        originalTasksRef.current = parsedTasks;
         setTasks(parsedTasks);
       } else {
         setTasks([]);
@@ -371,7 +380,16 @@ const ExampleTaskBoard: React.FC = () => {
     console.log("Refreshing tasks");
     fetchTasks();
   };
-
+  const searchTask = useCallback((value: string) => {
+    if (value === "" || !value.trim()) {
+      setTasks(originalTasksRef.current);
+    } else {
+      const filteredTasks = originalTasksRef.current.filter((item) =>
+        item.keyword?.includes(value)
+      );
+      setTasks(filteredTasks);
+    }
+  }, []);
   return (
     <TaskBoard
       tasks={tasks}
@@ -379,6 +397,7 @@ const ExampleTaskBoard: React.FC = () => {
       onAddTask={handleAddTask}
       onRefresh={handleRefresh}
       loading={loading}
+      searchTasks={searchTask}
     />
   );
 };
