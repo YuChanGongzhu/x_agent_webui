@@ -250,6 +250,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
       {/* Create Task Modal */}
       <CreateTaskModal
+        onRefresh={onRefresh}
         visible={isCreateModalVisible}
         onClose={handleCloseCreateModal}
         onFinish={handleFinishCreateTask}
