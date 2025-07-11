@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -162,6 +163,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   loading = false,
   searchTasks,
 }) => {
+  const navigate = useNavigate();
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const handleOpenCreateModal = () => {
     setIsCreateModalVisible(true);
@@ -195,6 +197,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
               color: "#333333",
               backgroundColor: "transparent",
             }}
+            onClick={() => navigate("/xhs/modules")}
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.currentTarget.style.color = "#8389fc";
               e.currentTarget.style.borderColor = "#8389fc";
