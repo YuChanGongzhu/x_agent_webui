@@ -5,11 +5,14 @@ import { useUser } from '../../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import CreateTaskModal from './CreateTaskModal';
+import UpdateTaskModal from './UpdateTaskModal';
 
 const ModuleBoard: React.FC = () => {
   const [modules, setModules] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
+  const [currentTemplate, setCurrentTemplate] = useState<TaskTemplate | undefined>();
   const { email } = useUser();
   const navigate = useNavigate();
   
@@ -35,32 +38,21 @@ const ModuleBoard: React.FC = () => {
   };
   
   // 处理编辑模板
-  const handleEditTemplate = async (template: TaskTemplate) => {
-    try {
-      // 这里可以打开编辑模态框或直接调用API
-      // 目前简单实现，直接调用API更新一个示例字段
-      setLoading(true);
-      const content = {
-        userInfo: template.userInfo,
-        keyword: template.keyword,
-        max_notes: template.max_notes,
-        note_type: template.note_type,
-        time_range: template.time_range,
-        sort_by: template.sort_by,
-        profile_sentence: template.profile_sentence,
-        template_ids: template.template_ids,
-        intent_type: template.intent_type
-      };
-      
-      await updateTaskTemplateAPI(template.id, content);
-      message.success('模板更新成功');
-      fetchTaskTemplates(); // 刷新模板列表
-    } catch (error) {
-      console.error('更新模板失败:', error);
-      message.error('更新模板失败');
-    } finally {
-      setLoading(false);
-    }
+  const handleEditTemplate = (template: TaskTemplate) => {
+    setCurrentTemplate(template);
+    setIsUpdateModalVisible(true);
+  };
+  
+  // 关闭编辑模板对话框
+  const handleCloseUpdateModal = () => {
+    setIsUpdateModalVisible(false);
+    setCurrentTemplate(undefined);
+  };
+  
+  // 完成编辑模板
+  const handleFinishUpdateTask = (values: any) => {
+    console.log('Task updated:', values);
+    fetchTaskTemplates(); // 刷新模板列表
   };
   
   // 处理删除模板
@@ -181,6 +173,15 @@ const ModuleBoard: React.FC = () => {
         onClose={handleCloseCreateModal}
         onFinish={handleFinishCreateTask}
         onRefresh={fetchTaskTemplates}
+      />
+      
+      {/* Update Task Modal */}
+      <UpdateTaskModal
+        visible={isUpdateModalVisible}
+        onClose={handleCloseUpdateModal}
+        onFinish={handleFinishUpdateTask}
+        onRefresh={fetchTaskTemplates}
+        initialTemplate={currentTemplate}
       />
     </div>
   );
