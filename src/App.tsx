@@ -48,7 +48,7 @@ function App() {
                           <Route path="/xhs/generate" element={<GenerateMsg />} />
                           <Route path="/xhs/dashboard" element={<Dashboard />} />
                           {/* <Route path="/xhs/templates" element={<TemplateManager />} /> */}
-                          <Route path="/xhs/modules" element={<ModuleBoard />} />
+                          <Route path="/xhs/dashboard/modules" element={<ModuleBoard />} />
                           <Route path="/devices" element={<DeviceManagement />} />
                         </Routes>
                       </main>

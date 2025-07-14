@@ -12,6 +12,7 @@ const getReplyTemplatesUrl = process.env.REACT_APP_TECENT_GET_REPLY_TEMPLATES;
 const updateReplyTemplateUrl = process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLATE;
 const getXhsDevicesMsgListUrl = process.env.REACT_APP_TECENT_GET_XHS_DEVICES_MSG_LIST;
 const updateTaskTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_TASK_TEMPLATES;
+const getTaskTemplatesUrl = process.env.REACT_APP_TECENT_GET_TASK_TEMPLATES;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1050,5 +1051,116 @@ export const addTaskTemplateAPI = async (content: {}): Promise<any> => {
   } catch (error) {
     console.error("Error adding task template:", error);
     throw error;
+  }
+};
+
+export const updateTaskTemplateAPI = async (templateId: number, content: {}): Promise<any> => {
+  try {
+    console.log("updateTaskTemplateAPI内容", { templateId, content });
+
+    const baseUrl = updateTaskTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "update",
+        template_id: templateId,
+        ...content,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error("更新任务模版失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating task template:", error);
+    throw error;
+  }
+};
+
+export const deleteTaskTemplateAPI = async (templateId: number, email: string): Promise<any> => {
+  try {
+    console.log("deleteTaskTemplateAPI内容", { templateId, email });
+
+    const baseUrl = updateTaskTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "delete",
+        template_id: templateId,
+        userInfo: email,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error("删除任务模版失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting task template:", error);
+    throw error;
+  }
+};
+
+// 定义任务模板接口
+export interface TaskTemplate {
+  id: number;
+  userInfo: string; // 用户邮箱
+  keyword: string; // 关键词
+  max_notes: number; // 最大笔记数
+  max_comments: number; // 最大评论数
+  note_type: string; // 笔记类型
+  time_range: string; // 时间范围
+  search_scope: string; // 搜索范围
+  sort_by: string; // 排序方式
+  profile_sentence: string; // 简介语句
+  template_ids: number[]; // 模板 ID 列表
+  intent_type: string[]; // 意向类型列表
+  created_at: string; // 创建时间
+  updated_at: string; // 更新时间
+  desc: string | null; // 描述，用于显示模板名称
+}
+
+// 获取任务模板列表
+export const getTaskTemplates = async (email?: string): Promise<TaskTemplate[]> => {
+  try {
+    const baseUrl = getTaskTemplatesUrl || "";
+    
+    // 添加email参数到查询（如果提供）
+    const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("获取任务模板失败");
+    }
+    
+    const result = await response.json();
+    
+    // 处理返回的数据
+    if (result.data && result.data.records) {
+      // 返回格式为 { data: { total: number, records: TaskTemplate[] } }
+      const templates = result.data.records;
+      
+      // 处理每个模板，确保有显示名称
+      return templates.map((template: TaskTemplate) => {
+        // 如果模板没有desc，使用keyword作为显示名称
+        if (!template.desc) {
+          return {
+            ...template,
+            desc: template.keyword || `模版${template.id}`
+          };
+        }
+        return template;
+      });
+    }
+    
+    return [];
+  } catch (error) {
+    console.error("Error fetching task templates:", error);
+    return [];
   }
 };

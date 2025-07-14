@@ -192,20 +192,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             onSearch={(value) => searchTasks(value)}
           />
           <Button
-            style={{
-              border: "1px solid #999999",
-              color: "#333333",
-              backgroundColor: "transparent",
-            }}
-            onClick={() => navigate("/xhs/modules")}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.color = "#8389fc";
-              e.currentTarget.style.borderColor = "#8389fc";
-            }}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.color = "#333333";
-              e.currentTarget.style.borderColor = "#999999";
-            }}
+            onClick={() => navigate("/xhs/dashboard/modules")}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md flex items-center"
           >
             任务模板
           </Button>
