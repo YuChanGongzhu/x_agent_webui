@@ -7,6 +7,7 @@ interface TemplateItem {
   imageUrl?: string;
   isEditing?: boolean;
   templateId?: number;
+  checked?: boolean; // 新增勾选状态字段
 }
 
 // 任务创建表单数据接口
@@ -86,13 +87,13 @@ const defaultFormData: TaskFormData = {
   userProfileLevel: [],
   profileSentence: "",
   commentTemplates: [
-    { id: "1", content: "", isEditing: true },
-    { id: "2", content: "", isEditing: false },
-    { id: "3", content: "", isEditing: false },
+    { id: "1", content: "", isEditing: true, checked: true },
+    { id: "2", content: "", isEditing: false, checked: true },
+    { id: "3", content: "", isEditing: false, checked: true },
   ],
   messageTemplates: [
-    { id: "1", content: "", isEditing: true },
-    { id: "2", content: "", isEditing: false },
+    { id: "1", content: "", isEditing: true, checked: true },
+    { id: "2", content: "", isEditing: false, checked: true },
   ],
 };
 
@@ -183,49 +184,6 @@ export const useDashBoardStore = create<DashBoardState>()(
         );
       },
 
-      // 更新私信模板
-      updateMessageTemplate: (index, template) => {
-        set(
-          (state) => {
-            const newTemplates = [...state.formData.messageTemplates];
-            newTemplates[index] = { ...newTemplates[index], ...template };
-            return {
-              formData: { ...state.formData, messageTemplates: newTemplates },
-            };
-          },
-          false,
-          "updateMessageTemplate"
-        );
-      },
-
-      // 添加私信模板
-      addMessageTemplate: (template) => {
-        set(
-          (state) => ({
-            formData: {
-              ...state.formData,
-              messageTemplates: [...state.formData.messageTemplates, template],
-            },
-          }),
-          false,
-          "addMessageTemplate"
-        );
-      },
-
-      // 删除私信模板
-      deleteMessageTemplate: (id) => {
-        set(
-          (state) => ({
-            formData: {
-              ...state.formData,
-              messageTemplates: state.formData.messageTemplates.filter((t) => t.id !== id),
-            },
-          }),
-          false,
-          "deleteMessageTemplate"
-        );
-      },
-
       // 重置表单
       resetForm: () => {
         set(
@@ -250,6 +208,18 @@ export const useDashBoardStore = create<DashBoardState>()(
 
           localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
           console.log("✅ 进度已保存到本地存储", progressData);
+
+          // 额外记录模板勾选状态
+          if (state.formData.commentTemplates && state.formData.commentTemplates.length > 0) {
+            console.log(
+              "✅ 保存的模板勾选状态:",
+              state.formData.commentTemplates.map((t) => ({
+                id: t.id,
+                templateId: t.templateId,
+                checked: t.checked,
+              }))
+            );
+          }
         } catch (error) {
           console.error("❌ 保存进度失败:", error);
         }
@@ -272,6 +242,22 @@ export const useDashBoardStore = create<DashBoardState>()(
             );
 
             console.log("✅ 进度已从本地存储加载", progressData);
+
+            // 额外记录加载的模板勾选状态
+            if (
+              progressData.formData?.commentTemplates &&
+              progressData.formData.commentTemplates.length > 0
+            ) {
+              console.log(
+                "✅ 加载的模板勾选状态:",
+                progressData.formData.commentTemplates.map((t: any) => ({
+                  id: t.id,
+                  templateId: t.templateId,
+                  checked: t.checked,
+                }))
+              );
+            }
+
             return true;
           }
           return false;
@@ -296,20 +282,6 @@ export const useDashBoardStore = create<DashBoardState>()(
     }
   )
 );
-
-// 选择器函数
-export const dashBoardSelectors = {
-  currentStep: (state: DashBoardState) => state.currentStep,
-  formData: (state: DashBoardState) => state.formData,
-  commentTemplates: (state: DashBoardState) => state.formData.commentTemplates,
-  messageTemplates: (state: DashBoardState) => state.formData.messageTemplates,
-  keyword: (state: DashBoardState) => state.formData.keyword,
-  targetEmail: (state: DashBoardState) => state.formData.targetEmail,
-  profileSentence: (state: DashBoardState) => state.formData.profileSentence,
-  userProfileLevel: (state: DashBoardState) => state.formData.userProfileLevel,
-  taskDate: (state: DashBoardState) => state.formData.taskDate,
-  taskTime: (state: DashBoardState) => state.formData.taskTime,
-};
 
 // 🔑 检查是否有已保存的进度
 export const hasSavedProgress = (): boolean => {
