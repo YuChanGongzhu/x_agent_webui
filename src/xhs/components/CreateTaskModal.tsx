@@ -59,7 +59,6 @@ interface TemplateItem {
   imageUrl?: string;
   isEditing?: boolean;
   templateId?: number; // Backend template ID
-  checked?: boolean;
 }
 
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
@@ -92,6 +91,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
   // 从store获取数据（仅用于初始化和保存）
   const commentTemplates = formData.commentTemplates;
+  const messageTemplates = formData.messageTemplates;
 
   // 本地state（不需要持久化的）
   const [availableEmails, setAvailableEmails] = useState<string[]>([]);
@@ -326,24 +326,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   // Fetch comment templates from backend when modal is opened
   useEffect(() => {
     if (visible && email && currentStep === "回复模板") {
-      // 检查是否已经有模板数据
-      const hasTemplates = commentTemplates && commentTemplates.length > 0;
-      const hasValidTemplates = hasTemplates && commentTemplates.some((t) => t.templateId);
-
-      // 只有在没有本地保存的进度时才拉取模板
-      if (!hasSavedProgress()) {
-        fetchCommentTemplates();
-      } else if (!hasValidTemplates) {
-        // 如果有保存的进度但没有有效的模板数据，也需要拉取
-        fetchCommentTemplates();
-      } else {
-        console.log(
-          "✅ 使用保存的模板数据，勾选状态:",
-          commentTemplates.map((t) => ({ id: t.id, checked: t.checked }))
-        );
-      }
+      fetchCommentTemplates();
     }
-  }, [visible, email, currentStep, commentTemplates]);
+  }, [visible, email, currentStep]);
 
   // Fetch comment templates from backend
   const fetchCommentTemplates = async () => {
@@ -360,29 +345,17 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       });
 
       if (response.data?.records && response.data.records.length > 0) {
-        // 获取当前已保存的模板状态（如果有的话）
-        const currentTemplates = useDashBoardStore.getState().formData.commentTemplates;
-        const savedTemplateMap = new Map(currentTemplates.map((t) => [t.templateId, t]));
-
-        // Map backend templates to our format，保留已保存的勾选状态
-        const templates = response.data.records.map((template: ReplyTemplate) => {
-          const savedTemplate = savedTemplateMap.get(template.id);
-          return {
-            id: template.id.toString(),
-            content: template.content || "",
-            imageUrl: template.image_urls || undefined,
-            isEditing: false,
-            templateId: template.id,
-            checked: savedTemplate ? savedTemplate.checked : true, // 如果有保存的状态就使用，否则默认全选
-          };
-        });
+        // Map backend templates to our format
+        const templates = response.data.records.map((template: ReplyTemplate) => ({
+          id: template.id.toString(),
+          content: template.content || "",
+          imageUrl: template.image_urls || undefined,
+          isEditing: false,
+          templateId: template.id,
+        }));
 
         // Update our template state
         updateFormData({ commentTemplates: templates });
-        console.log(
-          "✅ 获取模板完成，勾选状态:",
-          templates.map((t) => ({ id: t.id, checked: t.checked }))
-        );
       }
     } catch (error) {
       message.error("获取模板失败");
@@ -403,6 +376,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       if (templateIndex !== -1) {
         updateCommentTemplate(templateIndex, { isEditing: !template?.isEditing });
       }
+    }
+  };
+
+  // Toggle message template edit mode
+  const toggleMessageTemplateEditMode = (id: string) => {
+    const templateIndex = messageTemplates.findIndex((t: TemplateItem) => t.id === id);
+    if (templateIndex !== -1) {
+      const template = messageTemplates[templateIndex];
+      updateMessageTemplate(templateIndex, { isEditing: !template.isEditing });
     }
   };
 
@@ -633,13 +615,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         ...processedFormValues,
       };
 
-      // 🔑 确保获取最新的模板勾选状态
-      const currentTemplates = useDashBoardStore.getState().formData.commentTemplates;
-
       // 先更新到store
       updateFormData({
         ...completeFormData,
-        commentTemplates: currentTemplates, // 使用最新的模板状态
+        commentTemplates,
+        messageTemplates,
         currentStep,
       });
 
@@ -647,10 +627,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       saveProgress();
 
       message.success("进度已保存到本地");
-      console.log(
-        "✅ 已保存勾选状态:",
-        currentTemplates.map((t) => ({ id: t.id, checked: t.checked }))
-      );
     } catch (error) {
       message.error("保存进度失败");
     }
@@ -672,10 +648,12 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       // Create timestamp for unique DAG run ID
       const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
       const dag_run_id = `xhs_auto_progress_${timestamp}`;
-      //只获取被勾选的id
+
+      // Extract template IDs from comment templates that have backend IDs
       const templateIds = commentTemplates
-        .filter((template: TemplateItem) => template.checked && template.templateId)
+        .filter((template: TemplateItem) => template.templateId)
         .map((template: TemplateItem) => template.templateId as number);
+
       // Prepare configuration object for Airflow DAG
       const conf = {
         email: formValues.targetEmail,
@@ -765,15 +743,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     userProfileLevel: formData.userProfileLevel || [],
     profileSentence: formData.profileSentence || "",
   });
-  //勾选模版
-  // 更新勾选状态
-  const handleTemplateCheck = (id: string, checked: boolean) => {
-    const templateIndex = commentTemplates.findIndex((t: TemplateItem) => t.id === id);
-    if (templateIndex !== -1) {
-      updateCommentTemplate(templateIndex, { checked });
-      console.log(`✅ 模板 ${id} 勾选状态更新为: ${checked}`);
-    }
-  };
 
   // Render the current step content
   const renderStepContent = () => {
@@ -1089,17 +1058,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-base font-medium">评论区模版</h3>
-                    <Button
-                      onClick={() => {
-                        const allChecked = commentTemplates.every((t) => t.checked);
-                        commentTemplates.forEach((t) => {
-                          const index = commentTemplates.findIndex((item) => item.id === t.id);
-                          updateCommentTemplate(index, { checked: !allChecked });
-                        });
-                      }}
-                    >
-                      {commentTemplates.every((t) => t.checked) ? "取消全选" : "全选"}
-                    </Button>
                   </div>
 
                   <div className="space-y-3">
@@ -1114,10 +1072,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                           key={template.id}
                           className="flex items-start py-2 border-b border-gray-200"
                         >
-                          <Checkbox
-                            checked={template.checked || false}
-                            onChange={(e) => handleTemplateCheck(template.id, e.target.checked)}
-                          />
                           <div className="flex-grow">
                             <Input.TextArea
                               placeholder="请输入评论模板"
@@ -1216,12 +1170,128 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                         icon={<PlusOutlined />}
                         onClick={() => {
                           const newId = Date.now().toString(); // 使用时间戳作为唯一ID
-                          addCommentTemplate({
-                            id: newId,
-                            content: "",
-                            isEditing: true,
-                            checked: false,
-                          });
+                          addCommentTemplate({ id: newId, content: "", isEditing: true });
+                        }}
+                      >
+                        添加模板
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 私信回复模版 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-base font-medium">私信回复模版</h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    <VirtualList
+                      data={messageTemplates}
+                      height={150}
+                      itemHeight={80}
+                      itemKey={(item) => item.id}
+                    >
+                      {(template: TemplateItem, index: number) => (
+                        <div
+                          key={template.id}
+                          className="flex items-start py-2 border-b border-gray-200"
+                        >
+                          <div className="flex-grow">
+                            <Input.TextArea
+                              placeholder="请输入私信模板"
+                              autoSize
+                              className="flex-grow"
+                              value={template.content}
+                              onChange={(e) => {
+                                updateMessageTemplate(index, { content: e.target.value });
+                              }}
+                              disabled={!template.isEditing}
+                            />
+                            {/* Show image preview */}
+                            {template.imageUrl && (
+                              <div className="mt-2 relative">
+                                <Image
+                                  src={template.imageUrl}
+                                  alt="Template image"
+                                  width={100}
+                                  height={100}
+                                  style={{ objectFit: "cover" }}
+                                />
+                                {/* Show delete button only in edit mode */}
+                                {template.isEditing && (
+                                  <Button
+                                    type="text"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    size="small"
+                                    className="absolute top-0 right-0 bg-white bg-opacity-75"
+                                    onClick={() => {
+                                      updateMessageTemplate(index, { imageUrl: undefined });
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-2 flex items-start">
+                            {template.isEditing && (
+                              <Upload
+                                listType="picture"
+                                maxCount={1}
+                                beforeUpload={(file) => {
+                                  // Convert file to base64 for persistent storage
+                                  const reader = new FileReader();
+                                  reader.onload = (e) => {
+                                    const base64Url = e.target?.result as string;
+                                    updateMessageTemplate(index, {
+                                      imageUrl: base64Url,
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                  return false; // Prevent auto upload
+                                }}
+                                showUploadList={false} // Hide the default upload list
+                              >
+                                <Button
+                                  type="text"
+                                  icon={<UploadOutlined />}
+                                  className="text-blue-500 hover:text-blue-700"
+                                >
+                                  上传图片(可选)
+                                </Button>
+                              </Upload>
+                            )}
+                            <Button
+                              type="text"
+                              icon={template.isEditing ? <SaveOutlined /> : <EditOutlined />}
+                              onClick={() => toggleMessageTemplateEditMode(template.id)}
+                              className={
+                                template.isEditing
+                                  ? "text-green-500 hover:text-green-700"
+                                  : "text-blue-500 hover:text-blue-700"
+                              }
+                            >
+                              {template.isEditing ? "保存" : "编辑"}
+                            </Button>
+                            <Button
+                              type="text"
+                              danger
+                              onClick={() => handleDeleteMessageTemplate(template.id)}
+                            >
+                              删除
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </VirtualList>
+                    <div className="flex justify-center">
+                      <Button
+                        type="text"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                          const newId = (messageTemplates.length + 1).toString();
+                          addMessageTemplate({ id: newId, content: "", isEditing: true });
                         }}
                       >
                         添加模板
@@ -1260,47 +1330,81 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       </div>
     );
   };
-
   const addTaskTemplate = async () => {
     const messageKey = "addTaskTemplate";
+
+    // 使用唯一 key 显示加载中消息
     message.loading({
       content: "正在保存任务模板...",
       key: messageKey,
     });
 
     try {
-      // 只获取被勾选的模板ID
-      const selectedTemplates = commentTemplates.filter(
-        (template) => template.checked && template.templateId
-      );
+      //  由于现在有了 onValuesChange 实时同步，store 中的数据就是最新的
+      const latestFormData = useDashBoardStore.getState().formData;
 
-      const templateIds = selectedTemplates.map((template) => template.templateId as number);
-      const content = {
-        userInfo: formData.targetEmail,
-        keyword: formData.keyword,
-        max_notes: formData.noteCount,
-        note_type: formData.noteType,
-        time_range: formData.timeRange,
-        sort_by: formData.sortBy,
-        profile_sentence: formData.profileSentence,
-        template_ids: templateIds, // 只包含被勾选的模板ID
-        intent_type: formData.userProfileLevel,
+      // 为了确保数据最新，也获取一次当前表单的值并合并
+      const currentFormValues = form.getFieldsValue(true);
+
+      // 处理日期和时间格式
+      const processedFormValues = {
+        ...currentFormValues,
+        taskDate:
+          currentFormValues.taskDate && dayjs.isDayjs(currentFormValues.taskDate)
+            ? currentFormValues.taskDate.format("YYYY-MM-DD")
+            : currentFormValues.taskDate,
+        taskTime:
+          currentFormValues.taskTime && dayjs.isDayjs(currentFormValues.taskTime)
+            ? currentFormValues.taskTime.format("HH:mm")
+            : currentFormValues.taskTime,
       };
 
+      //  合并 store 数据和当前表单数据，确保获取最新的完整数据
+      const completeFormData = {
+        ...latestFormData,
+        ...processedFormValues,
+      };
+
+      // 构建任务模板内容（包含表单数据和模板数据）
+      const templateContent = {
+        ...completeFormData,
+        commentTemplates: commentTemplates,
+        messageTemplates: messageTemplates,
+        currentStep: currentStep,
+      };
+      console.log("🔍 完整的任务模板内容:", templateContent);
+      const templateIds = commentTemplates.map((template) => Number(template.id));
+      const content = {
+        userInfo: templateContent.targetEmail,
+        keyword: templateContent.keyword,
+        max_notes: templateContent.noteCount,
+        // max_comments: 15,
+        note_type: templateContent.noteType,
+        time_range: templateContent.timeRange,
+        // search_scope: templateContent.searchScope,
+        sort_by: templateContent.sortBy,
+        profile_sentence: templateContent.profileSentence,
+        template_ids: templateIds,
+        intent_type: templateContent.userProfileLevel,
+      };
+      console.log("🔍 上传参数:", content);
       const response = await addTaskTemplateAPI(content);
 
       if (response.code === 0) {
+        // 使用相同的 key 更新消息为成功状态
         message.success({
           content: "任务模板保存成功！",
           key: messageKey,
           duration: 2,
         });
+
         setTimeout(() => {
           onClose();
           clearSavedProgress();
           resetForm();
         }, 1000);
       } else {
+        // 使用相同的 key 更新消息为错误状态
         message.error({
           content: response.message || "保存任务模板失败",
           key: messageKey,
@@ -1308,6 +1412,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         });
       }
     } catch (error) {
+      // 使用相同的 key 更新消息为错误状态
       message.error({
         content: "保存任务模板失败，请重试",
         key: messageKey,
