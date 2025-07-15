@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -162,6 +163,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   loading = false,
   searchTasks,
 }) => {
+  const navigate = useNavigate();
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const handleOpenCreateModal = () => {
     setIsCreateModalVisible(true);
@@ -190,19 +192,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
             onSearch={(value) => searchTasks(value)}
           />
           <Button
-            style={{
-              border: "1px solid #999999",
-              color: "#333333",
-              backgroundColor: "transparent",
-            }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.color = "#8389fc";
-              e.currentTarget.style.borderColor = "#8389fc";
-            }}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.color = "#333333";
-              e.currentTarget.style.borderColor = "#999999";
-            }}
+            onClick={() => navigate("/xhs/dashboard/modules")}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md flex items-center"
           >
             任务模板
           </Button>
