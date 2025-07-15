@@ -167,7 +167,8 @@ const DataAnalyze: React.FC = () => {
 
       // First filter all customers by email
       const response = await getIntentCustomersApi({
-        email: !isAdmin && email ? email : undefined
+        email: !isAdmin && email ? email : undefined,
+        keyword: selectedKeyword !== '全部' ? selectedKeyword : undefined
       });
 
       console.log(`Fetching customer intents for ${!isAdmin && email ? `email: ${email}` : 'admin'}`);
