@@ -1117,6 +1117,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                           <Checkbox
                             checked={template.checked || false}
                             onChange={(e) => handleTemplateCheck(template.id, e.target.checked)}
+                            style={{ marginRight: "10px" }}
                           />
                           <div className="flex-grow">
                             <Input.TextArea

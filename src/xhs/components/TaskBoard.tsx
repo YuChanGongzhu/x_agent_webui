@@ -273,6 +273,7 @@ const ExampleTaskBoard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const originalTasksRef = useRef<Task[]>([]);
+  const navigate = useNavigate();
   // Parse conf object from task
   const parseTaskConf = (tasks: Task[]): Task[] => {
     return tasks.map((task) => {
@@ -360,7 +361,7 @@ const ExampleTaskBoard: React.FC = () => {
   }, [email, isAdmin]);
 
   const handleViewTask = (taskId: string) => {
-    console.log(`Viewing task ${taskId}`);
+    navigate(`/xhs/dashboard/taskview/${taskId}`);
   };
 
   const handleAddTask = () => {
