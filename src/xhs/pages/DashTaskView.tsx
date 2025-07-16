@@ -20,6 +20,9 @@ import {
   Input,
   Popconfirm,
   TableProps,
+  Form,
+  Modal,
+  Upload,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -31,6 +34,7 @@ import {
   DeleteOutlined,
   CheckOutlined,
   CloseOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import refresh from "../../img/refresh.svg";
 
@@ -39,9 +43,16 @@ import {
   getIntentCustomersApi,
   getXhsNotesByKeywordApi,
   getXhsCommentsByKeywordApi,
+  ReplyTemplate,
+  updateReplyTemplateApi,
+  createReplyTemplateApi,
+  deleteReplyTemplateApi,
+  getReplyTemplatesApi,
 } from "../../api/mysql";
 import { triggerDagRun, getDagRuns } from "../../api/airflow";
 import { exportFilterResults, ExportData } from "../../utils/excelExport";
+import VirtualList from "rc-virtual-list";
+import { tencentCOSService } from "../../api/tencent_cos";
 type TableRowSelection<T extends object = object> = TableProps<T>["rowSelection"];
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -147,10 +158,6 @@ interface FilterResult {
   reachContent: string;
 }
 
-interface ReplyTemplate {
-  key: string;
-  content: string;
-}
 interface AnalysisTask {
   dag_run_id: string;
   state: string;
@@ -158,6 +165,7 @@ interface AnalysisTask {
   end_date: string;
   conf: string;
 }
+
 const DashTaskVeiw = () => {
   const { isAdmin, email } = useUserStore();
   const [searchParams] = useSearchParams();
@@ -179,6 +187,7 @@ const DashTaskVeiw = () => {
   // 分页相关状态
   const [currentFilterPage, setCurrentFilterPage] = useState(1);
   const [filterPageSize] = useState(5); // 每页显示5条数据
+  const [refreshLoading, setRefreshLoading] = useState(false);
 
   // 存储评论数据
   const [commentsData, setCommentsData] = useState<any[]>([]);
@@ -195,7 +204,6 @@ const DashTaskVeiw = () => {
     if (taskKeyword) {
       const initData = async () => {
         await fetchTaskDetail(taskKeyword); // 先获取任务详情并存储评论数据
-        fetchReplyTemplates();
       };
       initData();
     }
@@ -459,25 +467,6 @@ const DashTaskVeiw = () => {
     }
   };
 
-  const fetchReplyTemplates = () => {
-    // 模拟回复模版数据
-    const mockTemplates: ReplyTemplate[] = [
-      {
-        key: "1",
-        content: "Vel cras auctor at tortor imperdiet amet id sed rhoncus.",
-      },
-      {
-        key: "2",
-        content: "Quam aliquam odio ullamcorper ornare eleifend ipsum",
-      },
-      {
-        key: "3",
-        content: "Mauris quam tristique et parturient sapien.",
-      },
-    ];
-    setReplyTemplates(mockTemplates);
-  };
-
   // 筛选处理函数
   const handleCustomerLevelFilter = (value: string | undefined) => {
     if (!value) {
@@ -499,15 +488,22 @@ const DashTaskVeiw = () => {
 
   const handleRefresh = async () => {
     if (taskKeyword) {
-      // 如果有分析任务，先检查分析状态
-      if (analysisTask) {
-        await checkAnalysisStatus();
-      } else {
-        // 如果没有分析任务，重新获取任务详情
-        await fetchTaskDetail(taskKeyword);
+      setRefreshLoading(true);
+      try {
+        // 如果有分析任务，先检查分析状态
+        if (analysisTask) {
+          await checkAnalysisStatus();
+        } else {
+          // 如果没有分析任务，重新获取任务详情
+          await fetchTaskDetail(taskKeyword);
+        }
+        // fetchFilterResults会通过useEffect自动触发
+      } catch (error) {
+        console.error("刷新失败:", error);
+        message.error("刷新失败，请稍后重试");
+      } finally {
+        setRefreshLoading(false);
       }
-      fetchReplyTemplates();
-      // fetchFilterResults会通过useEffect自动触发
     }
   };
 
@@ -543,42 +539,6 @@ const DashTaskVeiw = () => {
 
   const handleStartTask = () => {
     message.success("任务开始/重做功能开发中...");
-  };
-
-  const handleEditTemplate = (key: string) => {
-    const template = replyTemplates.find((t) => t.key === key);
-    if (template) {
-      setEditingTemplateKey(key);
-      setTempTemplateContent(template.content);
-      console.log("编辑模版", key);
-    }
-  };
-
-  const handleSaveTemplate = (key: string) => {
-    setReplyTemplates((templates) =>
-      templates.map((t) => (t.key === key ? { ...t, content: tempTemplateContent } : t))
-    );
-    setEditingTemplateKey(null);
-    setTempTemplateContent("");
-    message.success("保存成功");
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTemplateKey(null);
-    setTempTemplateContent("");
-  };
-
-  const handleDeleteTemplate = (key: string) => {
-    setReplyTemplates(replyTemplates.filter((template) => template.key !== key));
-    message.success("删除成功");
-  };
-
-  const handleAddTemplate = () => {
-    const newTemplate: ReplyTemplate = {
-      key: Date.now().toString(),
-      content: "新增模版内容",
-    };
-    setReplyTemplates([...replyTemplates, newTemplate]);
   };
 
   // 响应式处理函数
@@ -705,84 +665,6 @@ const DashTaskVeiw = () => {
     },
   ];
 
-  // 回复模版表格列定义
-  const templateColumns = [
-    {
-      title: "私信内容",
-      dataIndex: "content",
-      key: "content",
-      render: (text: string, record: ReplyTemplate) => {
-        const isEditing = editingTemplateKey === record.key;
-        return (
-          <TextArea
-            value={isEditing ? tempTemplateContent : text}
-            onChange={(e) => {
-              if (isEditing) {
-                setTempTemplateContent(e.target.value);
-              }
-            }}
-            autoSize={{ minRows: 2, maxRows: 6 }}
-            readOnly={!isEditing}
-            style={{
-              border: isEditing ? "1px solid #1890ff" : "1px solid #d9d9d9",
-              backgroundColor: isEditing ? "#f6ffed" : "#fafafa",
-            }}
-          />
-        );
-      },
-    },
-    {
-      title: "操作",
-      key: "action",
-      width: 150,
-      render: (_: any, record: ReplyTemplate) => {
-        const isEditing = editingTemplateKey === record.key;
-        return (
-          <Space>
-            {isEditing ? (
-              <>
-                <Button
-                  type="link"
-                  icon={<CheckOutlined />}
-                  onClick={() => handleSaveTemplate(record.key)}
-                  style={{ color: "#52c41a" }}
-                >
-                  保存
-                </Button>
-                <Button
-                  type="link"
-                  icon={<CloseOutlined />}
-                  onClick={handleCancelEdit}
-                  style={{ color: "#ff4d4f" }}
-                >
-                  取消
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="link"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEditTemplate(record.key)}
-                >
-                  编辑
-                </Button>
-                <Popconfirm
-                  title="确定要删除这个模版吗？"
-                  onConfirm={() => handleDeleteTemplate(record.key)}
-                >
-                  <Button type="link" danger icon={<DeleteOutlined />}>
-                    删除
-                  </Button>
-                </Popconfirm>
-              </>
-            )}
-          </Space>
-        );
-      },
-    },
-  ];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -816,10 +698,6 @@ const DashTaskVeiw = () => {
     onChange: onSelectedFilterChange,
   };
 
-  const templateRowSelection: TableRowSelection<ReplyTemplate> = {
-    selectedRowKeys: selectedTemplateRowKeys,
-    onChange: onSelectedTemplateChange,
-  };
   return (
     <div
       style={{
@@ -846,9 +724,7 @@ const DashTaskVeiw = () => {
           paddingBottom: "16px",
         }}
       />
-
       {/* 标题和统计信息 */}
-
       <div style={getResponsiveStyles().headerContainer}>
         {/* 标题区域 */}
         <div style={styles.titleSection}>
@@ -879,7 +755,6 @@ const DashTaskVeiw = () => {
           </div>
         </div>
       </div>
-
       {/* 筛选结果 */}
       <Card
         title="筛选结果"
@@ -888,7 +763,11 @@ const DashTaskVeiw = () => {
             <Button icon={<ExportOutlined />} onClick={handleExportData}>
               导出数据
             </Button>
-            <Button icon={<img src={refresh} alt="refresh" />} onClick={handleRefresh} />
+            <Button
+              icon={<img src={refresh} alt="refresh" />}
+              onClick={handleRefresh}
+              loading={refreshLoading}
+            />
           </div>
         }
         className="m-4"
@@ -910,29 +789,733 @@ const DashTaskVeiw = () => {
           rowSelection={filterRowSelection}
         />
       </Card>
-
+      <TemplateMessage />
       {/* 回复模版 */}
-      <Card
-        title="回复模版"
-        extra={
-          <div style={{ display: "flex", gap: "10px" }}>
-            <Button onClick={handleAddTemplate}>添加模版</Button>
-            <Button icon={<img src={refresh} alt="refresh" />} onClick={handleRefresh} />
-          </div>
-        }
-        className="mt-4 ml-4 mr-4"
-      >
-        <Table
-          columns={templateColumns}
-          dataSource={replyTemplates}
-          pagination={false}
-          size="small"
-          showHeader={false}
-          rowSelection={templateRowSelection}
-        />
-      </Card>
     </div>
   );
 };
+const TemplateMessage = () => {
+  const { email } = useUserStore();
+  const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(null);
+  const [templateContent, setTemplateContent] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshTemplateLoading, setRefreshTemplateLoading] = useState(false);
 
+  // 组件初始化时获取模板和评论数据
+  useEffect(() => {
+    // 当email可用时获取模板
+    if (email) {
+      console.log(`Email available, fetching templates for: ${email}`);
+      fetchTemplates();
+    }
+  }, [email]); // 依赖于email变化
+
+  const handleDeselectAllTemplates = () => {
+    setSelectedTemplateIds([]);
+  };
+
+  // 添加选择/取消选择所有模板的函数
+  const handleSelectAllTemplates = () => {
+    if (templates.length > 0) {
+      const allTemplateIds = templates.map((template) => template.id);
+      setSelectedTemplateIds(allTemplateIds);
+    }
+  };
+
+  // 刷新模板功能
+  const handleRefreshTemplates = async () => {
+    setRefreshTemplateLoading(true);
+    try {
+      await fetchTemplates();
+      message.success("模板列表已刷新");
+    } catch (error) {
+      console.error("刷新模板失败:", error);
+      message.error("刷新模板失败，请稍后重试");
+    } finally {
+      setRefreshTemplateLoading(false);
+    }
+  };
+
+  // 渲染模板列表项
+  const renderTemplateItem = (template: ReplyTemplate) => (
+    <div
+      key={template.id}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 0",
+        borderBottom: "1px solid #f0f0f0",
+        minHeight: "48px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
+        <Checkbox
+          checked={selectedTemplateIds.includes(template.id)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedTemplateIds([...selectedTemplateIds, template.id]);
+            } else {
+              setSelectedTemplateIds(selectedTemplateIds.filter((id) => id !== template.id));
+            }
+          }}
+          style={{ marginRight: "12px" }}
+        />
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              color: "#333",
+              fontSize: "14px",
+              lineHeight: "1.4",
+              wordBreak: "break-word",
+            }}
+          >
+            {template.content}
+          </div>
+          {template.image_urls && (
+            <div style={{ marginTop: "8px" }}>
+              <img
+                src={template.image_urls}
+                alt="模板图片"
+                style={{
+                  maxWidth: "80px",
+                  maxHeight: "60px",
+                  objectFit: "contain",
+                  borderRadius: "4px",
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "12px" }}>
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          size="small"
+          style={{
+            color: "#8389FC",
+            padding: "4px",
+            minWidth: "28px",
+            height: "28px",
+          }}
+          onClick={() => {
+            setEditingTemplate(template);
+            setTemplateContent(template.content);
+
+            // 如果模板有图片URL，加载图片
+            if (template.image_urls) {
+              loadImageFromCOS(template.image_urls);
+            } else {
+              // 清空之前可能存在的图片
+              setImageUrl("");
+              setImageFile(null);
+            }
+
+            setIsModalVisible(true);
+          }}
+        />
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          size="small"
+          style={{
+            color: "#ff4d4f",
+            padding: "4px",
+            minWidth: "28px",
+            height: "28px",
+          }}
+          onClick={() => handleDeleteTemplate(template.id)}
+        />
+      </div>
+    </div>
+  );
+  // 处理模板更新
+  const handleUpdateTemplate = async () => {
+    if (!editingTemplate) return;
+
+    // 确保有email才能更新模板
+    if (!email) {
+      message.error("用户邮箱不能为空，无法更新模板");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 如果有新图片，先上传到腾讯云COS
+      let imageUrlCOS = imageUrl;
+      console.log("Initial imageUrl value:", imageUrl);
+
+      if (imageFile) {
+        // 使用现有模板ID上传图片
+        console.log("Uploading new image file:", imageFile.name);
+        imageUrlCOS = await uploadImageToCOS(editingTemplate.id);
+        console.log("After upload, imageUrlCOS:", imageUrlCOS);
+        if (!imageUrlCOS) {
+          message.error("图片上传失败，请重试");
+          return;
+        }
+      } else {
+        console.log("No new image file, using existing imageUrl");
+      }
+
+      const response = await updateReplyTemplateApi(editingTemplate.id, {
+        content: templateContent,
+        email: email, // 使用当前用户的邮箱
+        image_urls: imageUrlCOS, // 添加图片URL字段
+      });
+
+      console.log(`Updating template ${editingTemplate.id} for user: ${email}`);
+
+      if (response.code === 0) {
+        message.success("更新模板成功");
+        setTemplateContent("");
+        setImageUrl("");
+        setImageFile(null);
+        setEditingTemplate(null);
+        setIsModalVisible(false);
+        fetchTemplates(); // 刷新模板列表
+      } else {
+        message.error(response.message || "更新模板失败");
+      }
+    } catch (error) {
+      console.error("更新模板失败:", error);
+      message.error("更新模板失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+  // 处理模板创建
+  const handleAddTemplate = async () => {
+    // 确保有email才能创建模板
+    if (!email) {
+      message.error("用户邮箱不能为空，无法创建模板");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 先创建不带图片的模板
+      const response = await createReplyTemplateApi({
+        content: templateContent,
+        email: email,
+      });
+
+      if (response.code !== 0) {
+        message.error(response.message || "添加模板失败");
+        return;
+      }
+
+      // 如果没有图片，直接完成
+      if (!imageFile) {
+        message.success("添加模板成功");
+        setTemplateContent("");
+        setIsModalVisible(false);
+        fetchTemplates(); // 刷新模板列表
+        return;
+      }
+
+      // 如果有图片，需要获取最新创建的模板ID
+      const templatesResponse = await getReplyTemplatesApi({
+        page: 1,
+        page_size: 10,
+        email: email,
+      });
+
+      if (!templatesResponse.data?.records || templatesResponse.data.records.length === 0) {
+        message.warning("创建模板成功，但无法上传图片，请稍后编辑模板添加图片");
+        setTemplateContent("");
+        setImageUrl("");
+        setImageFile(null);
+        setIsModalVisible(false);
+        fetchTemplates();
+        return;
+      }
+
+      // 假设最新的模板就是我们刚创建的（按创建时间排序，最新的在最前面）
+      const latestTemplate = templatesResponse.data.records[0];
+
+      // 上传图片
+      const imageUrlCOS = await uploadImageToCOS(latestTemplate.id);
+      if (!imageUrlCOS) {
+        message.warning("模板创建成功，但图片上传失败");
+        setTemplateContent("");
+        setImageUrl("");
+        setImageFile(null);
+        setIsModalVisible(false);
+        fetchTemplates();
+        return;
+      }
+
+      // 更新模板添加图片URL
+      const updateResponse = await updateReplyTemplateApi(latestTemplate.id, {
+        content: templateContent,
+        email: email,
+        image_urls: imageUrlCOS,
+      });
+
+      if (updateResponse.code === 0) {
+        message.success("添加模板成功");
+      } else {
+        message.warning("模板创建成功，但更新图片失败");
+      }
+
+      setTemplateContent("");
+      setImageUrl("");
+      setImageFile(null);
+      setIsModalVisible(false);
+      fetchTemplates(); // 刷新模板列表
+    } catch (error) {
+      console.error("添加模板失败:", error);
+      message.error("添加模板失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+  // 处理模板删除
+  const handleDeleteTemplate = async (id: number) => {
+    // 确保有email才能删除模板
+    if (!email) {
+      message.error("用户邮箱不能为空，无法删除模板");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await deleteReplyTemplateApi(id, email);
+
+      console.log(`Deleting template ${id} for user: ${email}`);
+
+      if (response.code === 0) {
+        message.success("删除模板成功");
+        fetchTemplates(); // 刷新模板列表
+      } else {
+        message.error(response.message || "删除模板失败");
+      }
+    } catch (error) {
+      console.error("删除模板失败:", error);
+      message.error("删除模板失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+  // 处理图片上传
+  const handleImageUpload = async (file: File): Promise<boolean> => {
+    if (!email) {
+      message.error("用户邮箱不能为空，无法上传图片");
+      return false;
+    }
+
+    try {
+      setUploadLoading(true);
+
+      // 检查文件类型
+      const isImage = file.type.startsWith("image/");
+      if (!isImage) {
+        message.error("只能上传图片文件!");
+        return false;
+      }
+
+      // 检查文件大小，限制为5MB
+      const isLt5M = file.size / 1024 / 1024 < 5;
+      if (!isLt5M) {
+        message.error("图片必须小于5MB!");
+        return false;
+      }
+
+      // 保存文件以供后续上传
+      setImageFile(file);
+
+      // 创建本地预览URL
+      const objectUrl = URL.createObjectURL(file);
+      setImageUrl(objectUrl);
+
+      return false; // 返回false阻止Upload组件默认上传行为
+    } catch (error) {
+      console.error("处理图片上传失败:", error);
+      message.error("处理图片上传失败");
+      return false;
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+  // 清除图片
+  const handleRemoveImage = () => {
+    setImageUrl("");
+    setImageFile(null);
+  };
+  // 从腾讯云COS获取图片并显示
+  const loadImageFromCOS = async (imageUrl: string) => {
+    if (!imageUrl) return;
+
+    try {
+      console.log("Loading image from URL:", imageUrl);
+
+      // 直接设置图片URL而不尝试从腾讯云COS获取
+      // 这样可以避免解析URL时的问题
+      setImageUrl(imageUrl);
+      setImageFile(null); // 不需要文件对象，因为我们直接使用URL
+
+      console.log("Image URL set successfully");
+    } catch (error) {
+      console.error("加载图片失败:", error);
+      message.error("加载图片失败");
+    }
+  };
+  // 上传图片到腾讯云COS
+  const uploadImageToCOS = async (templateId: number): Promise<string> => {
+    if (!imageFile || !email) return "";
+
+    try {
+      setUploadLoading(true);
+
+      // 创建腾讯云COS服务实例
+      const cosService = tencentCOSService;
+
+      // 构建上传路径：email/模板序号/图片名称
+      // 使用实际的模板ID
+      const uploadPath = `${email}/${templateId}`;
+
+      // 上传文件到腾讯云COS
+      const result = await cosService.uploadFile(imageFile, uploadPath);
+
+      return result.url;
+    } catch (error) {
+      console.error("上传图片到腾讯云COS失败:", error);
+      message.error("上传图片失败");
+      return "";
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+  // 从后端获取模板
+  const fetchTemplates = async () => {
+    try {
+      // 确保有email才能获取模板
+      if (!email) {
+        message.error("用户邮箱不能为空，无法获取模板");
+        return;
+      }
+
+      setLoading(true);
+      const response = await getReplyTemplatesApi({
+        page: 1,
+        page_size: 1000, // 获取所有模板
+        email: email, // 使用当前用户的邮箱
+      });
+
+      console.log(`Fetching templates for user: ${email}`);
+      console.log("response123", response.data);
+      setTemplates(response.data?.records || []);
+    } catch (error) {
+      console.error("获取模板失败:", error);
+      message.error("获取模板失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <>
+      <Card
+        extra={
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Button
+              onClick={() => {
+                setEditingTemplate(null);
+                setTemplateContent("");
+                setImageUrl("");
+                setImageFile(null);
+                setIsModalVisible(true);
+              }}
+              style={{
+                border: "1px solid #999999",
+                color: "#333333",
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.color = "#8389fc";
+                e.currentTarget.style.borderColor = "#8389fc";
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.color = "#333333";
+                e.currentTarget.style.borderColor = "#999999";
+              }}
+            >
+              添加模板
+            </Button>
+            <Button
+              icon={<img src={refresh} alt="refresh" />}
+              onClick={handleRefreshTemplates}
+              loading={refreshTemplateLoading}
+            />
+          </div>
+        }
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "16px",
+            paddingBottom: "12px",
+            borderBottom: "1px solid #f0f0f0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                width: "91%",
+              }}
+            >
+              <Checkbox
+                checked={selectedTemplateIds.length === templates.length && templates.length > 0}
+                indeterminate={
+                  selectedTemplateIds.length > 0 && selectedTemplateIds.length < templates.length
+                }
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    handleSelectAllTemplates();
+                  } else {
+                    handleDeselectAllTemplates();
+                  }
+                }}
+              />
+              <span style={{ fontSize: "16px", fontWeight: "500" }}>私信内容</span>
+            </div>
+            <div
+              style={{
+                width: "9%",
+                borderLeft: "1px solid #e0e0e0",
+                boxSizing: "border-box",
+                paddingLeft: "1.25rem",
+                fontSize: "1rem",
+                color: "#666666",
+              }}
+            >
+              操作
+            </div>
+          </div>
+        </div>
+        <Spin spinning={loading}>
+          <div
+            style={{
+              backgroundColor: "white",
+              minHeight: "200px",
+            }}
+          >
+            {templates.length > 0 ? (
+              <VirtualList
+                data={templates}
+                height={370}
+                itemHeight={80}
+                itemKey="id"
+                style={{ paddingRight: "12px" }}
+              >
+                {(item: ReplyTemplate) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 0",
+                      borderBottom: "1px solid #f0f0f0",
+                      minHeight: "48px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                      <Checkbox
+                        checked={selectedTemplateIds.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTemplateIds([...selectedTemplateIds, item.id]);
+                          } else {
+                            setSelectedTemplateIds(
+                              selectedTemplateIds.filter((id) => id !== item.id)
+                            );
+                          }
+                        }}
+                        style={{ marginRight: "12px" }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            color: "#333",
+                            fontSize: "14px",
+                            lineHeight: "1.4",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {item.content}
+                        </div>
+                        {item.image_urls && (
+                          <div style={{ marginTop: "8px" }}>
+                            <img
+                              src={item.image_urls}
+                              alt="模板图片"
+                              style={{
+                                maxWidth: "80px",
+                                maxHeight: "60px",
+                                objectFit: "contain",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        marginLeft: "12px",
+                      }}
+                    >
+                      <Button
+                        type="text"
+                        icon={<EditOutlined />}
+                        size="small"
+                        style={{
+                          color: "#8389FC",
+                          padding: "4px",
+                          minWidth: "28px",
+                          height: "28px",
+                        }}
+                        onClick={() => {
+                          setEditingTemplate(item);
+                          setTemplateContent(item.content);
+
+                          // 如果模板有图片URL，加载图片
+                          if (item.image_urls) {
+                            loadImageFromCOS(item.image_urls);
+                          } else {
+                            // 清空之前可能存在的图片
+                            setImageUrl("");
+                            setImageFile(null);
+                          }
+
+                          setIsModalVisible(true);
+                        }}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        style={{
+                          color: "#ff4d4f",
+                          padding: "4px",
+                          minWidth: "28px",
+                          height: "28px",
+                        }}
+                        onClick={() => handleDeleteTemplate(item.id)}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </VirtualList>
+            ) : (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px 0",
+                  color: "#999",
+                  fontSize: "14px",
+                }}
+              >
+                暂无模板
+              </div>
+            )}
+          </div>
+        </Spin>
+      </Card>
+      <Modal
+        title={editingTemplate ? "编辑模板" : "添加模板"}
+        open={isModalVisible}
+        onOk={editingTemplate ? handleUpdateTemplate : handleAddTemplate}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setTemplateContent("");
+          setImageUrl("");
+          setImageFile(null);
+          setEditingTemplate(null);
+        }}
+        confirmLoading={loading || uploadLoading}
+        okText={editingTemplate ? "更新" : "添加"}
+        cancelText="取消"
+      >
+        <Form layout="vertical">
+          <Form.Item label="模板内容" required>
+            <TextArea
+              rows={6}
+              value={templateContent}
+              onChange={(e) => setTemplateContent(e.target.value)}
+              placeholder="请输入模板内容..."
+            />
+          </Form.Item>
+          <Form.Item label="图片（可选）">
+            <div className="flex flex-col space-y-2">
+              <Upload
+                name="image"
+                listType="picture-card"
+                className="avatar-uploader"
+                showUploadList={false}
+                beforeUpload={handleImageUpload}
+                accept="image/*"
+              >
+                {imageUrl ? (
+                  <div className="relative">
+                    <img src={imageUrl} alt="模板图片" style={{ width: "100%" }} />
+                    <div
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveImage();
+                      }}
+                    >
+                      X
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {uploadLoading ? <Spin /> : <PlusOutlined />}
+                    <div style={{ marginTop: 8 }}>上传图片</div>
+                  </div>
+                )}
+              </Upload>
+              {imageUrl && (
+                <Button icon={<DeleteOutlined />} onClick={handleRemoveImage} danger>
+                  移除图片
+                </Button>
+              )}
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+};
 export default DashTaskVeiw;
