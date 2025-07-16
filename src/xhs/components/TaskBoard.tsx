@@ -41,7 +41,7 @@ interface Task {
 // Props for the TaskBoard component
 interface TaskBoardProps {
   tasks: Task[];
-  onViewTask?: (taskId: string) => void;
+  onViewTask?: (task: Task) => void;
   onAddTask?: () => void;
   onRefresh?: () => void;
   loading?: boolean;
@@ -96,7 +96,7 @@ const formatDate = (dateString: string) => {
 const TaskRow: React.FC<{
   task: Task;
   isHighlighted?: boolean;
-  onViewTask?: (taskId: string) => void;
+  onViewTask?: (task: Task) => void;
 }> = ({ task, isHighlighted = false, onViewTask }) => {
   const statusInfo = getStatusInfo(task.state);
 
@@ -134,7 +134,7 @@ const TaskRow: React.FC<{
       <div className="flex items-center justify-between" style={{ width: "53.3%" }}>
         <span className="text-gray-500 text-sm ml-3">{formatDate(task.start_date)}</span>
         <Button
-          onClick={() => onViewTask && onViewTask(task.dag_run_id)}
+          onClick={() => onViewTask && onViewTask(task)}
           size="small"
           style={{
             border: "1px solid #8389fc",
@@ -360,8 +360,11 @@ const ExampleTaskBoard: React.FC = () => {
     }
   }, [email, isAdmin]);
 
-  const handleViewTask = (taskId: string) => {
-    navigate(`/xhs/dashboard/taskview/${taskId}`);
+  const handleViewTask = (task: Task) => {
+    navigate({
+      pathname: "/xhs/dashboard/taskview",
+      search: `?keyword=${task.keyword}&state=${task.state}`,
+    });
   };
 
   const handleAddTask = () => {

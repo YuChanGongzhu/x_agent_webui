@@ -19,9 +19,22 @@ import { ConfigProvider } from "antd";
 import config from "./themeConfig/config";
 import BasePermission from "./components/BaseComponents/BasePermission";
 import DashTaskVeiw from "./xhs/pages/DashTaskView";
+import zhCN from "antd/es/locale/zh_CN"; // 中文
+import enUS from "antd/es/locale/en_US";
+// 自定义排序文本
+const customLocale = {
+  ...zhCN,
+  Table: {
+    ...zhCN.Table,
+    sortTitle: "点击排序",
+    cancelSort: "取消排序",
+    triggerDesc: "点击降序",
+    triggerAsc: "点击升序",
+  },
+};
 function App() {
   return (
-    <ConfigProvider theme={config}>
+    <ConfigProvider theme={config} locale={customLocale}>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -54,7 +67,7 @@ function App() {
                           <Route path="/xhs/generate" element={<GenerateMsg />} />
                           <Route path="/xhs/dashboard" element={<Dashboard />} />
                           <Route
-                            path="/xhs/dashboard/taskview/:taskId"
+                            path="/xhs/dashboard/taskview"
                             element={<DashTaskVeiw />}
                           />
                           {/* <Route path="/xhs/templates" element={<TemplateManager />} /> */}
