@@ -7,22 +7,15 @@ import {
   message,
   Typography,
   Breadcrumb,
-  Row,
-  Col,
-  Statistic,
-  Progress,
   Table,
-  Tag,
   Select,
   Checkbox,
-  Space,
-  Divider,
   Input,
-  Popconfirm,
   TableProps,
   Form,
   Modal,
   Upload,
+  Pagination,
 } from "antd";
 import {
   HomeOutlined,
@@ -172,13 +165,8 @@ const DashTaskVeiw = () => {
   const [filterResults, setFilterResults] = useState<FilterResult[]>([]);
   const [originalFilterResults, setOriginalFilterResults] = useState<FilterResult[]>([]); // 保存原始数据
   const [customerLevelFilter, setCustomerLevelFilter] = useState<string | undefined>(undefined); // 客户意向筛选
-  const [replyTemplates, setReplyTemplates] = useState<ReplyTemplate[]>([]);
   const [selectedFilterRowKeys, setSelectedFilterRowKeys] = useState<React.Key[]>([]);
-  const [selectedTemplateRowKeys, setSelectedTemplateRowKeys] = useState<React.Key[]>([]);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [editingTemplateKey, setEditingTemplateKey] = useState<string | null>(null); // 当前正在编辑的模板
-  const [tempTemplateContent, setTempTemplateContent] = useState<string>(""); // 临时保存编辑内容
-  const [analysisTask, setAnalysisTask] = useState<AnalysisTask | null>(null);
   // 分页相关状态
   const [currentFilterPage, setCurrentFilterPage] = useState(1);
   const [filterPageSize] = useState(5); // 每页显示5条数据
@@ -192,9 +180,6 @@ const DashTaskVeiw = () => {
   const [intentResults, setIntentResults] = useState<any>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
 
-  // 获取用户上下文
-  //   const { isAdmin, email } = useUser();
-
   useEffect(() => {
     if (taskKeyword) {
       const initData = async () => {
@@ -202,7 +187,7 @@ const DashTaskVeiw = () => {
       };
       initData();
     }
-  }, [taskKeyword]);
+  }, []);
 
   // 当评论数据更新时，更新筛选结果
   useEffect(() => {
@@ -670,18 +655,20 @@ const DashTaskVeiw = () => {
 };
 const TemplateMessage = () => {
   const { email } = useUserStore();
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<number[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(null);
   const [templateContent, setTemplateContent] = useState("");
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<number[]>([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [refreshTemplateLoading, setRefreshTemplateLoading] = useState(false);
-
-  // 组件初始化时获取模板和评论数据
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
+  const [totalTemplates, setTotalTemplates] = useState(0);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  // 组件初始化时获取模板数据
   useEffect(() => {
     // 当email可用时获取模板
     if (email) {
@@ -690,10 +677,161 @@ const TemplateMessage = () => {
     }
   }, [email]); // 依赖于email变化
 
+  // 从腾讯云COS获取图片并显示
+  const loadImageFromCOS = async (imageUrl: string) => {
+    if (!imageUrl) return;
+
+    try {
+      console.log("Loading image from URL:", imageUrl);
+
+      // 直接设置图片URL而不尝试从腾讯云COS获取
+      // 这样可以避免解析URL时的问题
+      setImageUrl(imageUrl);
+      setImageFile(null); // 不需要文件对象，因为我们直接使用URL
+
+      console.log("Image URL set successfully");
+    } catch (error) {
+      console.error("加载图片失败:", error);
+      message.error("加载图片失败");
+    }
+  };
+  // 模板表格列定义
+  const templateColumns = [
+    {
+      title: "选择",
+      key: "selection",
+      width: 60,
+      render: (_: any, record: ReplyTemplate) => (
+        <input
+          type="checkbox"
+          checked={selectedTemplateIds.includes(record.id)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedTemplateIds([...selectedTemplateIds, record.id]);
+            } else {
+              setSelectedTemplateIds(selectedTemplateIds.filter((id) => id !== record.id));
+            }
+          }}
+          className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
+        />
+      ),
+    },
+    {
+      title: "模板内容",
+      dataIndex: "content",
+      key: "content",
+      render: (text: string, record: ReplyTemplate) => (
+        <div>
+          <div className="max-w-xl line-clamp-3 hover:line-clamp-none">{text}</div>
+          {record.image_urls && (
+            <div className="mt-2">
+              <img
+                src={record.image_urls}
+                alt="模板图片"
+                style={{ maxWidth: "200px", maxHeight: "150px", objectFit: "contain" }}
+              />
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: "创建时间",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 180,
+    },
+    {
+      title: "操作",
+      key: "action",
+      width: 120,
+      render: (_: any, record: ReplyTemplate) => (
+        <>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => {
+              setEditingTemplate(record);
+              setTemplateContent(record.content);
+
+              // 如果模板有图片URL，加载图片
+              if (record.image_urls) {
+                loadImageFromCOS(record.image_urls);
+              } else {
+                // 清空之前可能存在的图片
+                setImageUrl("");
+                setImageFile(null);
+              }
+
+              setIsModalVisible(true);
+            }}
+          />
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteTemplate(record.id)}
+          />
+        </>
+      ),
+    },
+  ]; // 处理模板删除
+  const handleDeleteTemplate = async (id: number) => {
+    // 确保有email才能删除模板
+    if (!email) {
+      message.error("用户邮箱不能为空，无法删除模板");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await deleteReplyTemplateApi(id, email);
+
+      console.log(`Deleting template ${id} for user: ${email}`);
+
+      if (response.code === 0) {
+        message.success("删除模板成功");
+        fetchTemplates(); // 刷新模板列表
+      } else {
+        message.error(response.message || "删除模板失败");
+      }
+    } catch (error) {
+      console.error("删除模板失败:", error);
+      message.error("删除模板失败");
+    } finally {
+      setLoading(false);
+    }
+  }; // 从后端获取模板
+  const fetchTemplates = async () => {
+    try {
+      // 确保有email才能获取模板
+      if (!email) {
+        message.error("用户邮箱不能为空，无法获取模板");
+        return;
+      }
+
+      setLoading(true);
+      const response = await getReplyTemplatesApi({
+        page: currentPage,
+        page_size: pageSize,
+        email: email, // 使用当前用户的邮箱
+      });
+
+      console.log(`Fetching templates for user: ${email}`);
+
+      setTemplates(response.data?.records || []);
+      setTotalTemplates(response.data?.total || 0);
+    } catch (error) {
+      console.error("获取模板失败:", error);
+      message.error("获取模板失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeselectAllTemplates = () => {
     setSelectedTemplateIds([]);
   };
-
   // 添加选择/取消选择所有模板的函数
   const handleSelectAllTemplates = () => {
     if (templates.length > 0) {
@@ -701,116 +839,6 @@ const TemplateMessage = () => {
       setSelectedTemplateIds(allTemplateIds);
     }
   };
-
-  // 刷新模板功能
-  const handleRefreshTemplates = async () => {
-    setRefreshTemplateLoading(true);
-    try {
-      await fetchTemplates();
-      message.success("模板列表已刷新");
-    } catch (error) {
-      console.error("刷新模板失败:", error);
-      message.error("刷新模板失败，请稍后重试");
-    } finally {
-      setRefreshTemplateLoading(false);
-    }
-  };
-
-  // 渲染模板列表项
-  const renderTemplateItem = (template: ReplyTemplate) => (
-    <div
-      key={template.id}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 0",
-        borderBottom: "1px solid #f0f0f0",
-        minHeight: "48px",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
-        <Checkbox
-          checked={selectedTemplateIds.includes(template.id)}
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelectedTemplateIds([...selectedTemplateIds, template.id]);
-            } else {
-              setSelectedTemplateIds(selectedTemplateIds.filter((id) => id !== template.id));
-            }
-          }}
-          style={{ marginRight: "12px" }}
-        />
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              color: "#333",
-              fontSize: "14px",
-              lineHeight: "1.4",
-              wordBreak: "break-word",
-            }}
-          >
-            {template.content}
-          </div>
-          {template.image_urls && (
-            <div style={{ marginTop: "8px" }}>
-              <img
-                src={template.image_urls}
-                alt="模板图片"
-                style={{
-                  maxWidth: "80px",
-                  maxHeight: "60px",
-                  objectFit: "contain",
-                  borderRadius: "4px",
-                }}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "12px" }}>
-        <Button
-          type="text"
-          icon={<EditOutlined />}
-          size="small"
-          style={{
-            color: "#8389FC",
-            padding: "4px",
-            minWidth: "28px",
-            height: "28px",
-          }}
-          onClick={() => {
-            setEditingTemplate(template);
-            setTemplateContent(template.content);
-
-            // 如果模板有图片URL，加载图片
-            if (template.image_urls) {
-              loadImageFromCOS(template.image_urls);
-            } else {
-              // 清空之前可能存在的图片
-              setImageUrl("");
-              setImageFile(null);
-            }
-
-            setIsModalVisible(true);
-          }}
-        />
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          size="small"
-          style={{
-            color: "#ff4d4f",
-            padding: "4px",
-            minWidth: "28px",
-            height: "28px",
-          }}
-          onClick={() => handleDeleteTemplate(template.id)}
-        />
-      </div>
-    </div>
-  );
   // 处理模板更新
   const handleUpdateTemplate = async () => {
     if (!editingTemplate) return;
@@ -865,6 +893,33 @@ const TemplateMessage = () => {
       message.error("更新模板失败");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 上传图片到腾讯云COS
+  const uploadImageToCOS = async (templateId: number): Promise<string> => {
+    if (!imageFile || !email) return "";
+
+    try {
+      setUploadLoading(true);
+
+      // 创建腾讯云COS服务实例
+      const cosService = tencentCOSService;
+
+      // 构建上传路径：email/模板序号/图片名称
+      // 使用实际的模板ID
+      const uploadPath = `${email}/${templateId}`;
+
+      // 上传文件到腾讯云COS
+      const result = await cosService.uploadFile(imageFile, uploadPath);
+
+      return result.url;
+    } catch (error) {
+      console.error("上传图片到腾讯云COS失败:", error);
+      message.error("上传图片失败");
+      return "";
+    } finally {
+      setUploadLoading(false);
     }
   };
   // 处理模板创建
@@ -955,32 +1010,10 @@ const TemplateMessage = () => {
       setLoading(false);
     }
   };
-  // 处理模板删除
-  const handleDeleteTemplate = async (id: number) => {
-    // 确保有email才能删除模板
-    if (!email) {
-      message.error("用户邮箱不能为空，无法删除模板");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await deleteReplyTemplateApi(id, email);
-
-      console.log(`Deleting template ${id} for user: ${email}`);
-
-      if (response.code === 0) {
-        message.success("删除模板成功");
-        fetchTemplates(); // 刷新模板列表
-      } else {
-        message.error(response.message || "删除模板失败");
-      }
-    } catch (error) {
-      console.error("删除模板失败:", error);
-      message.error("删除模板失败");
-    } finally {
-      setLoading(false);
-    }
+  // 清除图片
+  const handleRemoveImage = () => {
+    setImageUrl("");
+    setImageFile(null);
   };
   // 处理图片上传
   const handleImageUpload = async (file: File): Promise<boolean> => {
@@ -1022,307 +1055,70 @@ const TemplateMessage = () => {
       setUploadLoading(false);
     }
   };
-  // 清除图片
-  const handleRemoveImage = () => {
-    setImageUrl("");
-    setImageFile(null);
-  };
-  // 从腾讯云COS获取图片并显示
-  const loadImageFromCOS = async (imageUrl: string) => {
-    if (!imageUrl) return;
-
-    try {
-      console.log("Loading image from URL:", imageUrl);
-
-      // 直接设置图片URL而不尝试从腾讯云COS获取
-      // 这样可以避免解析URL时的问题
-      setImageUrl(imageUrl);
-      setImageFile(null); // 不需要文件对象，因为我们直接使用URL
-
-      console.log("Image URL set successfully");
-    } catch (error) {
-      console.error("加载图片失败:", error);
-      message.error("加载图片失败");
-    }
-  };
-  // 上传图片到腾讯云COS
-  const uploadImageToCOS = async (templateId: number): Promise<string> => {
-    if (!imageFile || !email) return "";
-
-    try {
-      setUploadLoading(true);
-
-      // 创建腾讯云COS服务实例
-      const cosService = tencentCOSService;
-
-      // 构建上传路径：email/模板序号/图片名称
-      // 使用实际的模板ID
-      const uploadPath = `${email}/${templateId}`;
-
-      // 上传文件到腾讯云COS
-      const result = await cosService.uploadFile(imageFile, uploadPath);
-
-      return result.url;
-    } catch (error) {
-      console.error("上传图片到腾讯云COS失败:", error);
-      message.error("上传图片失败");
-      return "";
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-  // 从后端获取模板
-  const fetchTemplates = async () => {
-    try {
-      // 确保有email才能获取模板
-      if (!email) {
-        message.error("用户邮箱不能为空，无法获取模板");
-        return;
-      }
-
-      setLoading(true);
-      const response = await getReplyTemplatesApi({
-        page: 1,
-        page_size: 1000, // 获取所有模板
-        email: email, // 使用当前用户的邮箱
-      });
-
-      console.log(`Fetching templates for user: ${email}`);
-      console.log("response123", response.data);
-      setTemplates(response.data?.records || []);
-    } catch (error) {
-      console.error("获取模板失败:", error);
-      message.error("获取模板失败");
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = async () => {
+    setRefreshLoading(true);
+    await fetchTemplates();
+    setRefreshLoading(false);
   };
   return (
     <>
       <Card
+        title="回复模板管理"
         extra={
           <div style={{ display: "flex", gap: "10px" }}>
             <Button
+              type="primary"
+              icon={<PlusOutlined />}
               onClick={() => {
                 setEditingTemplate(null);
                 setTemplateContent("");
-                setImageUrl("");
-                setImageFile(null);
                 setIsModalVisible(true);
-              }}
-              style={{
-                border: "1px solid #999999",
-                color: "#333333",
-                backgroundColor: "transparent",
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.color = "#8389fc";
-                e.currentTarget.style.borderColor = "#8389fc";
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.color = "#333333";
-                e.currentTarget.style.borderColor = "#999999";
               }}
             >
               添加模板
             </Button>
+            {selectedTemplateIds.length > 0 ? (
+              <Button onClick={handleDeselectAllTemplates}>清除选择</Button>
+            ) : (
+              <Button onClick={handleSelectAllTemplates}>全选</Button>
+            )}
             <Button
               icon={<img src={refresh} alt="refresh" />}
-              onClick={handleRefreshTemplates}
-              loading={refreshTemplateLoading}
+              onClick={handleRefresh}
+              loading={refreshLoading}
             />
           </div>
         }
+        className="m-4"
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
-            paddingBottom: "12px",
-            borderBottom: "1px solid #f0f0f0",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              width: "100%",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                width: "91%",
-              }}
-            >
-              <Checkbox
-                checked={selectedTemplateIds.length === templates.length && templates.length > 0}
-                indeterminate={
-                  selectedTemplateIds.length > 0 && selectedTemplateIds.length < templates.length
-                }
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    handleSelectAllTemplates();
-                  } else {
-                    handleDeselectAllTemplates();
-                  }
-                }}
-              />
-              <span style={{ fontSize: "16px", fontWeight: "500" }}>私信内容</span>
-            </div>
-            <div
-              style={{
-                width: "9%",
-                borderLeft: "1px solid #e0e0e0",
-                boxSizing: "border-box",
-                paddingLeft: "1.25rem",
-                fontSize: "1rem",
-                color: "#666666",
-              }}
-            >
-              操作
-            </div>
-          </div>
-        </div>
         <Spin spinning={loading}>
-          <div
-            style={{
-              backgroundColor: "white",
-              minHeight: "200px",
-            }}
-          >
-            {templates.length > 0 ? (
-              <VirtualList
-                data={templates}
-                height={370}
-                itemHeight={80}
-                itemKey="id"
-                style={{ paddingRight: "12px" }}
-              >
-                {(item: ReplyTemplate) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "12px 0",
-                      borderBottom: "1px solid #f0f0f0",
-                      minHeight: "48px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
-                      <Checkbox
-                        checked={selectedTemplateIds.includes(item.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedTemplateIds([...selectedTemplateIds, item.id]);
-                          } else {
-                            setSelectedTemplateIds(
-                              selectedTemplateIds.filter((id) => id !== item.id)
-                            );
-                          }
-                        }}
-                        style={{ marginRight: "12px" }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            color: "#333",
-                            fontSize: "14px",
-                            lineHeight: "1.4",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {item.content}
-                        </div>
-                        {item.image_urls && (
-                          <div style={{ marginTop: "8px" }}>
-                            <img
-                              src={item.image_urls}
-                              alt="模板图片"
-                              style={{
-                                maxWidth: "80px",
-                                maxHeight: "60px",
-                                objectFit: "contain",
-                                borderRadius: "4px",
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        marginLeft: "12px",
-                      }}
-                    >
-                      <Button
-                        type="text"
-                        icon={<EditOutlined />}
-                        size="small"
-                        style={{
-                          color: "#8389FC",
-                          padding: "4px",
-                          minWidth: "28px",
-                          height: "28px",
-                        }}
-                        onClick={() => {
-                          setEditingTemplate(item);
-                          setTemplateContent(item.content);
-
-                          // 如果模板有图片URL，加载图片
-                          if (item.image_urls) {
-                            loadImageFromCOS(item.image_urls);
-                          } else {
-                            // 清空之前可能存在的图片
-                            setImageUrl("");
-                            setImageFile(null);
-                          }
-
-                          setIsModalVisible(true);
-                        }}
-                      >
-                        编辑
-                      </Button>
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        style={{
-                          color: "#ff4d4f",
-                          padding: "4px",
-                          minWidth: "28px",
-                          height: "28px",
-                        }}
-                        onClick={() => handleDeleteTemplate(item.id)}
-                      >
-                        删除
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </VirtualList>
-            ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 0",
-                  color: "#999",
-                  fontSize: "14px",
-                }}
-              >
-                暂无模板
-              </div>
-            )}
+          <Table dataSource={templates} columns={templateColumns} rowKey="id" pagination={false} />
+          <div className="mt-4 flex justify-end">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={totalTemplates}
+              onChange={(page: number) => setCurrentPage(page)}
+              onShowSizeChange={(current: number, size: number) => {
+                setCurrentPage(1);
+                setPageSize(size);
+              }}
+              showSizeChanger
+              showQuickJumper
+              showTotal={(total: number) => `共 ${total} 条`}
+              locale={{
+                items_per_page: "条/页",
+                jump_to: "跳至",
+                jump_to_confirm: "确定",
+                page: "页",
+                prev_page: "上一页",
+                next_page: "下一页",
+                prev_5: "向前 5 页",
+                next_5: "向后 5 页",
+                prev_3: "向前 3 页",
+                next_3: "向后 3 页",
+              }}
+            />
           </div>
         </Spin>
       </Card>
