@@ -13,6 +13,7 @@ const updateReplyTemplateUrl = process.env.REACT_APP_TECENT_UPDATE_REPLY_TEMPLAT
 const getXhsDevicesMsgListUrl = process.env.REACT_APP_TECENT_GET_XHS_DEVICES_MSG_LIST;
 const updateTaskTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_TASK_TEMPLATES;
 const getTaskTemplatesUrl = process.env.REACT_APP_TECENT_GET_TASK_TEMPLATES;
+const getCommentIntentsUrl = process.env.REACT_APP_TECENT_GET_COMMENT_INTENTS;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1129,38 +1130,118 @@ export interface TaskTemplate {
 export const getTaskTemplates = async (email?: string): Promise<TaskTemplate[]> => {
   try {
     const baseUrl = getTaskTemplatesUrl || "";
-    
+
     // 添加email参数到查询（如果提供）
     const url = email ? `${baseUrl}?email=${encodeURIComponent(email)}` : baseUrl;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error("获取任务模板失败");
     }
-    
+
     const result = await response.json();
-    
+
     // 处理返回的数据
     if (result.data && result.data.records) {
       // 返回格式为 { data: { total: number, records: TaskTemplate[] } }
       const templates = result.data.records;
-      
+
       // 处理每个模板，确保有显示名称
       return templates.map((template: TaskTemplate) => {
         // 如果模板没有desc，使用keyword作为显示名称
         if (!template.desc) {
           return {
             ...template,
-            desc: template.keyword || `模版${template.id}`
+            desc: template.keyword || `模版${template.id}`,
           };
         }
         return template;
       });
     }
-    
+
     return [];
   } catch (error) {
     console.error("Error fetching task templates:", error);
     return [];
+  }
+};
+//获取小红书评论后分析的意向客户（通过评论id确认）
+export const getCommentIntents = async (commentIds: string[]): Promise<any> => {
+  try {
+    const baseUrl = getCommentIntentsUrl || "";
+
+    // 首先获取第一页数据
+    const firstPageResponse = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "post",
+        comment_ids: commentIds,
+        page: 1,
+        page_size: 1000,
+      }),
+    });
+
+    if (!firstPageResponse.ok) {
+      throw new Error("获取小红书评论后分析的意向客户失败");
+    }
+
+    const firstPageData = await firstPageResponse.json();
+    console.log("第一页意向数据:", firstPageData);
+
+    // 如果只有一页或没有数据，直接返回
+    if (!firstPageData.data || firstPageData.data.total_pages <= 1) {
+      return firstPageData;
+    }
+
+    // 如果有多页，需要获取所有页的数据
+    const allRecords = [...firstPageData.data.records];
+    const totalPages = firstPageData.data.total_pages;
+
+    // 并行获取剩余所有页的数据
+    const remainingPagePromises = [];
+    for (let page = 2; page <= totalPages; page++) {
+      const pagePromise = fetch(baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "post",
+          comment_ids: commentIds,
+          page: page,
+          page_size: 20,
+        }),
+      }).then((response) => response.json());
+
+      remainingPagePromises.push(pagePromise);
+    }
+
+    // 等待所有页面的请求完成
+    const remainingPagesData = await Promise.all(remainingPagePromises);
+
+    // 合并所有页面的数据
+    remainingPagesData.forEach((pageData) => {
+      if (pageData.data && pageData.data.records) {
+        allRecords.push(...pageData.data.records);
+      }
+    });
+
+    // 返回合并后的完整数据
+    return {
+      ...firstPageData,
+      data: {
+        ...firstPageData.data,
+        records: allRecords,
+        page: 1,
+        page_size: allRecords.length,
+        total_pages: 1,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching comment intents:", error);
+    throw error;
   }
 };

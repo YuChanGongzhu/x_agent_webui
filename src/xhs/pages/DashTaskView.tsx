@@ -25,15 +25,10 @@ import {
   Upload,
 } from "antd";
 import {
-  ArrowLeftOutlined,
-  ReloadOutlined,
   HomeOutlined,
   ExportOutlined,
-  PlayCircleOutlined,
   EditOutlined,
   DeleteOutlined,
-  CheckOutlined,
-  CloseOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 import refresh from "../../img/refresh.svg";
@@ -48,8 +43,8 @@ import {
   createReplyTemplateApi,
   deleteReplyTemplateApi,
   getReplyTemplatesApi,
+  getCommentIntents,
 } from "../../api/mysql";
-import { triggerDagRun, getDagRuns } from "../../api/airflow";
 import { exportFilterResults, ExportData } from "../../utils/excelExport";
 import VirtualList from "rc-virtual-list";
 import { tencentCOSService } from "../../api/tencent_cos";
@@ -117,7 +112,7 @@ const styles = {
   divider: {
     backgroundColor: "#E5E5E5",
     width: "1px",
-    height: "40px",
+    height: "1.25rem",
     margin: "0 8px",
   },
   controlSection: {
@@ -229,81 +224,55 @@ const DashTaskVeiw = () => {
   const fetchTaskDetail = async (taskKeyword: string) => {
     setLoading(true);
     try {
-      console.log("fetchTaskDetail", taskKeyword);
-
-      // 获取评论数据
-      const commentsResponse = await getXhsCommentsByKeywordApi(
-        taskKeyword,
-        !isAdmin && email ? email : undefined
-      );
-
-      // 获取笔记数据
-      const notesResponse = await getXhsNotesByKeywordApi(
-        taskKeyword,
-        !isAdmin && email ? email : undefined
-      );
-
-      console.log("评论数据response", commentsResponse);
-      console.log("笔记数据response", notesResponse);
+      // 并行获取评论和笔记数据
+      const [commentsResponse, notesResponse] = await Promise.all([
+        getXhsCommentsByKeywordApi(taskKeyword, !isAdmin && email ? email : undefined),
+        getXhsNotesByKeywordApi(taskKeyword, !isAdmin && email ? email : undefined),
+      ]);
 
       // 计算笔记数量
       const noteCount =
-        notesResponse &&
-        notesResponse.code === 0 &&
-        notesResponse.data &&
-        notesResponse.data.records
+        notesResponse?.code === 0 && notesResponse?.data?.records
           ? notesResponse.data.records.length
           : 0;
 
       // 计算评论数量并存储评论数据
       let commentCount = 0;
-      if (
-        commentsResponse &&
-        commentsResponse.code === 0 &&
-        commentsResponse.data &&
-        commentsResponse.data.records
-      ) {
+      if (commentsResponse?.code === 0 && commentsResponse?.data?.records) {
         const records = commentsResponse.data.records;
         commentCount = records.length;
 
         // 存储评论数据
         setCommentsData(records);
 
-        // 存储评论ID
+        // 存储评论ID并获取分析意向结果
         const ids = records.map((comment: any) => comment.id?.toString() || "").filter((id) => id);
         setCommentIds(ids);
-        //告知分析意向客户，DAG开始运行
-        const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
-        const dagId = "comments_analyzer";
-        const dagRunId = `${dagId}_${timestamp}`;
-        const filteredComments = ids; // 使用刚刚提取的评论ID
-        console.log("filteredComments", filteredComments);
-        // Prepare configuration
-        const conf = {
-          profile_sentence: "",
-          comment_ids: filteredComments, // No limit on comments
-        };
-        const analysisDagRunResponse = await triggerDagRun(dagId, dagRunId, conf);
-        const newTask = {
-          dag_run_id: analysisDagRunResponse.dag_run_id,
-          state: analysisDagRunResponse.state,
-          start_date: analysisDagRunResponse.start_date || new Date().toISOString(),
-          end_date: analysisDagRunResponse.end_date || "",
-          conf: JSON.stringify(conf),
-        };
-        setAnalysisTask(newTask);
-        console.log("分析意向客户dagRunResponse", analysisDagRunResponse);
 
-        //检查分析状态是否完成 如果完成就到下一步的分析意向结果
-        setTimeout(() => {
-          checkAnalysisStatus();
-        }, 2000); // 等待2秒后检查状态，给DAG启动时间
-        console.log("存储的评论数据:", records);
-        console.log("存储的评论ID:", ids);
+        if (ids.length > 0) {
+          try {
+            const commentIntentsResponse = await getCommentIntents(ids);
+
+            // 设置意向分析结果
+            if (commentIntentsResponse?.code === 0 && commentIntentsResponse?.data) {
+              setIntentResults(commentIntentsResponse.data);
+              setAnalysisComplete(true);
+            } else {
+              setIntentResults(null);
+              setAnalysisComplete(false);
+            }
+          } catch (intentError) {
+            console.error("获取意向分析结果失败:", intentError);
+            setIntentResults(null);
+            setAnalysisComplete(false);
+          }
+        }
       } else {
         // 清空数据
         setCommentsData([]);
         setCommentIds([]);
+        setIntentResults(null);
+        setAnalysisComplete(false);
       }
 
       // 创建任务详情对象
@@ -314,12 +283,11 @@ const DashTaskVeiw = () => {
         email: email || "user@example.com",
         noteCount: noteCount,
         commentCount: commentCount,
-        progress: 0, // 暂时空着
+        progress: 0,
         remainingTime: "",
       };
 
       setTaskDetail(taskDetail);
-      console.log("任务详情设置完成:", taskDetail);
       setLoading(false);
     } catch (error) {
       console.error("获取任务详情失败:", error);
@@ -327,105 +295,19 @@ const DashTaskVeiw = () => {
       setLoading(false);
     }
   };
-  // 获取分析意向结果
-  const fetchIntentResults = async () => {
-    if (!taskKeyword) return;
-
-    try {
-      console.log("开始获取分析意向结果");
-      const response = await getIntentCustomersApi({
-        email: !isAdmin && email ? email : undefined,
-        keyword: taskKeyword,
-      });
-
-      console.log("分析意向结果:", response);
-
-      if (response && response.code === 0 && response.data) {
-        setIntentResults(response.data);
-        setAnalysisComplete(true);
-        message.success("意向客户分析结果已更新");
-      } else {
-        console.log("暂无分析结果数据");
-        setIntentResults(null);
-        setAnalysisComplete(false);
-      }
-    } catch (err) {
-      console.error("获取分析意向结果失败:", err);
-      message.error("获取分析意向结果失败");
-      setIntentResults(null);
-      setAnalysisComplete(false);
-    }
-  };
-
-  //查看分析意向客户任务状态
-  const checkAnalysisStatus = async () => {
-    if (!analysisTask) return;
-    try {
-      // Get the DAG ID from the dag_run_id (format: dagId_timestamp)
-      const dagId = "comments_analyzer";
-      const dagRunId = analysisTask.dag_run_id;
-
-      // Get the specific DAG run status from Airflow API
-      const response = await getDagRuns(dagId, 100, "-start_date");
-
-      // Find the specific DAG run by ID
-      const specificDagRun =
-        response && response.dag_runs
-          ? response.dag_runs.find((run: any) => run.dag_run_id === dagRunId)
-          : null;
-      console.log("Analysis task status response:", response);
-      console.log("Looking for DAG run ID:", dagRunId);
-
-      if (specificDagRun) {
-        console.log("Found specific DAG run:", specificDagRun);
-        const currentState = specificDagRun.state;
-
-        // Update the analysis task with the current state
-        setAnalysisTask({
-          ...analysisTask,
-          state: currentState,
-          end_date: specificDagRun.end_date || analysisTask.end_date,
-        });
-
-        if (currentState === "success") {
-          message.success("分析任务已完成！");
-          // 分析完成后获取结果
-          await fetchIntentResults();
-        } else if (currentState === "failed") {
-          message.error("分析任务失败，请检查日志");
-          setAnalysisComplete(false);
-        } else {
-          // Still running
-          message.info("分析任务在执行中");
-          setAnalysisComplete(false);
-        }
-      } else {
-        message.error("无法获取任务状态，请稍后再试");
-        setAnalysisComplete(false);
-      }
-    } catch (err) {
-      console.error("Error checking analysis task status:", err);
-      message.error("检查分析任务状态失败");
-      setAnalysisComplete(false);
-    }
-  };
 
   // 根据评论ID获取意向级别
-  const getCustomerLevel = (commentId: string) => {
-    if (!analysisComplete || !intentResults || !intentResults.records) {
+  const getCustomerLevel = (commentId: string): string => {
+    if (!analysisComplete || !intentResults?.records) {
       return "分析中";
     }
 
     // 在意向结果中查找匹配的评论
-    // 分析意向结果中的comment_id对应小红书评论数据中的id
     const intentCustomer = intentResults.records.find(
       (record: any) => record.comment_id?.toString() === commentId
     );
 
-    console.log(`查找评论ID ${commentId} 的意向结果:`, intentCustomer);
-
-    // 返回intent字段，不是intent_level
-    return intentCustomer ? intentCustomer.intent : "未知";
+    return intentCustomer?.intent || "未知";
   };
 
   const fetchFilterResults = () => {
@@ -490,13 +372,7 @@ const DashTaskVeiw = () => {
     if (taskKeyword) {
       setRefreshLoading(true);
       try {
-        // 如果有分析任务，先检查分析状态
-        if (analysisTask) {
-          await checkAnalysisStatus();
-        } else {
-          // 如果没有分析任务，重新获取任务详情
-          await fetchTaskDetail(taskKeyword);
-        }
+        await fetchTaskDetail(taskKeyword);
         // fetchFilterResults会通过useEffect自动触发
       } catch (error) {
         console.error("刷新失败:", error);
@@ -559,6 +435,12 @@ const DashTaskVeiw = () => {
           minWidth: "auto",
           flex: "none",
           gap: "12px",
+        }),
+      },
+      controlSection: {
+        ...styles.controlSection,
+        ...(isMobile && {
+          alignItems: "flex-start",
         }),
       },
     };
@@ -688,11 +570,6 @@ const DashTaskVeiw = () => {
     setSelectedFilterRowKeys(selectedRowKeys);
   };
 
-  const onSelectedTemplateChange = (selectedRowKeys: React.Key[]) => {
-    console.log("回复模版selectedRowKeys", selectedRowKeys);
-    setSelectedTemplateRowKeys(selectedRowKeys);
-  };
-
   const filterRowSelection: TableRowSelection<FilterResult> = {
     selectedRowKeys: selectedFilterRowKeys,
     onChange: onSelectedFilterChange,
@@ -710,9 +587,6 @@ const DashTaskVeiw = () => {
           {
             href: "/xhs/dashboard",
             title: <HomeOutlined />,
-          },
-          {
-            title: "智能获客",
           },
           {
             title: taskKeyword,
@@ -743,11 +617,11 @@ const DashTaskVeiw = () => {
             <StatItem label="采集笔记" value={taskDetail.noteCount} />
             <StatItem label="采集评论" value={taskDetail.commentCount} />
             <StatItem label="分析状态" value={taskDetail.status} />
-            <StatItem label="任务用时" value={taskDetail.remainingTime} showDivider={false} />
+            {/* <StatItem label="任务用时" value={taskDetail.remainingTime} showDivider={false} /> */}
           </div>
 
           {/* 控制按钮 */}
-          <div style={styles.controlSection}>
+          <div style={getResponsiveStyles().controlSection}>
             <Text style={styles.controlLabel}>任务控制</Text>
             <Button type="primary" onClick={handleStartTask} style={styles.controlButton}>
               开始/暂停
