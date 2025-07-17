@@ -343,7 +343,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         );
       }
     }
-  }, [visible, email, currentStep, commentTemplates]);
+  }, [visible, email, currentStep]);
 
   // Fetch comment templates from backend
   const fetchCommentTemplates = async () => {
