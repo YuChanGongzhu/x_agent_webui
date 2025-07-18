@@ -14,6 +14,8 @@ const getXhsDevicesMsgListUrl = process.env.REACT_APP_TECENT_GET_XHS_DEVICES_MSG
 const updateTaskTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_TASK_TEMPLATES;
 const getTaskTemplatesUrl = process.env.REACT_APP_TECENT_GET_TASK_TEMPLATES;
 const getCommentIntentsUrl = process.env.REACT_APP_TECENT_GET_COMMENT_INTENTS;
+const getAutoResultUrl = process.env.REACT_APP_GET_AUTO_RESULT;
+
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1243,5 +1245,101 @@ export const getCommentIntents = async (commentIds: string[]): Promise<any> => {
   } catch (error) {
     console.error("Error fetching comment intents:", error);
     throw error;
+  }
+};
+
+/**
+ * Interface for Auto Result Record
+ */
+export interface AutoResultRecord {
+  author?: string;
+  email?: string;
+  comment_content: string;
+  comment_likes: number;
+  intent: string;
+  reply_content: string;
+}
+
+/**
+ * Interface for Auto Result Response
+ */
+export interface AutoResultResponse {
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    records: AutoResultRecord[];
+  } | null;
+}
+
+/**
+ * 获取关键词下的笔记作者、评论内容、评论点赞数、客户意向和手动回复内容
+ * 
+ * @param keyword 必须，关键词
+ * @param email 可选，用户邮箱，用于过滤数据
+ * @param page 可选，页码，默认为1
+ * @param page_size 可选，每页记录数，默认为20，最大500
+ * @returns Promise with the auto result response
+ */
+export const getAutoResultApi = async (
+  keyword: string,
+  email?: string,
+  page?: number,
+  page_size?: number
+): Promise<AutoResultResponse> => {
+  try {
+    // 参数验证
+    if (!keyword || keyword.trim() === '') {
+      return {
+        code: 1,
+        message: "关键词不能为空",
+        data: null
+      };
+    }
+
+    // 处理关键字的空格
+    keyword = keyword.trim();
+    if (keyword.startsWith('"') && keyword.endsWith('"')) {
+      keyword = keyword.substring(1, keyword.length - 1);
+    }
+
+    // 限制每页最大记录数为500
+    const pageSize = page_size ? Math.min(page_size, 500) : 20;
+
+    // 构建查询参数
+    const queryParams = new URLSearchParams();
+    queryParams.append('keyword', keyword);
+    queryParams.append('page', page?.toString() || '1');
+    queryParams.append('page_size', pageSize.toString());
+    
+    // 如果提供了email，添加到查询参数中
+    if (email) {
+      queryParams.append('email', email);
+    }
+
+    // 发送请求
+    const response = await fetch(`${getAutoResultUrl || ''}?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`获取数据失败: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error fetching auto result:', error);
+    return {
+      code: 1,
+      message: `查询失败: ${error instanceof Error ? error.message : String(error)}`,
+      data: null
+    };
   }
 };
