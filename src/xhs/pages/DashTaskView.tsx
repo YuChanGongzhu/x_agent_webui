@@ -155,14 +155,6 @@ interface FilterResult {
   reachContent: string;
 }
 
-interface AnalysisTask {
-  dag_run_id: string;
-  state: string;
-  start_date: string;
-  end_date: string;
-  conf: string;
-}
-
 const DashTaskVeiw = () => {
   const { isAdmin, email } = useUserStore();
   const [searchParams] = useSearchParams();
@@ -220,7 +212,6 @@ const DashTaskVeiw = () => {
         1,
         500
       );
-      console.log("firstPageResponse", firstPageResponse);
 
       // 获取笔记数据
       const notesResponse = await getXhsNotesByKeywordApi(
@@ -247,12 +238,12 @@ const DashTaskVeiw = () => {
 
         // 如果有多页数据，获取剩余页面的数据
         if (total_pages > 1) {
-          console.log(`发现多页数据，总页数: ${total_pages}，开始获取剩余页面数据...`);
-
           const additionalPagePromises = [];
           for (let page = 2; page <= total_pages; page++) {
             // 使用最大页面大小500获取每一页数据
-            additionalPagePromises.push(getAutoResultApi(taskKeyword, email || "", page, 500));
+            additionalPagePromises.push(
+              getAutoResultApi(taskKeyword, !isAdmin && email ? email : undefined, page, 500)
+            );
           }
 
           try {
@@ -261,20 +252,15 @@ const DashTaskVeiw = () => {
             // 合并所有页面的数据
             additionalPagesResponses.forEach((response, index) => {
               if (response?.code === 0 && response?.data?.records) {
-                console.log(
-                  `第${index + 2}页数据获取成功，记录数: ${response.data.records.length}`
-                );
                 allComments = [...allComments, ...response.data.records];
               }
             });
           } catch (error) {
-            console.error("获取额外页面数据失败:", error);
             message.warning("部分页面数据获取失败，显示已获取的数据");
           }
         }
 
         commentCount = allComments.length;
-        console.log(`总共获取到 ${commentCount} 条评论数据`);
 
         // 存储所有评论数据
         setCommentsData(allComments);
@@ -298,7 +284,6 @@ const DashTaskVeiw = () => {
       setTaskDetail(taskDetail);
       setLoading(false);
     } catch (error) {
-      console.error("获取任务详情失败:", error);
       message.error("获取任务详情失败");
       setLoading(false);
     }
@@ -306,15 +291,11 @@ const DashTaskVeiw = () => {
 
   const fetchFilterResults = () => {
     if (!taskKeyword) {
-      console.log("taskKeyword为空，无法获取筛选结果");
       return;
     }
-    console.log("使用存储的评论数据进行筛选结果处理");
 
     // 使用存储的评论数据而不是重新调用API
     if (commentsData && commentsData.length > 0) {
-      console.log("使用存储的评论数据:", commentsData);
-
       // 将评论数据转换为FilterResult格式
       const transformedFilterResults: FilterResult[] = commentsData.map(
         (comment: any, index: number) => ({
@@ -331,13 +312,11 @@ const DashTaskVeiw = () => {
       setOriginalFilterResults(transformedFilterResults);
       setFilterResults(transformedFilterResults);
       setCurrentFilterPage(1); // 重置到第一页
-      console.log("转换后的筛选结果:", transformedFilterResults);
     } else {
       // 如果没有存储的数据，使用空数组
       setOriginalFilterResults([]);
       setFilterResults([]);
       setCurrentFilterPage(1); // 重置到第一页
-      console.log("未找到存储的评论数据，使用空数组");
     }
   };
 
@@ -367,7 +346,6 @@ const DashTaskVeiw = () => {
         await fetchTaskDetail(taskKeyword);
         // fetchFilterResults会通过useEffect自动触发
       } catch (error) {
-        console.error("刷新失败:", error);
         message.error("刷新失败，请稍后重试");
       } finally {
         setRefreshLoading(false);
@@ -400,7 +378,6 @@ const DashTaskVeiw = () => {
         message.error(`导出失败：${result.error}`);
       }
     } catch (error) {
-      console.error("导出数据失败:", error);
       message.error("导出数据失败，请稍后重试");
     }
   };
@@ -556,13 +533,61 @@ const DashTaskVeiw = () => {
     );
   }
   const onSelectedFilterChange = (selectedRowKeys: React.Key[]) => {
-    console.log("筛选结果selectedRowKeys", selectedRowKeys);
     setSelectedFilterRowKeys(selectedRowKeys);
   };
+
+  // 处理全选所有页面数据
+  const handleSelectAllPages = () => {
+    if (selectedFilterRowKeys.length === filterResults.length) {
+      // 如果已经全选，则取消全选
+      setSelectedFilterRowKeys([]);
+    } else {
+      // 否则选中所有数据
+      const allKeys = filterResults.map((item) => item.key);
+      setSelectedFilterRowKeys(allKeys);
+    }
+  };
+
+  // 计算当前页面是否全选
+  const getCurrentPageData = () => {
+    const startIndex = (currentFilterPage - 1) * filterPageSize;
+    const endIndex = startIndex + filterPageSize;
+    return filterResults.slice(startIndex, endIndex);
+  };
+
+  const currentPageData = getCurrentPageData();
+  const currentPageKeys = currentPageData.map((item) => item.key);
 
   const filterRowSelection: TableRowSelection<FilterResult> = {
     selectedRowKeys: selectedFilterRowKeys,
     onChange: onSelectedFilterChange,
+    onSelectAll: (selected) => {
+      if (selected) {
+        // 选中当前页面的所有数据
+        const newSelectedKeys = [...new Set([...selectedFilterRowKeys, ...currentPageKeys])];
+        setSelectedFilterRowKeys(newSelectedKeys);
+      } else {
+        // 取消选中当前页面的所有数据
+        const newSelectedKeys = selectedFilterRowKeys.filter(
+          (key) => !currentPageKeys.includes(key as string)
+        );
+        setSelectedFilterRowKeys(newSelectedKeys);
+      }
+    },
+    // 设置全选 checkbox 的状态
+    onSelectInvert: () => {
+      const newSelectedKeys = currentPageKeys.filter(
+        (key) => !selectedFilterRowKeys.includes(key as string)
+      );
+      const keysToRemove = currentPageKeys.filter((key) =>
+        selectedFilterRowKeys.includes(key as string)
+      );
+      const finalKeys = [
+        ...selectedFilterRowKeys.filter((key) => !keysToRemove.includes(key as string)),
+        ...newSelectedKeys,
+      ];
+      setSelectedFilterRowKeys(finalKeys);
+    },
   };
 
   return (
@@ -624,6 +649,13 @@ const DashTaskVeiw = () => {
         title="筛选结果"
         extra={
           <div style={{ display: "flex", gap: "10px" }}>
+            <Button
+              onClick={handleSelectAllPages}
+              type={selectedFilterRowKeys.length === filterResults.length ? "primary" : "default"}
+            >
+              {selectedFilterRowKeys.length === filterResults.length ? "取消全选" : "全选"}(
+              {selectedFilterRowKeys.length}/{filterResults.length})
+            </Button>
             <Button icon={<ExportOutlined />} onClick={handleExportData}>
               导出数据
             </Button>
@@ -677,7 +709,6 @@ const TemplateMessage = () => {
   useEffect(() => {
     // 当email可用时获取模板
     if (email) {
-      console.log(`Email available, fetching templates for: ${email}`);
       fetchTemplates();
     }
   }, [email]); // 依赖于email变化
@@ -687,16 +718,11 @@ const TemplateMessage = () => {
     if (!imageUrl) return;
 
     try {
-      console.log("Loading image from URL:", imageUrl);
-
       // 直接设置图片URL而不尝试从腾讯云COS获取
       // 这样可以避免解析URL时的问题
       setImageUrl(imageUrl);
       setImageFile(null); // 不需要文件对象，因为我们直接使用URL
-
-      console.log("Image URL set successfully");
     } catch (error) {
-      console.error("加载图片失败:", error);
       message.error("加载图片失败");
     }
   };
@@ -792,8 +818,6 @@ const TemplateMessage = () => {
       setLoading(true);
       const response = await deleteReplyTemplateApi(id, email);
 
-      console.log(`Deleting template ${id} for user: ${email}`);
-
       if (response.code === 0) {
         message.success("删除模板成功");
         fetchTemplates(); // 刷新模板列表
@@ -801,7 +825,6 @@ const TemplateMessage = () => {
         message.error(response.message || "删除模板失败");
       }
     } catch (error) {
-      console.error("删除模板失败:", error);
       message.error("删除模板失败");
     } finally {
       setLoading(false);
@@ -822,12 +845,9 @@ const TemplateMessage = () => {
         email: email, // 使用当前用户的邮箱
       });
 
-      console.log(`Fetching templates for user: ${email}`);
-
       setTemplates(response.data?.records || []);
       setTotalTemplates(response.data?.total || 0);
     } catch (error) {
-      console.error("获取模板失败:", error);
       message.error("获取模板失败");
     } finally {
       setLoading(false);
@@ -859,13 +879,12 @@ const TemplateMessage = () => {
 
       // 如果有新图片，先上传到腾讯云COS
       let imageUrlCOS = imageUrl;
-      console.log("Initial imageUrl value:", imageUrl);
 
       if (imageFile) {
         // 使用现有模板ID上传图片
-        console.log("Uploading new image file:", imageFile.name);
+
         imageUrlCOS = await uploadImageToCOS(editingTemplate.id);
-        console.log("After upload, imageUrlCOS:", imageUrlCOS);
+
         if (!imageUrlCOS) {
           message.error("图片上传失败，请重试");
           return;
@@ -880,8 +899,6 @@ const TemplateMessage = () => {
         image_urls: imageUrlCOS, // 添加图片URL字段
       });
 
-      console.log(`Updating template ${editingTemplate.id} for user: ${email}`);
-
       if (response.code === 0) {
         message.success("更新模板成功");
         setTemplateContent("");
@@ -894,7 +911,6 @@ const TemplateMessage = () => {
         message.error(response.message || "更新模板失败");
       }
     } catch (error) {
-      console.error("更新模板失败:", error);
       message.error("更新模板失败");
     } finally {
       setLoading(false);
@@ -1009,7 +1025,6 @@ const TemplateMessage = () => {
       setIsModalVisible(false);
       fetchTemplates(); // 刷新模板列表
     } catch (error) {
-      console.error("添加模板失败:", error);
       message.error("添加模板失败");
     } finally {
       setLoading(false);
@@ -1053,7 +1068,6 @@ const TemplateMessage = () => {
 
       return false; // 返回false阻止Upload组件默认上传行为
     } catch (error) {
-      console.error("处理图片上传失败:", error);
       message.error("处理图片上传失败");
       return false;
     } finally {
