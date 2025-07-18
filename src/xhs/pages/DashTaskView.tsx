@@ -214,7 +214,12 @@ const DashTaskVeiw = () => {
     setLoading(true);
     try {
       // 获取第一页数据，使用最大页面大小500
-      const firstPageResponse = await getAutoResultApi(taskKeyword, email || "", 1, 500);
+      const firstPageResponse = await getAutoResultApi(
+        taskKeyword,
+        !isAdmin && email ? email : undefined,
+        1,
+        500
+      );
       console.log("firstPageResponse", firstPageResponse);
 
       // 获取笔记数据
