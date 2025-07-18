@@ -14,7 +14,7 @@ const getXhsDevicesMsgListUrl = process.env.REACT_APP_TECENT_GET_XHS_DEVICES_MSG
 const updateTaskTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_TASK_TEMPLATES;
 const getTaskTemplatesUrl = process.env.REACT_APP_TECENT_GET_TASK_TEMPLATES;
 const getCommentIntentsUrl = process.env.REACT_APP_TECENT_GET_COMMENT_INTENTS;
-const getAutoResultUrl = process.env.REACT_APP_GET_AUTO_RESULT;
+const getAutoResultUrl = process.env.REACT_APP_TECENT_GET_AUTO_RESULTS;
 
 export interface ChatMessage {
   msg_id: string;
@@ -1277,7 +1277,7 @@ export interface AutoResultResponse {
 
 /**
  * 获取关键词下的笔记作者、评论内容、评论点赞数、客户意向和手动回复内容
- * 
+ *
  * @param keyword 必须，关键词
  * @param email 可选，用户邮箱，用于过滤数据
  * @param page 可选，页码，默认为1
@@ -1292,11 +1292,11 @@ export const getAutoResultApi = async (
 ): Promise<AutoResultResponse> => {
   try {
     // 参数验证
-    if (!keyword || keyword.trim() === '') {
+    if (!keyword || keyword.trim() === "") {
       return {
         code: 1,
         message: "关键词不能为空",
-        data: null
+        data: null,
       };
     }
 
@@ -1311,35 +1311,33 @@ export const getAutoResultApi = async (
 
     // 构建查询参数
     const queryParams = new URLSearchParams();
-    queryParams.append('keyword', keyword);
-    queryParams.append('page', page?.toString() || '1');
-    queryParams.append('page_size', pageSize.toString());
-    
+    queryParams.append("keyword", keyword);
+    queryParams.append("page", page?.toString() || "1");
+    queryParams.append("page_size", pageSize.toString());
+
     // 如果提供了email，添加到查询参数中
     if (email) {
-      queryParams.append('email', email);
+      queryParams.append("email", email);
     }
 
     // 发送请求
-    const response = await fetch(`${getAutoResultUrl || ''}?${queryParams.toString()}`, {
-      method: 'GET',
+    const response = await fetch(`${getAutoResultUrl || ""}?${queryParams.toString()}`, {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+      },
     });
-
     if (!response.ok) {
       throw new Error(`获取数据失败: ${response.statusText}`);
     }
-
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error('Error fetching auto result:', error);
+    console.error("Error fetching auto result:", error);
     return {
       code: 1,
       message: `查询失败: ${error instanceof Error ? error.message : String(error)}`,
-      data: null
+      data: null,
     };
   }
 };

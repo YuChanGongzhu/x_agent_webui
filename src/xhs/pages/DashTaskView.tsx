@@ -37,10 +37,12 @@ import {
   deleteReplyTemplateApi,
   getReplyTemplatesApi,
   getCommentIntents,
+  getAutoResultApi,
 } from "../../api/mysql";
 import { exportFilterResults, ExportData } from "../../utils/excelExport";
 import VirtualList from "rc-virtual-list";
 import { tencentCOSService } from "../../api/tencent_cos";
+import { pad } from "crypto-js";
 type TableRowSelection<T extends object = object> = TableProps<T>["rowSelection"];
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -124,6 +126,13 @@ const styles = {
     border: "1px solid #8389FC",
     borderRadius: "0.125rem",
   },
+  levelborder: {
+    color: " #333333",
+    borderRadius: "6px",
+    padding: "4px 6px",
+    backgroundColor: "#f0f0f0",
+    fontSize: "0.875rem",
+  },
 };
 interface TaskDetail {
   id: string;
@@ -174,11 +183,6 @@ const DashTaskVeiw = () => {
 
   // 存储评论数据
   const [commentsData, setCommentsData] = useState<any[]>([]);
-  const [commentIds, setCommentIds] = useState<string[]>([]);
-
-  // 存储分析意向结果
-  const [intentResults, setIntentResults] = useState<any>(null);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
 
   useEffect(() => {
     if (taskKeyword) {
@@ -194,7 +198,7 @@ const DashTaskVeiw = () => {
     if (taskKeyword) {
       fetchFilterResults();
     }
-  }, [commentsData, commentIds, taskKeyword, analysisComplete, intentResults]);
+  }, [commentsData, taskKeyword]);
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -209,11 +213,15 @@ const DashTaskVeiw = () => {
   const fetchTaskDetail = async (taskKeyword: string) => {
     setLoading(true);
     try {
-      // 并行获取评论和笔记数据
-      const [commentsResponse, notesResponse] = await Promise.all([
-        getXhsCommentsByKeywordApi(taskKeyword, !isAdmin && email ? email : undefined),
-        getXhsNotesByKeywordApi(taskKeyword, !isAdmin && email ? email : undefined),
-      ]);
+      // 获取第一页数据，使用最大页面大小500
+      const firstPageResponse = await getAutoResultApi(taskKeyword, email || "", 1, 500);
+      console.log("firstPageResponse", firstPageResponse);
+
+      // 获取笔记数据
+      const notesResponse = await getXhsNotesByKeywordApi(
+        taskKeyword,
+        !isAdmin && email ? email : undefined
+      );
 
       // 计算笔记数量
       const noteCount =
@@ -221,43 +229,53 @@ const DashTaskVeiw = () => {
           ? notesResponse.data.records.length
           : 0;
 
-      // 计算评论数量并存储评论数据
+      let allComments: any[] = [];
       let commentCount = 0;
-      if (commentsResponse?.code === 0 && commentsResponse?.data?.records) {
-        const records = commentsResponse.data.records;
-        commentCount = records.length;
 
-        // 存储评论数据
-        setCommentsData(records);
+      if (firstPageResponse?.code === 0 && firstPageResponse?.data) {
+        const { records, total_pages } = firstPageResponse.data;
 
-        // 存储评论ID并获取分析意向结果
-        const ids = records.map((comment: any) => comment.id?.toString() || "").filter((id) => id);
-        setCommentIds(ids);
+        // 添加第一页的数据
+        if (records && records.length > 0) {
+          allComments = [...records];
+        }
 
-        if (ids.length > 0) {
+        // 如果有多页数据，获取剩余页面的数据
+        if (total_pages > 1) {
+          console.log(`发现多页数据，总页数: ${total_pages}，开始获取剩余页面数据...`);
+
+          const additionalPagePromises = [];
+          for (let page = 2; page <= total_pages; page++) {
+            // 使用最大页面大小500获取每一页数据
+            additionalPagePromises.push(getAutoResultApi(taskKeyword, email || "", page, 500));
+          }
+
           try {
-            const commentIntentsResponse = await getCommentIntents(ids);
+            const additionalPagesResponses = await Promise.all(additionalPagePromises);
 
-            // 设置意向分析结果
-            if (commentIntentsResponse?.code === 0 && commentIntentsResponse?.data) {
-              setIntentResults(commentIntentsResponse.data);
-              setAnalysisComplete(true);
-            } else {
-              setIntentResults(null);
-              setAnalysisComplete(false);
-            }
-          } catch (intentError) {
-            console.error("获取意向分析结果失败:", intentError);
-            setIntentResults(null);
-            setAnalysisComplete(false);
+            // 合并所有页面的数据
+            additionalPagesResponses.forEach((response, index) => {
+              if (response?.code === 0 && response?.data?.records) {
+                console.log(
+                  `第${index + 2}页数据获取成功，记录数: ${response.data.records.length}`
+                );
+                allComments = [...allComments, ...response.data.records];
+              }
+            });
+          } catch (error) {
+            console.error("获取额外页面数据失败:", error);
+            message.warning("部分页面数据获取失败，显示已获取的数据");
           }
         }
+
+        commentCount = allComments.length;
+        console.log(`总共获取到 ${commentCount} 条评论数据`);
+
+        // 存储所有评论数据
+        setCommentsData(allComments);
       } else {
         // 清空数据
         setCommentsData([]);
-        setCommentIds([]);
-        setIntentResults(null);
-        setAnalysisComplete(false);
       }
 
       // 创建任务详情对象
@@ -281,20 +299,6 @@ const DashTaskVeiw = () => {
     }
   };
 
-  // 根据评论ID获取意向级别
-  const getCustomerLevel = (commentId: string): string => {
-    if (!analysisComplete || !intentResults?.records) {
-      return "分析中";
-    }
-
-    // 在意向结果中查找匹配的评论
-    const intentCustomer = intentResults.records.find(
-      (record: any) => record.comment_id?.toString() === commentId
-    );
-
-    return intentCustomer?.intent || "未知";
-  };
-
   const fetchFilterResults = () => {
     if (!taskKeyword) {
       console.log("taskKeyword为空，无法获取筛选结果");
@@ -305,19 +309,17 @@ const DashTaskVeiw = () => {
     // 使用存储的评论数据而不是重新调用API
     if (commentsData && commentsData.length > 0) {
       console.log("使用存储的评论数据:", commentsData);
-      console.log("分析完成状态:", analysisComplete);
-      console.log("意向结果:", intentResults);
 
       // 将评论数据转换为FilterResult格式
       const transformedFilterResults: FilterResult[] = commentsData.map(
         (comment: any, index: number) => ({
           key: comment.id?.toString() || index.toString(),
           userName: comment.author || "未知用户",
-          commentContent: comment.content || "无内容",
-          likeCount: comment.likes || 0,
-          customerLevel: getCustomerLevel(comment.id?.toString() || ""), // 使用分析结果或显示"分析中"
+          commentContent: comment.comment_content || "无内容",
+          likeCount: comment.comment_likes || 0,
+          customerLevel: comment.intent || "未知",
           followUpCount: Math.floor(Math.random() * 10) + 1, // 模拟跟评数量
-          reachContent: comment.note_url || "无内容", // 触达内容使用note_url
+          reachContent: comment.reply_content || "无内容", // 触达内容使用note_url
         })
       );
 
@@ -496,7 +498,18 @@ const DashTaskVeiw = () => {
       ),
       dataIndex: "customerLevel",
       key: "customerLevel",
-      render: (level: string) => <Text style={{ color: "#333333" }}>{level}</Text>,
+      render: (level: string) => (
+        <Text
+          style={{
+            ...styles.levelborder,
+            color: level === "高意向" ? "#166534" : level === "中意向" ? "#854d0e" : "#1f2937",
+            backgroundColor:
+              level === "高意向" ? "#dcfce7" : level === "中意向" ? "#fef9c3" : "#f3f4f6",
+          }}
+        >
+          {level}
+        </Text>
+      ),
     },
     // {
     //   title: "跟评数量",
@@ -509,25 +522,12 @@ const DashTaskVeiw = () => {
       dataIndex: "reachContent",
       key: "reachContent",
       width: 300,
-      render: (url: string) => {
-        if (!url || url === "无内容") {
+      render: (reachContent: string) => {
+        if (!reachContent || reachContent === "无内容") {
           return <Text type="secondary">无内容</Text>;
         }
 
-        // 省略显示URL，只显示前30个字符
-        const displayUrl = url.length > 30 ? `${url.substring(0, 30)}...` : url;
-
-        return (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#1890ff" }}
-            title={url} // 鼠标悬停时显示完整URL
-          >
-            {displayUrl}
-          </a>
-        );
+        return <Text>{reachContent}</Text>;
       },
     },
   ];
