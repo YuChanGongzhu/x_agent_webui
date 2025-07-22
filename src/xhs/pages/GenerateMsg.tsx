@@ -92,7 +92,7 @@ const GenerateMsg: React.FC = () => {
         <div className='flex justify-between mb-4'>
           <h2 className="text-lg font-semibold leading-4">设备列表</h2>
           <Space>
-            <Button disabled={!deviceMsgList.length || loading} type='default' onClick={fetchDeviceMsgList}>刷新</Button>
+            <Button disabled={loading} type='default' onClick={fetchDeviceMsgList}>刷新</Button>
             <BasePopconfirm popconfirmConfig={{
               title: <><div className='p-4 pb-0'>您想一键回复什么内容？</div></>,
               description: <>
