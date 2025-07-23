@@ -83,9 +83,9 @@ const DeviceManagement: React.FC = () => {
   const [currentDagRunId, setCurrentDagRunId] = useState<string | null>(null);
 
   // 检查DAG运行状态的函数
-  const checkDagRunStatus = async (dagRunId: string) => {
+  const checkDagRunStatus = async (dag_id:string,dagRunId: string) => {
     try {
-      const response = await getDagRunDetail('update_device_list', dagRunId);
+      const response = await getDagRunDetail(dag_id, dagRunId);
       console.log('DAG运行状态:', response);
 
       // 根据DAG状态更新refreshing
@@ -96,7 +96,7 @@ const DeviceManagement: React.FC = () => {
 
           // 继续轮询检查状态
           setTimeout(() => {
-            checkDagRunStatus(dagRunId);
+            checkDagRunStatus(dag_id,dagRunId);
           }, 2000);
         } else {
           // DAG已完成或失败
@@ -130,7 +130,7 @@ const DeviceManagement: React.FC = () => {
         setCurrentDagRunId(response.dag_run_id);
 
         // 开始轮询检查DAG状态
-        checkDagRunStatus(response.dag_run_id);
+        checkDagRunStatus('update_device_list',response.dag_run_id);
       } else {
         notifi('设备刷新任务触发成功，但未返回DAG运行ID', 'warning');
         // 退回到原有逻辑
