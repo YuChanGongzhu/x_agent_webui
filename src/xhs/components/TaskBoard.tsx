@@ -5,6 +5,7 @@ import {
   ClockIcon,
   ChatBubbleLeftRightIcon,
   ArrowPathIcon,
+  PauseIcon,
 } from "@heroicons/react/24/outline";
 import { Button, message, Image, Input } from "antd";
 import VirtualList from "rc-virtual-list";
@@ -13,6 +14,7 @@ import { getDagRuns } from "../../api/airflow";
 import { useUser } from "../../context/UserContext";
 import stopIcon from "../../img/stop.svg";
 import refreshIcon from "../../img/refresh.svg";
+import { pauseDag, setNote, getDagRunDetail } from "../../api/airflow";
 const { Search } = Input;
 // Define the status types
 type TaskStatus = "running" | "success" | "failed" | "queued";
@@ -49,7 +51,7 @@ interface TaskBoardProps {
 }
 
 // Helper function to get status icon and color
-const getStatusInfo = (state: string) => {
+const getStatusInfo = (state: string, note: string) => {
   const status = state.toLowerCase();
   switch (status) {
     case "running":
@@ -59,6 +61,13 @@ const getStatusInfo = (state: string) => {
         dotColor: "bg-green-500",
       };
     case "success":
+      if (note === "paused") {
+        return {
+          icon: <PauseIcon className="h-4 w-4 text-yellow-500 " />,
+          textColor: "text-yellow-500",
+          dotColor: "bg-yellow-500",
+        };
+      }
       return {
         icon: <CheckCircleIcon className="h-4 w-4 text-green-500" />,
         textColor: "text-green-500",
@@ -97,8 +106,31 @@ const TaskRow: React.FC<{
   task: Task;
   isHighlighted?: boolean;
   onViewTask?: (task: Task) => void;
-}> = ({ task, isHighlighted = false, onViewTask }) => {
-  const statusInfo = getStatusInfo(task.state);
+  onRefresh?: () => void;
+}> = ({ task, isHighlighted = false, onViewTask, onRefresh }) => {
+  const statusInfo = getStatusInfo(task.state, task.note);
+  const [isPausing, setIsPausing] = useState(false);
+
+  const stopRunningTask = async (dagRunId: string) => {
+    if (isPausing) return; // 防止重复点击
+    try {
+      setIsPausing(true);
+      message.loading({ content: "正在暂停任务...", key: "pauseTask" });
+      await Promise.all([
+        pauseDag("xhs_auto_progress", dagRunId),
+        setNote("xhs_auto_progress", dagRunId, "paused"),
+      ]);
+      // 获取任务详情确认状态
+      await getDagRunDetail("xhs_auto_progress", dagRunId);
+      // 刷新任务列表
+      onRefresh && (await onRefresh());
+      message.success({ content: "任务已成功暂停", key: "pauseTask" });
+    } catch (err) {
+      message.error({ content: "暂停任务失败，请重试", key: "pauseTask" });
+    } finally {
+      setIsPausing(false);
+    }
+  };
 
   return (
     <div
@@ -119,17 +151,31 @@ const TaskRow: React.FC<{
         <div className={`h-2 w-2 rounded-full ${statusInfo.dotColor} mr-2`}></div>
         <span className={`${statusInfo.textColor} text-sm flex items-center`}>
           {statusInfo.icon}
-          <span className="ml-1">{task.state}</span>
+          <span className="ml-1">
+            {task.state === "success" && task.note === "paused" ? "paused" : task.state}
+          </span>
         </span>
       </div>
       <div
-        className="flex items-center justify-center"
+        className={`flex items-center justify-center cursor-pointer rounded-full p-1 transition-colors`}
         style={{ width: "10%" }}
         onClick={() => {
-          console.log("暂停方法位置");
+          if (!isPausing && task.state === "running") {
+            stopRunningTask(task.dag_run_id);
+          }
         }}
       >
-        <Image src={stopIcon} alt="stop" width={20} height={20} preview={false} />
+        {task.state === "running" && (
+          <>
+            {isPausing ? (
+              <div className="flex items-center justify-center">
+                <ArrowPathIcon className="h-5 w-5 text-gray-500 animate-spin" />
+              </div>
+            ) : (
+              <Image src={stopIcon} alt="stop" width={20} height={20} preview={false} />
+            )}
+          </>
+        )}
       </div>
       <div className="flex items-center justify-between" style={{ width: "53.3%" }}>
         <span className="text-gray-500 text-sm ml-3">{formatDate(task.start_date)}</span>
@@ -246,6 +292,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                 task={task}
                 isHighlighted={index === 0}
                 onViewTask={onViewTask}
+                onRefresh={onRefresh}
               />
             )}
           </VirtualList>
