@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 /**
  * Airflow API客户端接口，用于与Airflow REST API交互
@@ -6,16 +6,16 @@ import axios from 'axios';
  */
 
 // 从环境变量中获取Airflow配置
-const BASE_URL = process.env.REACT_APP_AIRFLOW_BASE_URL
-const USERNAME = process.env.REACT_APP_AIRFLOW_USERNAME
-const PASSWORD = process.env.REACT_APP_AIRFLOW_PASSWORD
+const BASE_URL = process.env.REACT_APP_AIRFLOW_BASE_URL;
+const USERNAME = process.env.REACT_APP_AIRFLOW_USERNAME;
+const PASSWORD = process.env.REACT_APP_AIRFLOW_PASSWORD;
 
 // 创建Axios实例，配置基础URL和认证信息
 const airflowAxios = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Authorization': `Basic ${btoa(`${USERNAME}:${PASSWORD}`)}`,
-    'Content-Type': 'application/json',
+    Authorization: `Basic ${btoa(`${USERNAME}:${PASSWORD}`)}`,
+    "Content-Type": "application/json",
   },
 });
 
@@ -63,7 +63,11 @@ interface VariableResponse {
  * @param orderBy 排序字段，默认按开始时间降序排序
  * @returns 包含DAG运行记录的响应
  */
-export const getDagRuns = async (dagId: string, limit: number = 100, orderBy: string = '-start_date'): Promise<any> => {
+export const getDagRuns = async (
+  dagId: string,
+  limit: number = 100,
+  orderBy: string = "-start_date"
+): Promise<any> => {
   const params = { limit, order_by: orderBy };
   return handleRequest(airflowAxios.get(`/dags/${dagId}/dagRuns`, { params }));
 };
@@ -90,7 +94,7 @@ export const triggerDagRun = async (
   if (conf) payload.conf = conf;
   if (logicalDate) payload.logical_date = logicalDate;
   if (note) payload.note = note;
-  
+
   return handleRequest(airflowAxios.post(`/dags/${dagId}/dagRuns`, payload));
 };
 
@@ -115,12 +119,18 @@ export const getVariable = async (key: string): Promise<VariableResponse> => {
  * @param description 变量的描述（可选）
  * @returns 变量的响应
  */
-export const setVariable = async (key: string, value: string, description?: string): Promise<VariableResponse> => {
-  return handleRequest<VariableResponse>(airflowAxios.post('/variables', {
-    key,
-    value,
-    description
-  }));
+export const setVariable = async (
+  key: string,
+  value: string,
+  description?: string
+): Promise<VariableResponse> => {
+  return handleRequest<VariableResponse>(
+    airflowAxios.post("/variables", {
+      key,
+      value,
+      description,
+    })
+  );
 };
 
 /**
@@ -131,7 +141,7 @@ export const setVariable = async (key: string, value: string, description?: stri
  */
 export const getAllVariables = async (limit: number = 100, offset: number = 0): Promise<any> => {
   const params = { limit, offset };
-  return handleRequest(airflowAxios.get('/variables', { params }));
+  return handleRequest(airflowAxios.get("/variables", { params }));
 };
 
 /**
@@ -189,17 +199,33 @@ export const getDagRunTaskInstances = async (dagId: string, dagRunId: string): P
  * @param taskTryNumber 任务尝试次数
  * @returns 包含任务日志的响应
  */
-export const getTaskInstanceLog = async (dagId: string, dagRunId: string, taskId: string, taskTryNumber: number = 1): Promise<any> => {
-  return handleRequest(airflowAxios.get(`/dags/${dagId}/dagRuns/${dagRunId}/taskInstances/${taskId}/logs/${taskTryNumber}`));
+export const getTaskInstanceLog = async (
+  dagId: string,
+  dagRunId: string,
+  taskId: string,
+  taskTryNumber: number = 1
+): Promise<any> => {
+  return handleRequest(
+    airflowAxios.get(
+      `/dags/${dagId}/dagRuns/${dagRunId}/taskInstances/${taskId}/logs/${taskTryNumber}`
+    )
+  );
 };
 
 /**
  * 暂停DAG
  * @param dagId DAG的ID
+ * @param dag_run_id DAG运行的ID
  * @returns 操作响应
  */
-export const pauseDag = async (dagId: string): Promise<any> => {
-  return handleRequest(airflowAxios.patch(`/dags/${dagId}`, { is_paused: true }));
+export const pauseDag = async (dagId: string, dag_run_id: string): Promise<any> => {
+  return handleRequest(
+    airflowAxios.patch(`/dags/${dagId}/dagRuns/${dag_run_id}`, { state: "success" })
+  );
+};
+//设置note
+export const setNote = async (dagId: string, dagRunId: string, note: string): Promise<any> => {
+  return handleRequest(airflowAxios.patch(`/dags/${dagId}/dagRuns/${dagRunId}`, { note: note }));
 };
 
 /**
@@ -219,5 +245,5 @@ export const unpauseDag = async (dagId: string): Promise<any> => {
  */
 export const getAllDags = async (limit: number = 100, offset: number = 0): Promise<any> => {
   const params = { limit, offset };
-  return handleRequest(airflowAxios.get('/dags', { params }));
+  return handleRequest(airflowAxios.get("/dags", { params }));
 };
