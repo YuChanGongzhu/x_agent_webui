@@ -225,7 +225,9 @@ export const pauseDag = async (dagId: string, dag_run_id: string): Promise<any> 
 };
 //设置note
 export const setNote = async (dagId: string, dagRunId: string, note: string): Promise<any> => {
-  return handleRequest(airflowAxios.patch(`/dags/${dagId}/dagRuns/${dagRunId}`, { note: note }));
+  return handleRequest(
+    airflowAxios.patch(`/dags/${dagId}/dagRuns/${dagRunId}/setNote`, { note: note })
+  );
 };
 
 /**

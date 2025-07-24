@@ -121,6 +121,9 @@ const DataCollect: React.FC = () => {
   // State for loading and errors
   const [loading, setLoading] = useState(false);
 
+  // 添加暂停状态管理
+  const [pausingTasks, setPausingTasks] = useState<Set<string>>(new Set());
+
   // 获取用户上下文
   const { isAdmin, email } = useUser();
   // 获取共享的关键词上下文
@@ -673,17 +676,40 @@ const DataCollect: React.FC = () => {
   };
 
   const pauseTask = async (dagId: string, dagRunId: string) => {
-    console.log("暂停任务前", dagId, dagRunId);
-    const promise = Promise.all([pauseDag(dagId, dagRunId), setNote(dagId, dagRunId, "paused")]);
-    promise
-      .then(async () => {
-        console.log("暂停任务成功", dagId, dagRunId);
-        const res = await getDagRunDetail(dagId, dagRunId);
-        console.log("暂停任务详情", res);
-      })
-      .catch((err) => {
-        console.error("暂停任务失败", err);
+    // 防止重复点击
+    if (pausingTasks.has(dagRunId)) {
+      return;
+    }
+
+    try {
+      // 设置加载状态
+      setPausingTasks((prev) => new Set(prev).add(dagRunId));
+      console.log("暂停任务前", dagId, dagRunId);
+
+      // 并行执行操作
+      await Promise.all([pauseDag(dagId, dagRunId), setNote(dagId, dagRunId, "paused")]);
+
+      console.log("暂停任务成功");
+
+      // 获取更新后的任务详情（可选，如果不需要立即验证可以移除）
+      const res = await getDagRunDetail(dagId, dagRunId);
+      console.log("暂停任务实例", res);
+
+      // 刷新任务列表
+      await fetchRecentTasks();
+
+      notifi("任务已成功暂停", "success");
+    } catch (err) {
+      console.error("暂停任务失败", err);
+      notifi("暂停任务失败，请重试", "error");
+    } finally {
+      // 清除加载状态
+      setPausingTasks((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(dagRunId);
+        return newSet;
       });
+    }
   };
   return (
     <div>
@@ -1030,21 +1056,25 @@ const DataCollect: React.FC = () => {
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span
                                   className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    task.state === "success"
+                                    task.state === "success" && task.note !== "paused"
                                       ? "bg-green-100 text-green-800"
                                       : task.state === "running"
                                       ? "bg-blue-100 text-blue-800"
                                       : task.state === "failed"
                                       ? "bg-red-100 text-red-800"
+                                      : task.state === "success" && task.note === "paused"
+                                      ? "bg-yellow-100 text-yellow-800"
                                       : "bg-gray-100 text-gray-800"
                                   }`}
                                 >
-                                  {task.state === "success"
+                                  {task.state === "success" && task.note !== "paused"
                                     ? "成功"
                                     : task.state === "running"
                                     ? "运行中"
                                     : task.state === "failed"
                                     ? "失败"
+                                    : task.state === "success" && task.note === "paused"
+                                    ? "已结束"
                                     : task.state}
                                 </span>
                               </td>
@@ -1058,10 +1088,12 @@ const DataCollect: React.FC = () => {
                                 <Button
                                   onClick={() => {
                                     pauseTask(
-                                      isCommentTask ? "collect_video_comments" : "notes_collector",
+                                      isCommentTask ? "comments_collector" : "notes_collector",
                                       task.dag_run_id
                                     );
                                   }}
+                                  disabled={task.state === "success" || task.state === "failed"}
+                                  loading={pausingTasks.has(task.dag_run_id)}
                                 >
                                   暂停任务
                                 </Button>
