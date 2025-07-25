@@ -104,6 +104,140 @@ const formatDate = (dateString: string) => {
   return date.toLocaleString("zh-CN");
 };
 
+// 在组件外部使用普通变量而不是useRef
+let pausingTasks = new Set<string>();
+let pauseQueue: Array<{ dagRunId: string; keyword: string; onComplete: () => void }> = [];
+let isProcessingQueue = false;
+let queueTimer: NodeJS.Timeout | null = null;
+
+// 批量处理暂停队列的函数
+const processPauseQueue = async () => {
+  if (isProcessingQueue) return;
+
+  // 清除之前的定时器
+  if (queueTimer) {
+    clearTimeout(queueTimer);
+    queueTimer = null;
+  }
+
+  // 等待500ms收集更多的暂停请求
+  queueTimer = setTimeout(async () => {
+    if (pauseQueue.length === 0) return;
+
+    isProcessingQueue = true;
+    const currentBatch = [...pauseQueue];
+    pauseQueue = []; // 清空队列
+
+    try {
+      const batchSize = 3; // 每批最多处理3个任务
+
+      console.log(`开始批量处理 ${currentBatch.length} 个暂停任务`);
+
+      if (currentBatch.length > 1) {
+        message.loading({
+          content: `正在批量暂停 ${currentBatch.length} 个任务...`,
+          key: "batchPauseTask",
+          duration: 0,
+        });
+      }
+
+      const results = [];
+
+      // 分批处理
+      for (let i = 0; i < currentBatch.length; i += batchSize) {
+        const batch = currentBatch.slice(i, i + batchSize);
+
+        // 并行处理当前批次
+        const batchPromises = batch.map(async ({ dagRunId, keyword, onComplete }) => {
+          try {
+            if (currentBatch.length === 1) {
+              message.loading({
+                content: `正在暂停任务 "${keyword}"...`,
+                key: `pauseTask_${dagRunId}`,
+                duration: 0,
+              });
+            }
+
+            await Promise.all([
+              pauseDag("xhs_auto_progress", dagRunId),
+              setNote("xhs_auto_progress", dagRunId, "paused"),
+            ]);
+
+            await getDagRunDetail("xhs_auto_progress", dagRunId);
+
+            console.log(`成功暂停任务: ${dagRunId}, keyword: ${keyword}`);
+
+            if (currentBatch.length === 1) {
+              message.success({
+                content: `任务 "${keyword}" 已成功暂停`,
+                key: `pauseTask_${dagRunId}`,
+              });
+            }
+
+            return { success: true, dagRunId, keyword };
+          } catch (error) {
+            console.error(`暂停任务失败: ${dagRunId}`, error);
+
+            if (currentBatch.length === 1) {
+              message.error({
+                content: `暂停任务 "${keyword}" 失败，请重试`,
+                key: `pauseTask_${dagRunId}`,
+              });
+            }
+
+            return { success: false, dagRunId, keyword, error };
+          } finally {
+            // 清理状态并通知组件更新
+            pausingTasks.delete(dagRunId);
+            onComplete();
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+
+        // 批次间稍作延迟
+        if (i + batchSize < currentBatch.length) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+
+      // 显示批量操作结果
+      if (currentBatch.length > 1) {
+        const successCount = results.filter((r) => r.success).length;
+        const failCount = results.length - successCount;
+
+        if (failCount === 0) {
+          message.success({
+            content: `批量暂停完成，成功暂停 ${successCount} 个任务`,
+            key: "batchPauseTask",
+          });
+        } else {
+          message.warning({
+            content: `批量暂停完成，成功 ${successCount} 个，失败 ${failCount} 个`,
+            key: "batchPauseTask",
+          });
+        }
+      }
+
+      // 统一刷新一次
+      if (results.some((r) => r.success)) {
+        // 这里可以触发一次全局刷新，但由于每个任务都有自己的onComplete回调
+        // 我们依赖各自的回调来处理刷新
+        console.log("批量暂停操作完成，等待各任务回调处理刷新");
+      }
+    } finally {
+      isProcessingQueue = false;
+      queueTimer = null;
+
+      // 如果在处理过程中又有新的任务加入队列，继续处理
+      if (pauseQueue.length > 0) {
+        setTimeout(() => processPauseQueue(), 100);
+      }
+    }
+  }, 500); // 等待500ms收集更多请求
+};
+
 // TaskRow component for each task item
 const TaskRow: React.FC<{
   task: Task;
@@ -114,39 +248,49 @@ const TaskRow: React.FC<{
   const statusInfo = getStatusInfo(task.state, task.note);
   const [isPausing, setIsPausing] = useState(false);
 
+  // 检查全局暂停状态
+  useEffect(() => {
+    const checkPausingStatus = () => {
+      const isCurrentlyPausing = pausingTasks.has(task.dag_run_id);
+      setIsPausing(isCurrentlyPausing);
+    };
+
+    checkPausingStatus();
+
+    // 定期检查状态变化（简单的状态同步）
+    const interval = setInterval(checkPausingStatus, 100);
+
+    return () => clearInterval(interval);
+  }, [task.dag_run_id]);
+
   const stopRunningTask = async (dagRunId: string) => {
-    if (isPausing) return; // 防止重复点击
-    try {
-      setIsPausing(true);
-      message.loading({ content: "正在暂停任务...", key: "pauseTask" });
-      await Promise.all([
-        pauseDag("xhs_auto_progress", dagRunId),
-        setNote("xhs_auto_progress", dagRunId, "paused"),
-      ]);
-      // 获取任务详情确认状态
-      await getDagRunDetail("xhs_auto_progress", dagRunId);
+    // 防止重复点击
+    if (isPausing || pausingTasks.has(dagRunId)) return;
 
-      console.log(`手动暂停任务: ${dagRunId}, keyword: ${task.keyword}`);
+    console.log(`添加暂停任务到队列: ${dagRunId} (${task.keyword})`);
 
-      // 刷新任务列表但不更新状态记录，让长轮询检测状态变化并发送通知
-      onRefresh && (await onRefresh(true)); // 传入true跳过状态记录更新
+    // 立即更新UI状态
+    pausingTasks.add(dagRunId);
+    setIsPausing(true);
 
-      // 延迟2秒后再次检查状态，确保API状态已更新
-      setTimeout(async () => {
-        try {
-          console.log(`延迟检查任务状态: ${dagRunId}`);
-          onRefresh && (await onRefresh(true));
-        } catch (error) {
-          console.error("延迟状态检查失败:", error);
+    // 添加到处理队列
+    pauseQueue.push({
+      dagRunId,
+      keyword: task.keyword || "未知任务",
+      onComplete: () => {
+        // 任务完成后的回调
+        setIsPausing(false);
+        // 触发刷新
+        if (onRefresh) {
+          onRefresh(true);
         }
-      }, 2000);
+      },
+    });
 
-      message.success({ content: "任务已成功暂停", key: "pauseTask" });
-    } catch (err) {
-      message.error({ content: "暂停任务失败，请重试", key: "pauseTask" });
-    } finally {
-      setIsPausing(false);
-    }
+    console.log(`当前队列长度: ${pauseQueue.length}`);
+
+    // 启动队列处理（会等待500ms收集更多请求）
+    processPauseQueue();
   };
 
   return (
@@ -174,7 +318,9 @@ const TaskRow: React.FC<{
         </span>
       </div>
       <div
-        className={`flex items-center justify-center cursor-pointer rounded-full p-1 transition-colors`}
+        className={`flex items-center justify-center cursor-pointer rounded-full p-1 transition-colors ${
+          isPausing ? "opacity-50 cursor-not-allowed" : ""
+        }`}
         style={{ width: "10%" }}
         onClick={() => {
           if (!isPausing && task.state === "running") {

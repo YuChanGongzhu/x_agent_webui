@@ -379,10 +379,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
         // Update our template state
         updateFormData({ commentTemplates: templates });
-        console.log(
-          "✅ 获取模板完成，勾选状态:",
-          templates.map((t) => ({ id: t.id, checked: t.checked }))
-        );
       }
     } catch (error) {
       message.error("获取模板失败");
@@ -643,14 +639,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         currentStep,
       });
 
-      // 🔑 手动保存进度到本地存储
+      // 手动保存进度到本地存储
       saveProgress();
 
       message.success("进度已保存到本地");
-      console.log(
-        "✅ 已保存勾选状态:",
-        currentTemplates.map((t) => ({ id: t.id, checked: t.checked }))
-      );
     } catch (error) {
       message.error("保存进度失败");
     }
@@ -771,7 +763,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     const templateIndex = commentTemplates.findIndex((t: TemplateItem) => t.id === id);
     if (templateIndex !== -1) {
       updateCommentTemplate(templateIndex, { checked });
-      console.log(`✅ 模板 ${id} 勾选状态更新为: ${checked}`);
     }
   };
 
