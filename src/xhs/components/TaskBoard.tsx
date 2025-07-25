@@ -313,7 +313,17 @@ const TaskRow: React.FC<{
         <span className={`${statusInfo.textColor} text-sm flex items-center`}>
           {statusInfo.icon}
           <span className="ml-1">
-            {task.state === "success" && task.note === "paused" ? "paused" : task.state}
+            {task.state === "success" && task.note === "paused"
+              ? "已结束"
+              : task.state === "success"
+              ? "成功"
+              : task.state === "running"
+              ? "运行中"
+              : task.state === "failed"
+              ? "失败"
+              : task.state === "queued"
+              ? "排队中"
+              : "未知"}
           </span>
         </span>
       </div>

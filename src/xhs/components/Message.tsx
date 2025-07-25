@@ -18,6 +18,8 @@ import VirtualList from "rc-virtual-list";
 import BaseCollapse from "../../components/BaseComponents/BaseCollapse";
 import BaseList from "../../components/BaseComponents/BaseList";
 import BaseListUserItem from "../../components/BaseComponents/BaseListUserItem";
+import BasePopconfirm from "../../components/BaseComponents/BasePopconfirm";
+import BaseInput from "../../components/BaseComponents/BaseInput";
 import { useUser } from "../../context/UserContext";
 import {
   getXhsDevicesMsgList,
@@ -36,6 +38,8 @@ import {
   SendOutlined,
 } from "@ant-design/icons";
 import { tencentCOSService } from "../../api/tencent_cos";
+import { triggerDagRun, getDagRunDetail } from "../../api/airflow";
+import notifi from "../../utils/notification";
 // Define message types
 type MessageType = "user" | "template";
 const { TextArea } = Input;
@@ -501,7 +505,7 @@ const TemplateMessage = () => {
                 }
               }}
             />
-            <span style={{ fontSize: "16px", fontWeight: "500" }}>私信模版内容</span>
+            <span style={{ fontSize: "16px", fontWeight: "500" }}>回复模版内容</span>
           </div>
         </div>
         <Spin spinning={loading}>
@@ -688,7 +692,7 @@ const TemplateMessage = () => {
                 e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
               }}
             >
-              一键回复
+              检查私信
             </Button>
           </div>
         </Spin>
@@ -760,7 +764,12 @@ const TemplateMessage = () => {
   );
 };
 
-const PrivateMessage: React.FC = () => {
+const PrivateMessage = React.forwardRef<
+  { refresh: () => void },
+  {
+    loading?: boolean;
+  }
+>(({ loading = false }, ref) => {
   // ✅ 修复：正确的类型定义
   const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<Record<string, any[]>>({});
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
@@ -775,21 +784,37 @@ const PrivateMessage: React.FC = () => {
       const data = (await getXhsDevicesMsgList(email ? email : "")).data;
       console.log(data, "=====");
       const filterData = data.filter((device: any) => device.device_id);
-      const formatData = filterData.reduce((acc: any, device: any) => {
+
+      // 检查是否有有效数据
+      if (filterData.length === 0) {
+        console.log("没有找到有效的设备数据");
+        setFormatDeviceMsgList({});
+        setActiveKeys([]);
+        return;
+      }
+
+      const formatData = filterData.reduce((acc: Record<string, any[]>, device: any) => {
         if (!acc[device.device_id]) {
           acc[device.device_id] = [];
         }
         acc[device.device_id].push(device);
         return acc;
       }, {});
+
       console.log(formatData, "=====");
 
+      // 批量更新状态，确保数据一致性
       setActiveKeys(filterData.map((device: any) => device.device_id));
       setFormatDeviceMsgList(formatData);
     } catch (err) {
       console.error("获取设备消息列表失败:", err);
     }
   };
+
+  // 暴露fetchDeviceMsgList给父组件调用
+  React.useImperativeHandle(ref, () => ({
+    refresh: fetchDeviceMsgList,
+  }));
 
   // 获取设备列表
   const deviceIds = Object.keys(formatDeviceMsgList);
@@ -852,12 +877,122 @@ const PrivateMessage: React.FC = () => {
       )}
     </div>
   );
-};
+});
 
 // Main Message component
 const Message: React.FC = () => {
+  const { email } = useUser();
+  const [loading, setLoading] = useState(false);
+  const [sendMsg, setSendMsg] = useState("");
+  const [messageApi, contextHolder] = message.useMessage();
+  const privateMessageRef = React.useRef<{ refresh: () => void }>(null);
+
+  // 成功提示
+  const success = (content: string) => {
+    messageApi.open({
+      type: "success",
+      content: content,
+    });
+  };
+
+  // 刷新设备消息列表
+  const refreshDeviceMsgList = async ({
+    interval = 3 * 1000,
+    maxAttempts = 10,
+  }: {
+    interval: number;
+    maxAttempts: number;
+  }) => {
+    setLoading(true);
+    const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
+    const email_name = email?.match(/[^@\s]+(?=@)/g);
+    const dag_run_id = `msg_check_${email_name}_${timestamp}`;
+    const conf = {
+      email: email,
+    };
+    let attempts = 0;
+
+    // 轮询函数，查询dag任务状态是否成功
+    const poll = async () => {
+      try {
+        const response = await getDagRunDetail("msg_check", dag_run_id);
+        if (response.state === "success") {
+          // 调用PrivateMessage组件的刷新方法
+          if (privateMessageRef.current) {
+            await privateMessageRef.current.refresh();
+          }
+          success("刷新成功");
+          setLoading(false);
+          return; //成功之后，直接退出
+        }
+      } catch (error) {
+        setLoading(false);
+        console.log("poll attempt failed", error);
+      }
+      attempts++;
+      if (attempts >= maxAttempts) {
+        console.log(`到达最大次数，停止查询`);
+        setLoading(false);
+        return;
+      }
+      setTimeout(poll, interval);
+    };
+
+    // 创建dag任务
+    const promise = triggerDagRun("msg_check", dag_run_id, conf);
+    promise
+      .then(() => {
+        // 成功就轮询
+        poll();
+      })
+      .catch((err) => {
+        setLoading(false);
+        console.log("创建dag任务失败", err);
+        message.error("创建刷新任务失败");
+      });
+  };
+
+  // 一键回复处理函数
+  const handleSend = async (e: any) => {
+    if (!sendMsg.trim()) {
+      notifi("请输入回复内容", "error");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Create timestamp for unique dag_run_id
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
+      const dag_run_id = `xhs_reply_${timestamp}`;
+
+      // Prepare configuration
+      const conf = {
+        email: email,
+        msg: sendMsg,
+      };
+
+      const response = await triggerDagRun("msg_reply", dag_run_id, conf);
+
+      console.log("=====", response);
+
+      notifi(`成功创建回复评论任务，任务ID: ${dag_run_id}`, "success");
+      setLoading(false);
+      setSendMsg("");
+
+      // 刷新设备消息列表
+      if (privateMessageRef.current) {
+        await privateMessageRef.current.refresh();
+      }
+    } catch (err) {
+      console.error("Error creating notes task:", err);
+      notifi("创建回复评论失败", "error");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+      {contextHolder}
       {/*  Messages Section */}
       <div>
         <div
@@ -869,23 +1004,69 @@ const Message: React.FC = () => {
           }}
         >
           <span className="font-medium text-sm">私信管理</span>
-          <Button
-            type="primary"
-            style={{
-              border: "1px solid #8389FC",
-              background: "linear-gradient(135deg, #8389FC, #D477E1)",
-            }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
-            }}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
-            }}
-          >
-            字体待定
-          </Button>
+          <Space>
+            <Button
+              disabled={loading}
+              loading={loading}
+              type="default"
+              onClick={() => refreshDeviceMsgList({ interval: 3 * 1000, maxAttempts: 10 })}
+            >
+              刷新
+            </Button>
+            <BasePopconfirm
+              popconfirmConfig={{
+                title: (
+                  <>
+                    <div className="p-4 pb-0">您想一键回复什么内容？</div>
+                  </>
+                ),
+                description: (
+                  <>
+                    <div className="w-[24rem] h-[6rem] p-4 pt-1 pb-0">
+                      <BaseInput
+                        type="textarea"
+                        textareaConfig={{
+                          autoSize: {
+                            minRows: 4,
+                            maxRows: 4,
+                          },
+                          value: sendMsg,
+                          onChange: (e: any) => setSendMsg(e.target.value),
+                        }}
+                      />
+                    </div>
+                  </>
+                ),
+                placement: "bottomRight",
+                icon: <></>,
+                okText: "发送",
+                cancelText: "取消",
+                okButtonProps: {
+                  className: "mr-7 mt-2",
+                },
+                onConfirm: handleSend,
+              }}
+            >
+              <Button
+                disabled={loading}
+                type="primary"
+                style={{
+                  border: "1px solid #8389FC",
+                  background: "linear-gradient(135deg, #8389FC, #D477E1)",
+                }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+                }}
+              >
+                一键回复
+              </Button>
+            </BasePopconfirm>
+          </Space>
         </div>
-        <PrivateMessage />
+        <PrivateMessage ref={privateMessageRef} loading={loading} />
       </div>
 
       {/* Template Messages  */}
