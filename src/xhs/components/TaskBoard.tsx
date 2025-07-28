@@ -14,7 +14,7 @@ import { getDagRuns } from "../../api/airflow";
 import { useUser } from "../../context/UserContext";
 import stopIcon from "../../img/stop.svg";
 import refreshIcon from "../../img/refresh.svg";
-import { pauseDag, setNote, getDagRunDetail } from "../../api/airflow";
+import { createPauseTaskQueue } from "../../utils/taskQueue";
 import notifi from "../../utils/notification";
 const { Search } = Input;
 
@@ -104,139 +104,8 @@ const formatDate = (dateString: string) => {
   return date.toLocaleString("zh-CN");
 };
 
-// 在组件外部使用普通变量而不是useRef
-let pausingTasks = new Set<string>();
-let pauseQueue: Array<{ dagRunId: string; keyword: string; onComplete: () => void }> = [];
-let isProcessingQueue = false;
-let queueTimer: NodeJS.Timeout | null = null;
-
-// 批量处理暂停队列的函数
-const processPauseQueue = async () => {
-  if (isProcessingQueue) return;
-
-  // 清除之前的定时器
-  if (queueTimer) {
-    clearTimeout(queueTimer);
-    queueTimer = null;
-  }
-
-  // 等待500ms收集更多的暂停请求
-  queueTimer = setTimeout(async () => {
-    if (pauseQueue.length === 0) return;
-
-    isProcessingQueue = true;
-    const currentBatch = [...pauseQueue];
-    pauseQueue = []; // 清空队列
-
-    try {
-      const batchSize = 3; // 每批最多处理3个任务
-
-      console.log(`开始批量处理 ${currentBatch.length} 个暂停任务`);
-
-      if (currentBatch.length > 1) {
-        message.loading({
-          content: `正在批量暂停 ${currentBatch.length} 个任务...`,
-          key: "batchPauseTask",
-          duration: 0,
-        });
-      }
-
-      const results = [];
-
-      // 分批处理
-      for (let i = 0; i < currentBatch.length; i += batchSize) {
-        const batch = currentBatch.slice(i, i + batchSize);
-
-        // 并行处理当前批次
-        const batchPromises = batch.map(async ({ dagRunId, keyword, onComplete }) => {
-          try {
-            if (currentBatch.length === 1) {
-              message.loading({
-                content: `正在暂停任务 "${keyword}"...`,
-                key: `pauseTask_${dagRunId}`,
-                duration: 0,
-              });
-            }
-
-            await Promise.all([
-              pauseDag("xhs_auto_progress", dagRunId),
-              setNote("xhs_auto_progress", dagRunId, "paused"),
-            ]);
-
-            await getDagRunDetail("xhs_auto_progress", dagRunId);
-
-            console.log(`成功暂停任务: ${dagRunId}, keyword: ${keyword}`);
-
-            if (currentBatch.length === 1) {
-              message.success({
-                content: `任务 "${keyword}" 已成功暂停`,
-                key: `pauseTask_${dagRunId}`,
-              });
-            }
-
-            return { success: true, dagRunId, keyword };
-          } catch (error) {
-            console.error(`暂停任务失败: ${dagRunId}`, error);
-
-            if (currentBatch.length === 1) {
-              message.error({
-                content: `暂停任务 "${keyword}" 失败，请重试`,
-                key: `pauseTask_${dagRunId}`,
-              });
-            }
-
-            return { success: false, dagRunId, keyword, error };
-          } finally {
-            // 清理状态并通知组件更新
-            pausingTasks.delete(dagRunId);
-            onComplete();
-          }
-        });
-
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
-
-        // 批次间稍作延迟
-        if (i + batchSize < currentBatch.length) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
-      }
-
-      // 显示批量操作结果
-      if (currentBatch.length > 1) {
-        const successCount = results.filter((r) => r.success).length;
-        const failCount = results.length - successCount;
-
-        if (failCount === 0) {
-          message.success({
-            content: `批量暂停完成，成功暂停 ${successCount} 个任务`,
-            key: "batchPauseTask",
-          });
-        } else {
-          message.warning({
-            content: `批量暂停完成，成功 ${successCount} 个，失败 ${failCount} 个`,
-            key: "batchPauseTask",
-          });
-        }
-      }
-
-      // 统一刷新一次
-      if (results.some((r) => r.success)) {
-        // 这里可以触发一次全局刷新，但由于每个任务都有自己的onComplete回调
-        // 我们依赖各自的回调来处理刷新
-        console.log("批量暂停操作完成，等待各任务回调处理刷新");
-      }
-    } finally {
-      isProcessingQueue = false;
-      queueTimer = null;
-
-      // 如果在处理过程中又有新的任务加入队列，继续处理
-      if (pauseQueue.length > 0) {
-        setTimeout(() => processPauseQueue(), 100);
-      }
-    }
-  }, 500); // 等待500ms收集更多请求
-};
+// 创建全局暂停任务队列实例
+const pauseTaskQueue = createPauseTaskQueue();
 
 // TaskRow component for each task item
 const TaskRow: React.FC<{
@@ -251,7 +120,7 @@ const TaskRow: React.FC<{
   // 检查全局暂停状态
   useEffect(() => {
     const checkPausingStatus = () => {
-      const isCurrentlyPausing = pausingTasks.has(task.dag_run_id);
+      const isCurrentlyPausing = pauseTaskQueue.isProcessingTask(task.dag_run_id);
       setIsPausing(isCurrentlyPausing);
     };
 
@@ -265,32 +134,29 @@ const TaskRow: React.FC<{
 
   const stopRunningTask = async (dagRunId: string) => {
     // 防止重复点击
-    if (isPausing || pausingTasks.has(dagRunId)) return;
-
-    console.log(`添加暂停任务到队列: ${dagRunId} (${task.keyword})`);
+    if (isPausing || pauseTaskQueue.isProcessingTask(dagRunId)) return;
 
     // 立即更新UI状态
-    pausingTasks.add(dagRunId);
     setIsPausing(true);
 
     // 添加到处理队列
-    pauseQueue.push({
+    const success = pauseTaskQueue.addTask(
       dagRunId,
-      keyword: task.keyword || "未知任务",
-      onComplete: () => {
+      { dagRunId, keyword: task.keyword || "未知任务" },
+      () => {
         // 任务完成后的回调
         setIsPausing(false);
         // 触发刷新
         if (onRefresh) {
           onRefresh(true);
         }
-      },
-    });
+      }
+    );
 
-    console.log(`当前队列长度: ${pauseQueue.length}`);
-
-    // 启动队列处理（会等待500ms收集更多请求）
-    processPauseQueue();
+    if (!success) {
+      // 如果添加失败，清理UI状态
+      setIsPausing(false);
+    }
   };
 
   return (
@@ -394,7 +260,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   };
 
   const handleFinishCreateTask = (values: any) => {
-    console.log("Task created with values:", values);
+    // console.log("Task created with values:", values);
     setIsCreateModalVisible(false);
   };
 
@@ -517,7 +383,7 @@ const ExampleTaskBoard: React.FC = () => {
         }
         return task;
       } catch (error) {
-        console.error("Error parsing task conf:", error);
+        // console.error("Error parsing task conf:", error);
         return task;
       }
     });
@@ -547,7 +413,7 @@ const ExampleTaskBoard: React.FC = () => {
           const conf = JSON.parse(task.conf);
           return conf.email === email;
         } catch (error) {
-          console.error("Error parsing task conf:", error);
+          // console.error("Error parsing task conf:", error);
           return false;
         }
       });
@@ -593,7 +459,7 @@ const ExampleTaskBoard: React.FC = () => {
   };
 
   const handleAddTask = () => {
-    console.log("Adding new task");
+    // console.log("Adding new task");
   };
 
   const searchTask = useCallback((value: string) => {
@@ -637,27 +503,19 @@ const ExampleTaskBoard: React.FC = () => {
           // 检查从running到其他状态的变化
           if (previousState === "running") {
             const keyword = task.keyword || "未知任务";
-            const startTime = task.start_date ? formatDate(task.start_date) : "";
-
-            console.log(
-              `检测到任务状态变化: ${
-                task.dag_run_id
-              } (${keyword}) 从 ${previousState} 变为 ${currentState}${
-                currentNote ? ` (${currentNote})` : ""
-              }`
-            );
+            // const startTime = task.start_date ? formatDate(task.start_date) : "";
 
             if (currentState === "success" && currentNote === "paused") {
               // running -> success + paused
-              console.log(`发送暂停通知: ${keyword}`);
+              // console.log(`发送暂停通知: ${keyword}`);
               notifi(`⏸️ 任务 "${keyword}" 已结束`, "warning");
             } else if (currentState === "success") {
               // running -> success
-              console.log(`发送完成通知: ${keyword}`);
+              // console.log(`发送完成通知: ${keyword}`);
               notifi(`🎉 任务 "${keyword}" 已完成`, "success");
             } else if (currentState === "failed") {
               // running -> failed
-              console.log(`发送失败通知: ${keyword}`);
+              // console.log(`发送失败通知: ${keyword}`);
               notifi(`❌ 任务 "${keyword}" 执行失败`, "error");
             }
           }
@@ -687,16 +545,11 @@ const ExampleTaskBoard: React.FC = () => {
         // 重置重试计数（成功时）
         retryCountRef.current = 0;
       } catch (err) {
-        console.error("轮询任务失败:", err);
         retryCountRef.current++;
-
-        // 检查是否是网络错误
-        const isNetworkError = err instanceof TypeError && err.message.includes("fetch");
-        const errorMessage = isNetworkError ? "网络连接失败" : "服务器错误";
 
         // 如果重试次数超过最大值，暂时停止轮询
         if (retryCountRef.current >= maxRetries) {
-          console.warn(`轮询失败次数过多(${maxRetries}次)，暂停轮询。错误类型: ${errorMessage}`);
+
           stopTaskStatusPolling();
 
           // 显示用户友好的错误提示
@@ -720,7 +573,6 @@ const ExampleTaskBoard: React.FC = () => {
     // 启动轮询
     isPollingRef.current = true;
     retryCountRef.current = 0; // 重置重试计数
-    console.log("开始任务状态长轮询监控");
     pollTasks(); // 立即执行一次
 
     // 设置定时轮询，每30秒检查一次
@@ -737,14 +589,12 @@ const ExampleTaskBoard: React.FC = () => {
     if (pollingTimerRef.current) {
       clearInterval(pollingTimerRef.current);
       pollingTimerRef.current = null;
-      console.log("停止任务状态长轮询监控");
     }
 
     // 清理恢复定时器
     if (recoveryTimerRef.current) {
       clearTimeout(recoveryTimerRef.current);
       recoveryTimerRef.current = null;
-      console.log("清理轮询恢复定时器");
     }
 
     isPollingRef.current = false;
@@ -760,7 +610,7 @@ const ExampleTaskBoard: React.FC = () => {
     const handleVisibilityChange = () => {
       if (!document.hidden && isPollingRef.current) {
         // 页面重新可见时立即检查一次任务状态
-        console.log("页面重新可见，立即检查任务状态");
+
         // 立即执行一次轮询检查
         processTasksData()
           .then((parsedTasks) => {
@@ -783,13 +633,6 @@ const ExampleTaskBoard: React.FC = () => {
                   notifi(`❌ 任务 "${keyword}" 执行失败`, "error");
                 }
 
-                console.log(
-                  `页面重新可见时发现任务状态变化: ${
-                    task.dag_run_id
-                  } 从 ${previousState} 变为 ${currentState}${
-                    currentNote ? ` (${currentNote})` : ""
-                  }`
-                );
               }
 
               // 更新状态记录
@@ -856,7 +699,6 @@ const ExampleTaskBoard: React.FC = () => {
           startTaskStatusPolling();
         }
       } catch (error) {
-        console.error("刷新任务失败:", error);
         message.error("刷新任务失败");
       }
     },

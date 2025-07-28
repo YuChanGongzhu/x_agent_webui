@@ -11,14 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import CreateTaskModal from "./CreateTaskModal";
 import UpdateTaskModal from "./UpdateTaskModal";
-import { triggerDagRun } from "../../api/airflow";
-import dayjs from "dayjs";
-
-// 任务队列管理
-let startTaskQueue: Array<{ template: TaskTemplate; onComplete: (success: boolean) => void }> = [];
-let isProcessingStartQueue = false;
-let startQueueTimer: NodeJS.Timeout | null = null;
-let processingTasks = new Set<number>(); // 跟踪正在处理的模板ID
+import { createStartTaskQueue } from "../../utils/taskQueue";
 const ModuleBoard: React.FC = () => {
   const [modules, setModules] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -30,159 +23,18 @@ const ModuleBoard: React.FC = () => {
   const navigate = useNavigate();
   const pendingNavigationRef = useRef<boolean>(false);
 
-  // 批量处理开始任务队列的函数
-  const processStartTaskQueue = async () => {
-    if (isProcessingStartQueue) return;
+  // 创建任务队列实例
+  const startTaskQueueRef = useRef(createStartTaskQueue());
+  const startTaskQueue = startTaskQueueRef.current;
 
-    // 清除之前的定时器
-    if (startQueueTimer) {
-      clearTimeout(startQueueTimer);
-      startQueueTimer = null;
-    }
-
-    // 等待1000ms收集更多的开始任务请求
-    startQueueTimer = setTimeout(async () => {
-      if (startTaskQueue.length === 0) return;
-
-      isProcessingStartQueue = true;
-      const currentBatch = [...startTaskQueue];
-      startTaskQueue = []; // 清空队列
-
-      try {
-        console.log(`开始批量处理 ${currentBatch.length} 个开始任务请求`);
-
-        if (currentBatch.length > 1) {
-          message.loading({
-            content: `正在批量创建 ${currentBatch.length} 个任务...`,
-            key: "batchStartTask",
-            duration: 0,
-          });
-        }
-
-        const results = [];
-        const batchSize = 3; // 每批最多处理3个任务
-
-        // 分批处理
-        for (let i = 0; i < currentBatch.length; i += batchSize) {
-          const batch = currentBatch.slice(i, i + batchSize);
-
-          // 并行处理当前批次
-          const batchPromises = batch.map(async ({ template, onComplete }) => {
-            try {
-              const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
-              const dag_run_id = `xhs_auto_progress_${timestamp}_${template.id}`;
-
-              const conf = {
-                email: template.userInfo,
-                keyword: template.keyword,
-                max_notes: template.max_notes || 10,
-                note_type: template.note_type || "图文",
-                time_range: template.time_range || "",
-                search_scope: template.search_scope || "",
-                sort_by: template.sort_by || "综合",
-                profile_sentence: template.profile_sentence || "",
-                intent_type: template.intent_type || [],
-                template_ids: template.template_ids,
-                task_date:
-                  (template.updated_at && dayjs(template.updated_at).format("YYYY-MM-DD")) || "",
-                task_time:
-                  (template.updated_at && dayjs(template.updated_at).format("HH:mm")) || "",
-              };
-
-              if (currentBatch.length === 1) {
-                message.loading({
-                  content: `正在创建任务 "${template.keyword}"...`,
-                  key: `startTask_${template.id}`,
-                  duration: 0,
-                });
-              }
-
-              console.log(`创建任务: ${dag_run_id}`, conf);
-              const response = await triggerDagRun("xhs_auto_progress", dag_run_id, conf);
-
-              if (response && response.dag_run_id) {
-                console.log(`成功创建任务: ${dag_run_id}, keyword: ${template.keyword}`);
-
-                if (currentBatch.length === 1) {
-                  message.success({
-                    content: `任务 "${template.keyword}" 创建成功`,
-                    key: `startTask_${template.id}`,
-                  });
-                }
-
-                onComplete(true);
-                return { success: true, templateId: template.id, keyword: template.keyword };
-              } else {
-                throw new Error("创建任务失败，响应无效");
-              }
-            } catch (error) {
-              console.error(`创建任务失败: ${template.id}`, error);
-
-              if (currentBatch.length === 1) {
-                message.error({
-                  content: `创建任务 "${template.keyword}" 失败，请重试`,
-                  key: `startTask_${template.id}`,
-                });
-              }
-
-              onComplete(false);
-              return { success: false, templateId: template.id, keyword: template.keyword, error };
-            }
-          });
-
-          const batchResults = await Promise.all(batchPromises);
-          results.push(...batchResults);
-
-          // 批次间稍作延迟
-          if (i + batchSize < currentBatch.length) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-        }
-
-        // 显示批量操作结果
-        if (currentBatch.length > 1) {
-          const successCount = results.filter((r) => r.success).length;
-          const failCount = results.length - successCount;
-
-          if (failCount === 0) {
-            message.success({
-              content: `批量创建完成，成功创建 ${successCount} 个任务`,
-              key: "batchStartTask",
-            });
-          } else {
-            message.warning({
-              content: `批量创建完成，成功 ${successCount} 个，失败 ${failCount} 个`,
-              key: "batchStartTask",
-            });
-          }
-        }
-
-        // 如果有成功的任务且没有待处理的队列，准备导航
-        if (results.some((r) => r.success) && startTaskQueue.length === 0) {
-          console.log("批量任务创建完成，准备导航");
-          pendingNavigationRef.current = true;
-          setTimeout(() => {
-            if (pendingNavigationRef.current) {
-              navigate(-1);
-            }
-          }, 2000);
-        }
-      } finally {
-        isProcessingStartQueue = false;
-        startQueueTimer = null;
-
-        // 如果在处理过程中又有新的任务加入队列，继续处理
-        if (startTaskQueue.length > 0) {
-          setTimeout(() => processStartTaskQueue(), 100);
-        }
-      }
-    }, 1000); // 等待1000ms收集更多请求
-  };
+  // 成功任务计数
+  const successfulTasksRef = useRef(0);
 
   // 返回到自动化任务页面
   const handleBack = () => {
     // 如果有正在处理的任务，取消导航
-    if (startTaskQueue.length > 0 || isProcessingStartQueue) {
+    const queueStatus = startTaskQueue.getQueueStatus();
+    if (queueStatus.queueLength > 0 || queueStatus.isProcessing) {
       message.warning("有任务正在创建中，请等待完成后再返回");
       return;
     }
@@ -219,7 +71,7 @@ const ModuleBoard: React.FC = () => {
 
   // 完成编辑模板
   const handleFinishUpdateTask = (values: any) => {
-    console.log("Task updated:", values);
+    // console.log("Task updated:", values);
     fetchTaskTemplates(); // 刷新模板列表
   };
 
@@ -238,7 +90,7 @@ const ModuleBoard: React.FC = () => {
           message.success("模板删除成功");
           fetchTaskTemplates(); // 刷新模板列表
         } catch (error) {
-          console.error("删除模板失败:", error);
+          // console.error("删除模板失败:", error);
           message.error("删除模板失败");
         } finally {
           setLoading(false);
@@ -254,7 +106,7 @@ const ModuleBoard: React.FC = () => {
       const templates = await getTaskTemplates(email!);
       setModules(templates);
     } catch (error) {
-      console.error("获取任务模板失败:", error);
+      // console.error("获取任务模板失败:", error);
       message.error("获取任务模板失败");
     } finally {
       setLoading(false);
@@ -271,57 +123,89 @@ const ModuleBoard: React.FC = () => {
   // 组件卸载时清理
   useEffect(() => {
     return () => {
-      // 清理定时器
-      if (startQueueTimer) {
-        clearTimeout(startQueueTimer);
-        startQueueTimer = null;
-      }
-
-      // 清理全局状态
-      startTaskQueue = [];
-      processingTasks.clear();
-      isProcessingStartQueue = false;
-
-      console.log("ModuleBoard组件卸载，清理队列状态");
+      // 清理队列
+      startTaskQueue.cleanup();
+      // console.log("ModuleBoard组件卸载，清理队列状态");
     };
-  }, []);
+  }, [startTaskQueue]);
 
   const startTask = async (template: TaskTemplate) => {
     // 防止同一个模板重复点击
-    if (processingTemplateIds.has(template.id) || processingTasks.has(template.id)) {
-      console.log(`模板 ${template.id} (${template.keyword}) 已在处理队列中，忽略重复点击`);
+    if (
+      processingTemplateIds.has(template.id) ||
+      startTaskQueue.isProcessingTask(template.id.toString())
+    ) {
+      // console.log(`模板 ${template.id} (${template.keyword}) 已在处理队列中，忽略重复点击`);
       return;
     }
 
-    console.log(`添加开始任务到队列: ${template.id} (${template.keyword})`);
+    // console.log(`添加开始任务到队列: ${template.id} (${template.keyword})`);
 
     // 立即更新UI状态
-    processingTasks.add(template.id);
     setProcessingTemplateIds((prev) => new Set([...prev, template.id]));
 
-    // 取消待定的导航
+    // 取消待定的导航，重置成功计数
     pendingNavigationRef.current = false;
 
-    // 添加到处理队列
-    startTaskQueue.push({
-      template,
-      onComplete: (success: boolean) => {
-        // 任务完成后的回调
-        processingTasks.delete(template.id);
-        setProcessingTemplateIds((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(template.id);
-          return newSet;
-        });
+    // 如果这是第一个任务，重置成功计数
+    if (processingTemplateIds.size === 0) {
+      successfulTasksRef.current = 0;
+      // console.log("开始新的任务批次，重置成功计数");
+    }
 
-        console.log(`任务 ${template.id} (${template.keyword}) 处理完成，成功: ${success}`);
-      },
+    // 添加到处理队列
+    const success = startTaskQueue.addTask(template.id.toString(), template, (success: boolean) => {
+      // 任务完成后的回调
+      setProcessingTemplateIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(template.id);
+        return newSet;
+      });
+
+      // console.log(`任务 ${template.id} (${template.keyword}) 处理完成，成功: ${success}`);
+
+      // 如果有成功的任务，记录成功数量
+      if (success) {
+        successfulTasksRef.current += 1;
+        // console.log(`成功任务数: ${successfulTasksRef.current}`);
+      }
+
+      // 检查是否所有任务都完成了
+      setTimeout(() => {
+        const queueStatus = startTaskQueue.getQueueStatus();
+        // console.log("检查队列状态:", queueStatus);
+
+        if (
+          queueStatus.queueLength === 0 &&
+          !queueStatus.isProcessing &&
+          queueStatus.processingCount === 0
+        ) {
+          if (successfulTasksRef.current > 0) {
+            // console.log(`所有任务完成，成功 ${successfulTasksRef.current} 个，准备导航`);
+            pendingNavigationRef.current = true;
+            setTimeout(() => {
+              if (pendingNavigationRef.current) {
+                console.log("执行导航返回");
+                navigate(-1);
+              }
+            }, 2000);
+          }
+        } else {
+          // console.log(
+          //   `还有任务在处理中，等待完成。队列长度: ${queueStatus.queueLength}, 正在处理: ${queueStatus.isProcessing}, 处理中数量: ${queueStatus.processingCount}`
+          // );
+        }
+      }, 200); // 给队列状态更新足够的时间
     });
 
-    console.log(`当前开始任务队列长度: ${startTaskQueue.length}`);
-
-    // 启动队列处理（会等待1000ms收集更多请求）
-    processStartTaskQueue();
+    if (!success) {
+      // 如果添加失败，清理UI状态
+      setProcessingTemplateIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(template.id);
+        return newSet;
+      });
+    }
   };
 
   return (
@@ -343,9 +227,9 @@ const ModuleBoard: React.FC = () => {
         <div className="flex items-center">
           <h2 className="text-xl font-semibold text-gray-800">模版库</h2>
           {loading && <Spin className="ml-2" size="small" />}
-          {(processingTemplateIds.size > 0 || isProcessingStartQueue) && (
+          {processingTemplateIds.size > 0 && (
             <div className="ml-3 px-2 py-1 bg-blue-100 text-blue-600 rounded-md text-sm">
-              {isProcessingStartQueue ? (
+              {startTaskQueue.getQueueStatus().isProcessing ? (
                 <div className="flex items-center">
                   <Spin size="small" className="mr-1" />
                   正在处理 {processingTemplateIds.size} 个任务

@@ -775,61 +775,17 @@ const TemplateMessage = ({
   );
 };
 
-const PrivateMessage = React.forwardRef<
-  { refresh: () => void },
-  {
-    loading?: boolean;
-  }
->(({ loading = false }, ref) => {
-  // ✅ 修复：正确的类型定义
-  const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<Record<string, any[]>>({});
-  const [activeKeys, setActiveKeys] = useState<string[]>([]);
-  const { email } = useUser();
-
-  React.useEffect(() => {
-    fetchDeviceMsgList();
-  }, [email]);
-
-  const fetchDeviceMsgList = async () => {
-    try {
-      const data = (await getXhsDevicesMsgList(email ? email : "")).data;
-      console.log(data, "=====");
-      const filterData = data.filter((device: any) => device.device_id);
-
-      // 检查是否有有效数据
-      if (filterData.length === 0) {
-        console.log("没有找到有效的设备数据");
-        setFormatDeviceMsgList({});
-        setActiveKeys([]);
-        return;
-      }
-
-      const formatData = filterData.reduce((acc: Record<string, any[]>, device: any) => {
-        if (!acc[device.device_id]) {
-          acc[device.device_id] = [];
-        }
-        acc[device.device_id].push(device);
-        return acc;
-      }, {});
-
-      console.log(formatData, "=====");
-
-      // 批量更新状态，确保数据一致性
-      setActiveKeys(filterData.map((device: any) => device.device_id));
-      setFormatDeviceMsgList(formatData);
-    } catch (err) {
-      console.error("获取设备消息列表失败:", err);
-    }
-  };
-
-  // 暴露fetchDeviceMsgList给父组件调用
-  React.useImperativeHandle(ref, () => ({
-    refresh: fetchDeviceMsgList,
-  }));
-
+// 重构后的 PrivateMessage 组件 - 移除 forwardRef，使用状态提升
+const PrivateMessage: React.FC<{
+  loading?: boolean;
+  formatDeviceMsgList: Record<string, any[]>;
+  activeKeys: string[];
+  onActiveKeysChange: (keys: string[]) => void;
+}> = ({ loading = false, formatDeviceMsgList, activeKeys, onActiveKeysChange }) => {
   // 获取设备列表
   const deviceIds = Object.keys(formatDeviceMsgList);
   console.log(formatDeviceMsgList, "formatDeviceMsgList=====");
+
   return (
     <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
       {deviceIds.length ? (
@@ -850,11 +806,11 @@ const PrivateMessage = React.forwardRef<
                     if (newKeys.includes(deviceId)) {
                       // 展开
                       if (!activeKeys.includes(deviceId)) {
-                        setActiveKeys([...activeKeys, deviceId]);
+                        onActiveKeysChange([...activeKeys, deviceId]);
                       }
                     } else {
                       // 收起
-                      setActiveKeys(activeKeys.filter((key) => key !== deviceId));
+                      onActiveKeysChange(activeKeys.filter((key) => key !== deviceId));
                     }
                   }}
                   style={{ borderRadius: "0px" }}
@@ -888,15 +844,58 @@ const PrivateMessage = React.forwardRef<
       )}
     </div>
   );
-});
+};
 
-// Main Message component
+// Main Message component - 数据逻辑提升到这里
 const Message: React.FC = () => {
   const { email } = useUser();
   const [loading, setLoading] = useState(false);
   const [sendMsg, setSendMsg] = useState("");
   const [messageApi, contextHolder] = message.useMessage();
-  const privateMessageRef = React.useRef<{ refresh: () => void }>(null);
+
+  // 将 PrivateMessage 的状态提升到父组件
+  const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<Record<string, any[]>>({});
+  const [activeKeys, setActiveKeys] = useState<string[]>([]);
+
+  // 获取设备消息列表的逻辑移到父组件
+  const fetchDeviceMsgList = async () => {
+    try {
+      const data = (await getXhsDevicesMsgList(email ? email : "")).data;
+      console.log(data, "=====");
+      const filterData = data.filter((device: any) => device.device_id);
+
+      // 检查是否有有效数据
+      if (filterData.length === 0) {
+        console.log("没有找到有效的设备数据");
+        setFormatDeviceMsgList({});
+        setActiveKeys([]);
+        return;
+      }
+
+      const formatData = filterData.reduce((acc: Record<string, any[]>, device: any) => {
+        if (!acc[device.device_id]) {
+          acc[device.device_id] = [];
+        }
+        acc[device.device_id].push(device);
+        return acc;
+      }, {});
+
+      console.log(formatData, "=====");
+
+      // 批量更新状态，确保数据一致性
+      setActiveKeys(filterData.map((device: any) => device.device_id));
+      setFormatDeviceMsgList(formatData);
+    } catch (err) {
+      console.error("获取设备消息列表失败:", err);
+    }
+  };
+
+  // 初始化时获取数据
+  React.useEffect(() => {
+    if (email) {
+      fetchDeviceMsgList();
+    }
+  }, [email]);
 
   // 成功提示
   const success = (content: string) => {
@@ -928,10 +927,8 @@ const Message: React.FC = () => {
       try {
         const response = await getDagRunDetail("msg_check", dag_run_id);
         if (response.state === "success") {
-          // 调用PrivateMessage组件的刷新方法
-          if (privateMessageRef.current) {
-            await privateMessageRef.current.refresh();
-          }
+          // 直接调用父组件的刷新方法
+          await fetchDeviceMsgList();
           success("刷新成功");
           setLoading(false);
           return; //成功之后，直接退出
@@ -991,9 +988,7 @@ const Message: React.FC = () => {
       setSendMsg("");
 
       // 刷新设备消息列表
-      if (privateMessageRef.current) {
-        await privateMessageRef.current.refresh();
-      }
+      await fetchDeviceMsgList();
     } catch (err) {
       console.error("Error creating notes task:", err);
       notifi("创建回复评论失败", "error");
@@ -1016,14 +1011,6 @@ const Message: React.FC = () => {
         >
           <span className="font-medium text-sm">私信管理</span>
           <Space>
-            {/* <Button
-              disabled={loading}
-              loading={loading}
-              type="default"
-              onClick={() => refreshDeviceMsgList({ interval: 3 * 1000, maxAttempts: 10 })}
-            >
-              刷新
-            </Button> */}
             <BasePopconfirm
               popconfirmConfig={{
                 title: (
@@ -1077,7 +1064,12 @@ const Message: React.FC = () => {
             </BasePopconfirm>
           </Space>
         </div>
-        <PrivateMessage ref={privateMessageRef} loading={loading} />
+        <PrivateMessage
+          loading={loading}
+          formatDeviceMsgList={formatDeviceMsgList}
+          activeKeys={activeKeys}
+          onActiveKeysChange={setActiveKeys}
+        />
       </div>
 
       {/* Template Messages  */}
