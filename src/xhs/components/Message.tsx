@@ -64,7 +64,13 @@ interface TemplateMessage {
 // Union type for all message types
 type Message = UserMessage | TemplateMessage;
 
-const TemplateMessage = () => {
+const TemplateMessage = ({
+  onRefreshDeviceMsg,
+  refreshLoading = false,
+}: {
+  onRefreshDeviceMsg?: () => void;
+  refreshLoading?: boolean;
+}) => {
   const { email } = useUser();
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(null);
   const [templateContent, setTemplateContent] = useState("");
@@ -75,8 +81,6 @@ const TemplateMessage = () => {
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(1000); // 设置一个很大的数值来显示所有模板
   const [totalTemplates, setTotalTemplates] = useState(0);
   // 组件初始化时获取模板和评论数据
   useEffect(() => {
@@ -674,9 +678,11 @@ const TemplateMessage = () => {
               添加模板
             </Button>
             <Button
-              type="primary"
+              // type="primary"
+              loading={refreshLoading}
+              disabled={refreshLoading}
               onClick={() => {
-                console.log("一键回复");
+                onRefreshDeviceMsg && onRefreshDeviceMsg();
               }}
               style={{
                 borderRadius: "6px",
@@ -684,15 +690,20 @@ const TemplateMessage = () => {
                 height: "32px",
                 border: "1px solid #8389FC",
                 background: "linear-gradient(135deg, #8389FC, #D477E1)",
+                color: "#fff",
               }}
               onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+                if (!refreshLoading) {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+                }
               }}
               onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+                if (!refreshLoading) {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+                }
               }}
             >
-              检查私信
+              {refreshLoading ? "检查中..." : "检查私信"}
             </Button>
           </div>
         </Spin>
@@ -775,7 +786,7 @@ const PrivateMessage = React.forwardRef<
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
   const { email } = useUser();
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchDeviceMsgList();
   }, [email]);
 
@@ -818,7 +829,7 @@ const PrivateMessage = React.forwardRef<
 
   // 获取设备列表
   const deviceIds = Object.keys(formatDeviceMsgList);
-
+  console.log(formatDeviceMsgList, "formatDeviceMsgList=====");
   return (
     <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
       {deviceIds.length ? (
@@ -1005,14 +1016,14 @@ const Message: React.FC = () => {
         >
           <span className="font-medium text-sm">私信管理</span>
           <Space>
-            <Button
+            {/* <Button
               disabled={loading}
               loading={loading}
               type="default"
               onClick={() => refreshDeviceMsgList({ interval: 3 * 1000, maxAttempts: 10 })}
             >
               刷新
-            </Button>
+            </Button> */}
             <BasePopconfirm
               popconfirmConfig={{
                 title: (
@@ -1071,7 +1082,10 @@ const Message: React.FC = () => {
 
       {/* Template Messages  */}
       <div style={{ marginTop: "20px" }}>
-        <TemplateMessage />
+        <TemplateMessage
+          onRefreshDeviceMsg={() => refreshDeviceMsgList({ interval: 3 * 1000, maxAttempts: 10 })}
+          refreshLoading={loading}
+        />
       </div>
     </div>
   );
@@ -1079,8 +1093,6 @@ const Message: React.FC = () => {
 
 // Example usage with sample data
 const ExampleMessage: React.FC = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-
   return <Message />;
 };
 

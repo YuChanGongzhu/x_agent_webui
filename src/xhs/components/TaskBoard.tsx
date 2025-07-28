@@ -563,7 +563,7 @@ const ExampleTaskBoard: React.FC = () => {
       setLoading(true);
       const parsedTasks = await processTasksData();
 
-      console.log("获取任务数据:", parsedTasks.length, parsedTasks);
+      // console.log("获取任务数据:", parsedTasks.length, parsedTasks);
 
       originalTasksRef.current = parsedTasks;
       setTasks(parsedTasks);
@@ -571,7 +571,6 @@ const ExampleTaskBoard: React.FC = () => {
 
       return parsedTasks;
     } catch (err) {
-      console.error("Error fetching tasks:", err);
       message.error("获取任务列表失败");
       setTasks([]);
       setLoading(false);
