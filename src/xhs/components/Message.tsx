@@ -64,13 +64,7 @@ interface TemplateMessage {
 // Union type for all message types
 type Message = UserMessage | TemplateMessage;
 
-const TemplateMessage = ({
-  onRefreshDeviceMsg,
-  refreshLoading = false,
-}: {
-  onRefreshDeviceMsg?: () => void;
-  refreshLoading?: boolean;
-}) => {
+const TemplateMessage = () => {
   const { email } = useUser();
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(null);
   const [templateContent, setTemplateContent] = useState("");
@@ -511,6 +505,30 @@ const TemplateMessage = ({
             />
             <span style={{ fontSize: "16px", fontWeight: "500" }}>回复模版内容</span>
           </div>
+          <Button
+            onClick={() => {
+              setEditingTemplate(null);
+              setTemplateContent("");
+              setImageUrl("");
+              setImageFile(null);
+              setIsModalVisible(true);
+            }}
+            style={{
+              border: "1px solid #999999",
+              color: "#333333",
+              backgroundColor: "transparent",
+            }}
+            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.color = "#8389fc";
+              e.currentTarget.style.borderColor = "#8389fc";
+            }}
+            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.color = "#333333";
+              e.currentTarget.style.borderColor = "#999999";
+            }}
+          >
+            添加模板
+          </Button>
         </div>
         <Spin spinning={loading}>
           <div
@@ -643,68 +661,6 @@ const TemplateMessage = ({
                 暂无模板
               </div>
             )}
-          </div>
-          {/* 底部按钮区域 */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingTop: "20px",
-            }}
-          >
-            <Button
-              onClick={() => {
-                setEditingTemplate(null);
-                setTemplateContent("");
-                setImageUrl("");
-                setImageFile(null);
-                setIsModalVisible(true);
-              }}
-              style={{
-                border: "1px solid #999999",
-                color: "#333333",
-                backgroundColor: "transparent",
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.color = "#8389fc";
-                e.currentTarget.style.borderColor = "#8389fc";
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.color = "#333333";
-                e.currentTarget.style.borderColor = "#999999";
-              }}
-            >
-              添加模板
-            </Button>
-            <Button
-              // type="primary"
-              loading={refreshLoading}
-              disabled={refreshLoading}
-              onClick={() => {
-                onRefreshDeviceMsg && onRefreshDeviceMsg();
-              }}
-              style={{
-                borderRadius: "6px",
-                padding: "6px 16px",
-                height: "32px",
-                border: "1px solid #8389FC",
-                background: "linear-gradient(135deg, #8389FC, #D477E1)",
-                color: "#fff",
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                if (!refreshLoading) {
-                  e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
-                }
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                if (!refreshLoading) {
-                  e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
-                }
-              }}
-            >
-              {refreshLoading ? "检查中..." : "检查私信"}
-            </Button>
           </div>
         </Spin>
       </Card>
@@ -908,7 +864,7 @@ const Message: React.FC = () => {
   // 刷新设备消息列表
   const refreshDeviceMsgList = async ({
     interval = 3 * 1000,
-    maxAttempts = 10,
+    maxAttempts = 20,
   }: {
     interval: number;
     maxAttempts: number;
@@ -1011,6 +967,31 @@ const Message: React.FC = () => {
         >
           <span className="font-medium text-sm">私信管理</span>
           <Space>
+            <Button
+              loading={loading}
+              disabled={loading}
+              onClick={() => refreshDeviceMsgList({ interval: 3 * 1000, maxAttempts: 20 })}
+              style={{
+                borderRadius: "6px",
+                padding: "6px 16px",
+                height: "32px",
+                border: "1px solid #8389FC",
+                background: "linear-gradient(135deg, #8389FC, #D477E1)",
+                color: "#fff",
+              }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                if (!loading) {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+                }
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                if (!loading) {
+                  e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+                }
+              }}
+            >
+              {loading ? "检查中..." : "检查私信"}
+            </Button>
             <BasePopconfirm
               popconfirmConfig={{
                 title: (
@@ -1074,10 +1055,7 @@ const Message: React.FC = () => {
 
       {/* Template Messages  */}
       <div style={{ marginTop: "20px" }}>
-        <TemplateMessage
-          onRefreshDeviceMsg={() => refreshDeviceMsgList({ interval: 3 * 1000, maxAttempts: 10 })}
-          refreshLoading={loading}
-        />
+        <TemplateMessage />
       </div>
     </div>
   );

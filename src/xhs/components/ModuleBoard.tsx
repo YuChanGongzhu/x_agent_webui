@@ -8,7 +8,12 @@ import {
 } from "../../api/mysql";
 import { useUser } from "../../context/UserContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  ExclamationCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+} from "@ant-design/icons";
 import CreateTaskModal from "./CreateTaskModal";
 import UpdateTaskModal from "./UpdateTaskModal";
 import { createStartTaskQueue } from "../../utils/taskQueue";
@@ -264,18 +269,32 @@ const ModuleBoard: React.FC = () => {
                 {module.keyword || module.desc || `模版${module.id}`}
               </div>
               <div className="flex space-x-4">
-                <button
-                  className="text-blue-500 hover:text-blue-700"
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  size="small"
+                  style={{
+                    color: "#8389fc",
+                    padding: "4px",
+                    minWidth: "28px",
+                    height: "28px",
+                  }}
                   onClick={() => handleEditTemplate(module)}
-                >
-                  编辑
-                </button>
-                <button
-                  className="text-red-500 hover:text-red-700"
+                />
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  style={{
+                    color: "#ff4d4f",
+                    padding: "4px",
+                    minWidth: "28px",
+                    height: "28px",
+                  }}
                   onClick={() => handleDeleteTemplate(module.id)}
-                >
-                  删除
-                </button>
+                />
+                {/* <button className="text-red-500 hover:text-red-700">删除</button> */}
                 <button
                   className={`px-3 py-1 rounded-md text-sm transition-colors ${
                     processingTemplateIds.has(module.id)
