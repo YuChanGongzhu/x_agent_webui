@@ -153,6 +153,7 @@ interface FilterResult {
   customerLevel: string;
   followUpCount: number;
   reachContent: string;
+  commentTime: string;
 }
 
 const DashTaskVeiw = () => {
@@ -306,6 +307,7 @@ const DashTaskVeiw = () => {
           customerLevel: comment.intent || "未知",
           followUpCount: Math.floor(Math.random() * 10) + 1, // 模拟跟评数量
           reachContent: comment.reply_content || "无内容", // 触达内容使用note_url
+          commentTime: formatDate(comment.comment_time || "未知时间"),
         })
       );
 
@@ -367,6 +369,7 @@ const DashTaskVeiw = () => {
         likeCount: item.likeCount,
         customerLevel: item.customerLevel,
         reachContent: item.reachContent,
+        commentTime: formatDate(item.commentTime),
       }));
 
       // 导出数据
@@ -413,6 +416,19 @@ const DashTaskVeiw = () => {
         }),
       },
     };
+  };
+
+  const formatDate = (dateString?: string, defaultValue: string = "未知时间"): string => {
+    if (!dateString) {
+      return defaultValue;
+    }
+    
+    // 检查日期字符串是否以 "00:00:00" 结尾
+    if (dateString.endsWith(" 00:00:00")) {
+      return dateString.replace(" 00:00:00", "");
+    }
+    
+    return dateString;
   };
 
   // 统计项组件
@@ -512,6 +528,16 @@ const DashTaskVeiw = () => {
         return <Text>{reachContent}</Text>;
       },
     },
+    {
+      title:"评论时间",
+      dataIndex:"commentTime",
+      key:"commentTime",
+      width:200,
+      render: (commentTime: string) => {
+        return <Text>{formatDate(commentTime)}</Text>;
+      },
+    }
+
   ];
 
   if (loading) {

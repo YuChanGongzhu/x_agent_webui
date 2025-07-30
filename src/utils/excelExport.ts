@@ -7,6 +7,7 @@ export interface ExportData {
   likeCount: number;
   customerLevel: string;
   reachContent: string;
+  commentTime: string;
 }
 
 // 简单的导出筛选结果功能
