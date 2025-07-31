@@ -1062,9 +1062,15 @@ const Message: React.FC = () => {
 };
 
 // Example usage with sample data
-const ExampleMessage: React.FC = () => {
-  return <Message />;
-};
+const ExampleMessage: React.FC = React.memo(
+  () => {
+    return <Message />;
+  },
+  () => {
+    // ExampleMessage 没有 props，但它依赖内部状态，让它正常重新渲染
+    return false; // 允许重新渲染以响应内部状态变化
+  }
+);
 
 export default Message;
 export { ExampleMessage, PrivateMessage };

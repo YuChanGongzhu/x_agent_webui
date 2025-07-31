@@ -166,74 +166,80 @@ const DashboardBoard: React.FC<DashboardBoardProps> = ({
 };
 
 // Example usage with sample data
-const ExampleDataBoard: React.FC = () => {
-  const getGainQuantity = useDashEchartStore((state) => state.getGainQuantity);
-  const gainQuantityArray = useDashEchartStore((state) => state.gainQuantity);
-  const [acquisitionData, setAcquisitionData] = useState({
-    value: "0",
-    dailyValue: "0",
-    chartData: [] as { name: string; value: number }[],
-  });
-  // 🔧 使用useMemo避免重复计算
-  const processedData = useMemo(() => {
-    const result = getGainQuantity();
-    return {
-      value: result.value.toLocaleString(),
-      dailyValue: result.dailyValue.toLocaleString(),
-      chartData: result.chartData.map((item) => ({
-        name: new Date(item.key).toLocaleDateString("zh-CN", {
-          month: "short",
-          day: "numeric",
-        }),
-        value: item.value,
-      })),
+const ExampleDataBoard: React.FC = React.memo(
+  () => {
+    const getGainQuantity = useDashEchartStore((state) => state.getGainQuantity);
+    const gainQuantityArray = useDashEchartStore((state) => state.gainQuantity);
+    const [acquisitionData, setAcquisitionData] = useState({
+      value: "0",
+      dailyValue: "0",
+      chartData: [] as { name: string; value: number }[],
+    });
+    // 🔧 使用useMemo避免重复计算
+    const processedData = useMemo(() => {
+      const result = getGainQuantity();
+      return {
+        value: result.value.toLocaleString(),
+        dailyValue: result.dailyValue.toLocaleString(),
+        chartData: result.chartData.map((item) => ({
+          name: new Date(item.key).toLocaleDateString("zh-CN", {
+            month: "short",
+            day: "numeric",
+          }),
+          value: item.value,
+        })),
+      };
+    }, [gainQuantityArray]); // 🔧 依赖原始数组，而不是函数调用结果
+
+    // 🔧 只在processedData变化时更新状态
+    useEffect(() => {
+      setAcquisitionData(processedData);
+    }, [processedData]);
+
+    const sampleData = {
+      acquisitionData,
+      reachData: {
+        value: "6,560",
+        percentage: 60,
+        chartData: [
+          { name: "Mon", value: 120 },
+          { name: "Tue", value: 200 },
+          { name: "Wed", value: 150 },
+          { name: "Thu", value: 80 },
+          { name: "Fri", value: 70 },
+          { name: "Sat", value: 110 },
+          { name: "Sun", value: 130 },
+        ],
+      },
+      conversionData: {
+        value: "78%",
+        wowChange: 12,
+        dodChange: 5,
+        chartData: [
+          { name: "Mon", value: 120 },
+          { name: "Tue", value: 200 },
+          { name: "Wed", value: 150 },
+          { name: "Thu", value: 80 },
+          { name: "Fri", value: 70 },
+          { name: "Sat", value: 110 },
+          { name: "Sun", value: 130 },
+        ],
+      },
     };
-  }, [gainQuantityArray, getGainQuantity]); // 🔧 依赖原始数组，而不是函数调用结果
 
-  // 🔧 只在processedData变化时更新状态
-  useEffect(() => {
-    setAcquisitionData(processedData);
-  }, [processedData]);
-
-  const sampleData = {
-    acquisitionData,
-    reachData: {
-      value: "6,560",
-      percentage: 60,
-      chartData: [
-        { name: "Mon", value: 120 },
-        { name: "Tue", value: 200 },
-        { name: "Wed", value: 150 },
-        { name: "Thu", value: 80 },
-        { name: "Fri", value: 70 },
-        { name: "Sat", value: 110 },
-        { name: "Sun", value: 130 },
-      ],
-    },
-    conversionData: {
-      value: "78%",
-      wowChange: 12,
-      dodChange: 5,
-      chartData: [
-        { name: "Mon", value: 120 },
-        { name: "Tue", value: 200 },
-        { name: "Wed", value: 150 },
-        { name: "Thu", value: 80 },
-        { name: "Fri", value: 70 },
-        { name: "Sat", value: 110 },
-        { name: "Sun", value: 130 },
-      ],
-    },
-  };
-
-  return (
-    <DashboardBoard
-      acquisitionData={sampleData.acquisitionData}
-      reachData={sampleData.reachData}
-      conversionData={sampleData.conversionData}
-    />
-  );
-};
+    return (
+      <DashboardBoard
+        acquisitionData={sampleData.acquisitionData}
+        reachData={sampleData.reachData}
+        conversionData={sampleData.conversionData}
+      />
+    );
+  },
+  () => {
+    // ExampleDataBoard 没有 props，但需要响应 store 变化，减少不必要的重新渲染
+    return false; // 允许重新渲染，但通过内部优化减少不必要的计算
+  }
+);
 
 export default DashboardBoard;
 export { ExampleDataBoard };

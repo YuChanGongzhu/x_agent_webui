@@ -129,81 +129,87 @@ const styles = {
   },
 };
 
-const TopUserMessage = () => {
-  // const { email, isAdmin, userProfile } = useUser();
-  const { email, isAdmin, userProfile } = useUserStore();
-  const [tasks, setTasks] = useState<number>(0);
-  const displayname = userProfile?.display_name || email?.split("@")[0] || "User";
-  const AvatorIcon = (
-    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayname}`} alt="User" />
-  );
+const TopUserMessage = React.memo(
+  () => {
+    // const { email, isAdmin, userProfile } = useUser();
+    const { email, isAdmin, userProfile } = useUserStore();
+    const [tasks, setTasks] = useState<number>(0);
+    const displayname = userProfile?.display_name || email?.split("@")[0] || "User";
+    const AvatorIcon = (
+      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayname}`} alt="User" />
+    );
 
-  useEffect(() => {
-    fetchTasks();
-  }, [email, isAdmin]);
-  // 按钮悬停效果处理
-  const handleButtonHover = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
-  };
+    useEffect(() => {
+      fetchTasks();
+    }, [email, isAdmin]);
+    // 按钮悬停效果处理
+    const handleButtonHover = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+    };
 
-  const handleButtonLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
-  };
-  const fetchTasks = async () => {
-    try {
-      const response = await getDagRuns("xhs_auto_progress", 200, "-start_date");
-      setTasks(response.dag_runs.length);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-    }
-  };
+    const handleButtonLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+    };
+    const fetchTasks = async () => {
+      try {
+        const response = await getDagRuns("xhs_auto_progress", 200, "-start_date");
+        setTasks(response.dag_runs.length);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      }
+    };
 
-  return (
-    <div style={styles.container}>
-      <Avatar size={{ xs: 24, sm: 32, md: 40, lg: 64, xl: 80, xxl: 100 }} icon={AvatorIcon} />
-      {/* 用户信息区域 */}
-      <div style={styles.userInfoSection}>
-        <div style={styles.accountInfo}>
-          <span style={styles.accountLabel}>账户：</span>
-          <span style={styles.emailText}>{email}</span>
-        </div>
-        <span style={styles.descriptionText}>
-          User interaction expert | ant financial service - business group - platform department -
-          technology department -UED
-        </span>
-      </div>
-      {/* 总任务量统计 */}
-      <div style={styles.statsSection}>
-        <div style={styles.statsItem}>
-          <span style={styles.statsLabel}>总任务量</span>
-          <span style={styles.statsValue}>{tasks ? tasks : "--"}</span>
-        </div>
-        <div style={styles.divider} />
-      </div>
-      {/* 任务进度统计 */}
-      <div style={styles.statsSection}>
-        <div style={styles.statsItem}>
-          <span style={styles.statsLabel}>任务进度</span>
-          <span style={styles.statsValue}>
-            8<span style={styles.statsValueSmall}>/{tasks ? tasks : "--"}</span>
+    return (
+      <div style={styles.container}>
+        <Avatar size={{ xs: 24, sm: 32, md: 40, lg: 64, xl: 80, xxl: 100 }} icon={AvatorIcon} />
+        {/* 用户信息区域 */}
+        <div style={styles.userInfoSection}>
+          <div style={styles.accountInfo}>
+            <span style={styles.accountLabel}>账户：</span>
+            <span style={styles.emailText}>{email}</span>
+          </div>
+          <span style={styles.descriptionText}>
+            User interaction expert | ant financial service - business group - platform department -
+            technology department -UED
           </span>
         </div>
-        <div style={styles.divider} />
+        {/* 总任务量统计 */}
+        <div style={styles.statsSection}>
+          <div style={styles.statsItem}>
+            <span style={styles.statsLabel}>总任务量</span>
+            <span style={styles.statsValue}>{tasks ? tasks : "--"}</span>
+          </div>
+          <div style={styles.divider} />
+        </div>
+        {/* 任务进度统计 */}
+        <div style={styles.statsSection}>
+          <div style={styles.statsItem}>
+            <span style={styles.statsLabel}>任务进度</span>
+            <span style={styles.statsValue}>
+              8<span style={styles.statsValueSmall}>/{tasks ? tasks : "--"}</span>
+            </span>
+          </div>
+          <div style={styles.divider} />
+        </div>
+        {/* 控制区域 */}
+        <div style={styles.controlSection}>
+          <span style={styles.statsLabel}>总任务控制</span>
+          <Button
+            type="primary"
+            style={styles.gradientButton}
+            onMouseEnter={handleButtonHover}
+            onMouseLeave={handleButtonLeave}
+          >
+            开始/暂停
+          </Button>
+        </div>
       </div>
-      {/* 控制区域 */}
-      <div style={styles.controlSection}>
-        <span style={styles.statsLabel}>总任务控制</span>
-        <Button
-          type="primary"
-          style={styles.gradientButton}
-          onMouseEnter={handleButtonHover}
-          onMouseLeave={handleButtonLeave}
-        >
-          开始/暂停
-        </Button>
-      </div>
-    </div>
-  );
-};
+    );
+  },
+  () => {
+    // TopUserMessage 没有 props，阻止重新渲染
+    return true;
+  }
+);
 
 export default TopUserMessage;
