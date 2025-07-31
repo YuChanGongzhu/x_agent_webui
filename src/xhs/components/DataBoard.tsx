@@ -219,7 +219,7 @@ const ExampleDataBoard: React.FC = React.memo(
       const acquisitionNum = Number(totalAcquisition); // 避免除零
       const replyData: ReplyData = {
         value: total,
-        percentage: Number(((acquisitionNum / Number(total)) * 100).toFixed(2)),
+        percentage: Number(((Number(total) / acquisitionNum) * 100).toFixed(2)),
         chartData: replyTime.map((item: any) => ({
           time: item.time,
           value: item.count,
@@ -232,7 +232,7 @@ const ExampleDataBoard: React.FC = React.memo(
     useEffect(() => {
       if (acquisitionData.value !== "0") {
         // 等待第一个数据加载完成
-        getReplyNum(email, "2025-06-09", "2025-06-30")
+        getReplyNum(email)
           .then((res) => {
             const replyData = aggReplyData(res.data, acquisitionData.value);
             setReplyData(replyData);
@@ -272,6 +272,7 @@ const ExampleDataBoard: React.FC = React.memo(
     useEffect(() => {
       updatePrivateMessageData(processedPrivateMessageData);
     }, [processedPrivateMessageData, updatePrivateMessageData]);
+
     const sampleData = useMemo(
       () => ({
         acquisitionData,

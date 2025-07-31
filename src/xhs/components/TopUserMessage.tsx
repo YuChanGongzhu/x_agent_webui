@@ -192,7 +192,7 @@ const TopUserMessage = React.memo(
           <div style={styles.divider} />
         </div>
         {/* 控制区域 */}
-        <div style={styles.controlSection}>
+        {/* <div style={styles.controlSection}>
           <span style={styles.statsLabel}>总任务控制</span>
           <Button
             type="primary"
@@ -202,7 +202,7 @@ const TopUserMessage = React.memo(
           >
             开始/暂停
           </Button>
-        </div>
+        </div> */}
       </div>
     );
   },
