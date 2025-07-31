@@ -15,7 +15,7 @@ const updateTaskTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_TASK_TEMPLATE
 const getTaskTemplatesUrl = process.env.REACT_APP_TECENT_GET_TASK_TEMPLATES;
 const getCommentIntentsUrl = process.env.REACT_APP_TECENT_GET_COMMENT_INTENTS;
 const getAutoResultUrl = process.env.REACT_APP_TECENT_GET_AUTO_RESULTS;
-
+const getReplyNumUrl = process.env.REACT_APP_TECENT_GET_REPLY_NUM;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1191,7 +1191,6 @@ export const getCommentIntents = async (commentIds: string[]): Promise<any> => {
     }
 
     const firstPageData = await firstPageResponse.json();
-    console.log("第一页意向数据:", firstPageData);
 
     // 如果只有一页或没有数据，直接返回
     if (!firstPageData.data || firstPageData.data.total_pages <= 1) {
@@ -1339,5 +1338,37 @@ export const getAutoResultApi = async (
       message: `查询失败: ${error instanceof Error ? error.message : String(error)}`,
       data: null,
     };
+  }
+};
+
+//获取触达用户数量
+export const getReplyNum = async (email: string | null, start_date?: string, end_date?: string) => {
+  try {
+    //  如果没有传 start_date，则默认为 7 天前
+    const final_start_date =
+      start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    // 如果没有传 end_date，则默认为今天
+    const final_end_date = end_date || new Date().toISOString().split("T")[0];
+
+    console.log("日期", final_start_date, final_end_date);
+
+    const baseUrl = getReplyNumUrl || "";
+
+    // ✅ 构造查询参数（无论 email 是否存在，都应该支持日期参数）
+    const params = new URLSearchParams();
+    if (email) params.append("email", email);
+    params.append("start_date", final_start_date);
+    params.append("end_date", final_end_date);
+
+    const url = `${baseUrl}?${params.toString()}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("获取回复数量失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("获取回复数量失败", error);
   }
 };

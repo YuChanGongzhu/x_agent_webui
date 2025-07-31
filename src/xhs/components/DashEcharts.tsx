@@ -26,7 +26,7 @@ export type ChartType = "area" | "bar";
 
 // 数据点类型
 export interface ChartDataPoint {
-  name: string;
+  time: string;
   value: number;
 }
 

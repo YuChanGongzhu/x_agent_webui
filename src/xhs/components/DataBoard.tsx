@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 // import { ArrowUpIcon } from "@heroicons/react/24/solid";
 import up from "../../img/up.svg";
 import down from "../../img/down.svg";
@@ -6,6 +6,8 @@ import { Image } from "antd";
 import DashEcharts from "./DashEcharts";
 import exclamation from "../../img/exclamation.svg";
 import { useDashEchartStore } from "../../store/dashEchartStore";
+import { useUserStore } from "../../store/userStore";
+import { getReplyNum } from "../../api/mysql";
 interface MetricCardProps {
   title: string;
   value: string;
@@ -13,7 +15,7 @@ interface MetricCardProps {
   percentage?: number;
   isPositive?: boolean;
   chartType: "line" | "bar";
-  chartData: { name: string; value: number }[];
+  chartData: { time: string; value: number }[];
   color: "purple" | "blue" | "teal";
   WoWText?: string;
   DoDText?: string;
@@ -112,18 +114,18 @@ interface DashboardBoardProps {
   acquisitionData: {
     value: string;
     dailyValue: string;
-    chartData: { name: string; value: number }[];
+    chartData: { time: string; value: number }[];
   };
   reachData: {
     value: string;
     percentage: number;
-    chartData: { name: string; value: number }[];
+    chartData: { time: string; value: number }[];
   };
   conversionData: {
     value: string;
     wowChange: number;
     dodChange: number;
-    chartData: { name: string; value: number }[];
+    chartData: { time: string; value: number }[];
   };
 }
 
@@ -137,7 +139,7 @@ const DashboardBoard: React.FC<DashboardBoardProps> = ({
       <MetricCard
         title="获取数量"
         value={acquisitionData.value}
-        subtext={`每日获取量 ${acquisitionData.dailyValue}`}
+        subtext={`今日获取量 ${acquisitionData.dailyValue}`}
         chartType="line"
         chartData={acquisitionData.chartData}
         color="purple"
@@ -146,7 +148,7 @@ const DashboardBoard: React.FC<DashboardBoardProps> = ({
       <MetricCard
         title="触达用户"
         value={reachData.value}
-        subtext={`触达率 60%`}
+        subtext={`触达率 ${reachData.percentage}%`}
         chartType="bar"
         chartData={reachData.chartData}
         color="blue"
@@ -164,25 +166,36 @@ const DashboardBoard: React.FC<DashboardBoardProps> = ({
     </div>
   );
 };
-
+interface ReplyData {
+  value: string;
+  percentage: number;
+  chartData: { time: string; value: number }[];
+}
 // Example usage with sample data
 const ExampleDataBoard: React.FC = React.memo(
   () => {
+    const { email } = useUserStore();
     const getGainQuantity = useDashEchartStore((state) => state.getGainQuantity);
     const gainQuantityArray = useDashEchartStore((state) => state.gainQuantity);
     const [acquisitionData, setAcquisitionData] = useState({
       value: "0",
       dailyValue: "0",
-      chartData: [] as { name: string; value: number }[],
+      chartData: [] as { time: string; value: number }[],
     });
-    // 🔧 使用useMemo避免重复计算
+    const [replyData, setReplyData] = useState({
+      value: "0",
+      percentage: 0,
+      chartData: [] as { time: string; value: number }[],
+    });
+    //第一个数据处理
+    // 使用useMemo避免重复计算
     const processedData = useMemo(() => {
       const result = getGainQuantity();
       return {
         value: result.value.toLocaleString(),
         dailyValue: result.dailyValue.toLocaleString(),
         chartData: result.chartData.map((item) => ({
-          name: new Date(item.key).toLocaleDateString("zh-CN", {
+          time: new Date(item.key).toLocaleDateString("zh-CN", {
             month: "short",
             day: "numeric",
           }),
@@ -191,38 +204,52 @@ const ExampleDataBoard: React.FC = React.memo(
       };
     }, [gainQuantityArray]); // 🔧 依赖原始数组，而不是函数调用结果
 
-    // 🔧 只在processedData变化时更新状态
+    // 只在processedData变化时更新状态
     useEffect(() => {
       setAcquisitionData(processedData);
     }, [processedData]);
 
+    //获取第二个的数据
+    useEffect(() => {
+      getReplyNum(email, "2025-06-09", "2025-06-30")
+        .then((res) => {
+          const replyData = aggReplyData(res.data);
+          setReplyData(replyData);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }, [email]);
+    //第二个数据处理方法
+
+    const aggReplyData = (data: any) => {
+      const { total, replyTime } = data;
+      const replyData: ReplyData = {
+        value: total,
+        percentage: Number(((Number(total)/Number(acquisitionData.value)) * 100).toFixed(2)),
+        chartData: replyTime.map((item: any) => ({
+          time: item.time,
+          value: item.count,
+        })),
+      };
+      return replyData;
+    };
+
     const sampleData = {
       acquisitionData,
-      reachData: {
-        value: "6,560",
-        percentage: 60,
-        chartData: [
-          { name: "Mon", value: 120 },
-          { name: "Tue", value: 200 },
-          { name: "Wed", value: 150 },
-          { name: "Thu", value: 80 },
-          { name: "Fri", value: 70 },
-          { name: "Sat", value: 110 },
-          { name: "Sun", value: 130 },
-        ],
-      },
+      replyData,
       conversionData: {
         value: "78%",
         wowChange: 12,
         dodChange: 5,
         chartData: [
-          { name: "Mon", value: 120 },
-          { name: "Tue", value: 200 },
-          { name: "Wed", value: 150 },
-          { name: "Thu", value: 80 },
-          { name: "Fri", value: 70 },
-          { name: "Sat", value: 110 },
-          { name: "Sun", value: 130 },
+          { time: "Mon", value: 120 },
+          { time: "Tue", value: 200 },
+          { time: "Wed", value: 150 },
+          { time: "Thu", value: 80 },
+          { time: "Fri", value: 70 },
+          { time: "Sat", value: 110 },
+          { time: "Sun", value: 130 },
         ],
       },
     };
@@ -230,7 +257,7 @@ const ExampleDataBoard: React.FC = React.memo(
     return (
       <DashboardBoard
         acquisitionData={sampleData.acquisitionData}
-        reachData={sampleData.reachData}
+        reachData={sampleData.replyData}
         conversionData={sampleData.conversionData}
       />
     );
