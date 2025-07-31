@@ -16,6 +16,8 @@ import stopIcon from "../../img/stop.svg";
 import refreshIcon from "../../img/refresh.svg";
 import { createPauseTaskQueue } from "../../utils/taskQueue";
 import notifi from "../../utils/notification";
+import { useDashEchartStore } from "../../store/dashEchartStore";
+import { useUserStore } from "../../store/userStore";
 const { Search } = Input;
 
 // Define the status types
@@ -355,7 +357,9 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
 
 // Example usage with real data
 const ExampleTaskBoard: React.FC = () => {
-  const { isAdmin, email } = useUser();
+  // const { isAdmin, email } = useUser();
+  const { isAdmin, email } = useUserStore();
+  const setGainQuantity = useDashEchartStore((state) => state.setGainQuantity);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const originalTasksRef = useRef<Task[]>([]);
@@ -430,7 +434,7 @@ const ExampleTaskBoard: React.FC = () => {
       const parsedTasks = await processTasksData();
 
       // console.log("获取任务数据:", parsedTasks.length, parsedTasks);
-
+      setGainQuantity(parsedTasks);
       originalTasksRef.current = parsedTasks;
       setTasks(parsedTasks);
       setLoading(false);
@@ -549,7 +553,6 @@ const ExampleTaskBoard: React.FC = () => {
 
         // 如果重试次数超过最大值，暂时停止轮询
         if (retryCountRef.current >= maxRetries) {
-
           stopTaskStatusPolling();
 
           // 显示用户友好的错误提示
@@ -632,7 +635,6 @@ const ExampleTaskBoard: React.FC = () => {
                 } else if (currentState === "failed") {
                   notifi(`❌ 任务 "${keyword}" 执行失败`, "error");
                 }
-
               }
 
               // 更新状态记录

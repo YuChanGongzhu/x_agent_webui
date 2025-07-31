@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 // import { ArrowUpIcon } from "@heroicons/react/24/solid";
 import up from "../../img/up.svg";
 import down from "../../img/down.svg";
 import { Image } from "antd";
 import DashEcharts from "./DashEcharts";
 import exclamation from "../../img/exclamation.svg";
+import { useDashEchartStore } from "../../store/dashEchartStore";
 interface MetricCardProps {
   title: string;
   value: string;
@@ -166,20 +167,36 @@ const DashboardBoard: React.FC<DashboardBoardProps> = ({
 
 // Example usage with sample data
 const ExampleDataBoard: React.FC = () => {
+  const getGainQuantity = useDashEchartStore((state) => state.getGainQuantity);
+  const gainQuantityArray = useDashEchartStore((state) => state.gainQuantity);
+  const [acquisitionData, setAcquisitionData] = useState({
+    value: "0",
+    dailyValue: "0",
+    chartData: [] as { name: string; value: number }[],
+  });
+  // 🔧 使用useMemo避免重复计算
+  const processedData = useMemo(() => {
+    const result = getGainQuantity();
+    return {
+      value: result.value.toLocaleString(),
+      dailyValue: result.dailyValue.toLocaleString(),
+      chartData: result.chartData.map((item) => ({
+        name: new Date(item.key).toLocaleDateString("zh-CN", {
+          month: "short",
+          day: "numeric",
+        }),
+        value: item.value,
+      })),
+    };
+  }, [gainQuantityArray, getGainQuantity]); // 🔧 依赖原始数组，而不是函数调用结果
+
+  // 🔧 只在processedData变化时更新状态
+  useEffect(() => {
+    setAcquisitionData(processedData);
+  }, [processedData]);
+
   const sampleData = {
-    acquisitionData: {
-      value: "8,846",
-      dailyValue: "1,234",
-      chartData: [
-        { name: "Mon", value: 120 },
-        { name: "Tue", value: 200 },
-        { name: "Wed", value: 150 },
-        { name: "Thu", value: 80 },
-        { name: "Fri", value: 70 },
-        { name: "Sat", value: 110 },
-        { name: "Sun", value: 130 },
-      ],
-    },
+    acquisitionData,
     reachData: {
       value: "6,560",
       percentage: 60,
