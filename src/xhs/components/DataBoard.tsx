@@ -20,96 +20,6 @@ interface MetricCardProps {
   WoWText?: string;
   DoDText?: string;
 }
-
-const MetricCard: React.FC<MetricCardProps> = ({
-  title,
-  value,
-  subtext,
-  percentage,
-  isPositive = true,
-  chartType,
-  chartData,
-  color,
-  WoWText,
-  DoDText,
-}) => {
-  const getColorClasses = () => {
-    switch (color) {
-      case "purple":
-        return {
-          bg: "bg-purple-500",
-          light: "bg-purple-100",
-          text: "text-purple-500",
-        };
-      case "blue":
-        return {
-          bg: "bg-blue-500",
-          light: "bg-blue-100",
-          text: "text-blue-500",
-        };
-      case "teal":
-        return {
-          bg: "bg-teal-500",
-          light: "bg-teal-100",
-          text: "text-teal-500",
-        };
-      default:
-        return {
-          bg: "bg-gray-500",
-          light: "bg-gray-100",
-          text: "text-gray-500",
-        };
-    }
-  };
-
-  const colors = getColorClasses();
-
-  const renderChart = () => {
-    if (chartType === "line") {
-      // Simple line chart implementation
-      return <DashEcharts type="area" dataKey={chartData} height={100} />;
-    } else {
-      // Simple bar chart implementation
-      return <DashEcharts type="bar" dataKey={chartData} height={100} />;
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-lg p-5 shadow-sm">
-      <div className="flex justify-between items-start">
-        <div>
-          <div style={{ color: "#999999", fontSize: "1rem" }}>{title}</div>
-          <p className="font-bold mt-1 text-4xl">{value}</p>
-        </div>
-        <Image src={exclamation} alt="exclamation" width={32} height={32} preview={false} />
-      </div>
-      <div style={{ marginTop: "1rem" }}>{renderChart()}</div>
-
-      <div
-        className="flex items-center mt-2 justify-between pt-2"
-        style={{ borderTop: "1px solid rgb(233, 226, 226)" }}
-      >
-        {WoWText && <div style={{ color: "#333333", fontSize: "1rem" }}>{WoWText}</div>}
-        <div style={{ color: "#333333", fontSize: "1rem" }}>{subtext}</div>
-        {percentage !== undefined && (
-          <div
-            className={`flex items-center ${isPositive ? "text-green-500" : "text-red-500"} mr-2`}
-          >
-            {isPositive ? (
-              <Image src={up} alt="up" width={14} height={14} preview={false} />
-            ) : (
-              <Image src={down} alt="down" width={14} height={14} preview={false} />
-            )}
-            <span className="text-xs ml-1">{percentage}%</span>
-          </div>
-        )}
-
-        {DoDText && <div style={{ color: "#333333", fontSize: "1rem" }}>{DoDText}</div>}
-      </div>
-    </div>
-  );
-};
-
 interface DashboardBoardProps {
   acquisitionData: {
     value: string;
@@ -129,43 +39,132 @@ interface DashboardBoardProps {
   };
 }
 
-const DashboardBoard: React.FC<DashboardBoardProps> = ({
-  acquisitionData,
-  reachData,
-  conversionData,
-}) => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <MetricCard
-        title="获取数量"
-        value={acquisitionData.value}
-        subtext={`今日获取量 ${acquisitionData.dailyValue}`}
-        chartType="line"
-        chartData={acquisitionData.chartData}
-        color="purple"
-      />
+const MetricCard: React.FC<MetricCardProps> = React.memo(
+  ({
+    title,
+    value,
+    subtext,
+    percentage,
+    isPositive = true,
+    chartType,
+    chartData,
+    color,
+    WoWText,
+    DoDText,
+  }) => {
+    const getColorClasses = () => {
+      switch (color) {
+        case "purple":
+          return {
+            bg: "bg-purple-500",
+            light: "bg-purple-100",
+            text: "text-purple-500",
+          };
+        case "blue":
+          return {
+            bg: "bg-blue-500",
+            light: "bg-blue-100",
+            text: "text-blue-500",
+          };
+        case "teal":
+          return {
+            bg: "bg-teal-500",
+            light: "bg-teal-100",
+            text: "text-teal-500",
+          };
+        default:
+          return {
+            bg: "bg-gray-500",
+            light: "bg-gray-100",
+            text: "text-gray-500",
+          };
+      }
+    };
 
-      <MetricCard
-        title="触达用户"
-        value={reachData.value}
-        subtext={`触达率 ${reachData.percentage}%`}
-        chartType="bar"
-        chartData={reachData.chartData}
-        color="blue"
-      />
+    const colors = getColorClasses();
 
-      <MetricCard
-        title="转化量"
-        value={conversionData.value}
-        chartType="bar"
-        chartData={conversionData.chartData}
-        color="teal"
-        WoWText={`WoW Change ${conversionData.wowChange}%`}
-        DoDText={`DoD Change ${conversionData.dodChange}%`}
-      />
-    </div>
-  );
-};
+    const renderChart = () => {
+      if (chartType === "line") {
+        // Simple line chart implementation
+        return <DashEcharts type="area" dataKey={chartData} height={100} />;
+      } else {
+        // Simple bar chart implementation
+        return <DashEcharts type="bar" dataKey={chartData} height={100} />;
+      }
+    };
+
+    return (
+      <div className="bg-white rounded-lg p-5 shadow-sm">
+        <div className="flex justify-between items-start">
+          <div>
+            <div style={{ color: "#999999", fontSize: "1rem" }}>{title}</div>
+            <p className="font-bold mt-1 text-4xl">{value}</p>
+          </div>
+          <Image src={exclamation} alt="exclamation" width={32} height={32} preview={false} />
+        </div>
+        <div style={{ marginTop: "1rem" }}>{renderChart()}</div>
+
+        <div
+          className="flex items-center mt-2 justify-between pt-2"
+          style={{ borderTop: "1px solid rgb(233, 226, 226)" }}
+        >
+          {WoWText && <div style={{ color: "#333333", fontSize: "1rem" }}>{WoWText}</div>}
+          <div style={{ color: "#333333", fontSize: "1rem" }}>{subtext}</div>
+          {percentage !== undefined && (
+            <div
+              className={`flex items-center ${isPositive ? "text-green-500" : "text-red-500"} mr-2`}
+            >
+              {isPositive ? (
+                <Image src={up} alt="up" width={14} height={14} preview={false} />
+              ) : (
+                <Image src={down} alt="down" width={14} height={14} preview={false} />
+              )}
+              <span className="text-xs ml-1">{percentage}%</span>
+            </div>
+          )}
+
+          {DoDText && <div style={{ color: "#333333", fontSize: "1rem" }}>{DoDText}</div>}
+        </div>
+      </div>
+    );
+  }
+);
+
+const DashboardBoard: React.FC<DashboardBoardProps> = React.memo(
+  ({ acquisitionData, reachData, conversionData }) => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MetricCard
+          title="获取数量"
+          value={acquisitionData.value}
+          subtext={`今日获取量 ${acquisitionData.dailyValue}`}
+          chartType="line"
+          chartData={acquisitionData.chartData}
+          color="purple"
+        />
+
+        <MetricCard
+          title="触达用户"
+          value={reachData.value}
+          subtext={`触达率 ${reachData.percentage}%`}
+          chartType="bar"
+          chartData={reachData.chartData}
+          color="blue"
+        />
+
+        <MetricCard
+          title="转化量"
+          value={conversionData.value}
+          chartType="bar"
+          chartData={conversionData.chartData}
+          color="teal"
+          WoWText={`WoW Change ${conversionData.wowChange}%`}
+          DoDText={`DoD Change ${conversionData.dodChange}%`}
+        />
+      </div>
+    );
+  }
+);
 interface ReplyData {
   value: string;
   percentage: number;
@@ -209,50 +208,57 @@ const ExampleDataBoard: React.FC = React.memo(
       setAcquisitionData(processedData);
     }, [processedData]);
 
-    //获取第二个的数据
-    useEffect(() => {
-      getReplyNum(email, "2025-06-09", "2025-06-30")
-        .then((res) => {
-          const replyData = aggReplyData(res.data);
-          setReplyData(replyData);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }, [email]);
     //第二个数据处理方法
-
-    const aggReplyData = (data: any) => {
+    const aggReplyData = useCallback((data: any, totalAcquisition: string) => {
       const { total, replyTime } = data;
+      const acquisitionNum = Number(totalAcquisition); // 避免除零
       const replyData: ReplyData = {
         value: total,
-        percentage: Number(((Number(total)/Number(acquisitionData.value)) * 100).toFixed(2)),
+        percentage: Number(((acquisitionNum / Number(total)) * 100).toFixed(2)),
         chartData: replyTime.map((item: any) => ({
           time: item.time,
           value: item.count,
         })),
       };
       return replyData;
-    };
+    }, []);
 
-    const sampleData = {
-      acquisitionData,
-      replyData,
-      conversionData: {
-        value: "78%",
-        wowChange: 12,
-        dodChange: 5,
-        chartData: [
-          { time: "Mon", value: 120 },
-          { time: "Tue", value: 200 },
-          { time: "Wed", value: 150 },
-          { time: "Thu", value: 80 },
-          { time: "Fri", value: 70 },
-          { time: "Sat", value: 110 },
-          { time: "Sun", value: 130 },
-        ],
-      },
-    };
+    //获取第二个的数据
+    useEffect(() => {
+      if (acquisitionData.value !== "0") {
+        // 等待第一个数据加载完成
+        getReplyNum(email, "2025-06-09", "2025-06-30")
+          .then((res) => {
+            const replyData = aggReplyData(res.data, acquisitionData.value);
+            setReplyData(replyData);
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      }
+    }, [email, acquisitionData.value, aggReplyData]);
+
+    const sampleData = useMemo(
+      () => ({
+        acquisitionData,
+        replyData,
+        conversionData: {
+          value: "78%",
+          wowChange: 12,
+          dodChange: 5,
+          chartData: [
+            { time: "Mon", value: 120 },
+            { time: "Tue", value: 200 },
+            { time: "Wed", value: 150 },
+            { time: "Thu", value: 80 },
+            { time: "Fri", value: 70 },
+            { time: "Sat", value: 110 },
+            { time: "Sun", value: 130 },
+          ],
+        },
+      }),
+      [acquisitionData, replyData]
+    );
 
     return (
       <DashboardBoard
