@@ -40,6 +40,7 @@ import {
 import { tencentCOSService } from "../../api/tencent_cos";
 import { triggerDagRun, getDagRunDetail } from "../../api/airflow";
 import notifi from "../../utils/notification";
+import { useDashEchartStore } from "../../store/dashEchartStore";
 // Define message types
 type MessageType = "user" | "template";
 const { TextArea } = Input;
@@ -740,7 +741,7 @@ const PrivateMessage: React.FC<{
 }> = ({ loading = false, formatDeviceMsgList, activeKeys, onActiveKeysChange }) => {
   // 获取设备列表
   const deviceIds = Object.keys(formatDeviceMsgList);
-  console.log(formatDeviceMsgList, "formatDeviceMsgList=====");
+  // console.log(formatDeviceMsgList, "formatDeviceMsgList=====");
 
   return (
     <div className="w-full overflow-y-auto h-[calc(100%-4rem)]">
@@ -808,7 +809,7 @@ const Message: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sendMsg, setSendMsg] = useState("");
   const [messageApi, contextHolder] = message.useMessage();
-
+  const setPrivateMessageData  = useDashEchartStore((state) => state.setPrivateMessageData);
   // 将 PrivateMessage 的状态提升到父组件
   const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<Record<string, any[]>>({});
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
@@ -817,7 +818,7 @@ const Message: React.FC = () => {
   const fetchDeviceMsgList = async () => {
     try {
       const data = (await getXhsDevicesMsgList(email ? email : "")).data;
-      console.log(data, "=====");
+
       const filterData = data.filter((device: any) => device.device_id);
 
       // 检查是否有有效数据
@@ -841,6 +842,8 @@ const Message: React.FC = () => {
       // 批量更新状态，确保数据一致性
       setActiveKeys(filterData.map((device: any) => device.device_id));
       setFormatDeviceMsgList(formatData);
+      //把私信数据存到store中
+      setPrivateMessageData(formatData);
     } catch (err) {
       console.error("获取设备消息列表失败:", err);
     }

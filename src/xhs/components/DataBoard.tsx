@@ -14,11 +14,9 @@ interface MetricCardProps {
   subtext?: string;
   percentage?: number;
   isPositive?: boolean;
-  chartType: "line" | "bar";
+  chartType: "line" | "bar" | "pie";
   chartData: { time: string; value: number }[];
   color: "purple" | "blue" | "teal";
-  WoWText?: string;
-  DoDText?: string;
 }
 interface DashboardBoardProps {
   acquisitionData: {
@@ -31,27 +29,14 @@ interface DashboardBoardProps {
     percentage: number;
     chartData: { time: string; value: number }[];
   };
-  conversionData: {
+  privateMessageData: {
     value: string;
-    wowChange: number;
-    dodChange: number;
     chartData: { time: string; value: number }[];
   };
 }
 
 const MetricCard: React.FC<MetricCardProps> = React.memo(
-  ({
-    title,
-    value,
-    subtext,
-    percentage,
-    isPositive = true,
-    chartType,
-    chartData,
-    color,
-    WoWText,
-    DoDText,
-  }) => {
+  ({ title, value, subtext, percentage, isPositive = true, chartType, chartData, color }) => {
     const getColorClasses = () => {
       switch (color) {
         case "purple":
@@ -87,6 +72,9 @@ const MetricCard: React.FC<MetricCardProps> = React.memo(
       if (chartType === "line") {
         // Simple line chart implementation
         return <DashEcharts type="area" dataKey={chartData} height={100} />;
+      } else if (chartType === "pie") {
+        // Simple pie chart implementation
+        return <DashEcharts type="pie" dataKey={chartData} height={100} />;
       } else {
         // Simple bar chart implementation
         return <DashEcharts type="bar" dataKey={chartData} height={100} />;
@@ -108,7 +96,6 @@ const MetricCard: React.FC<MetricCardProps> = React.memo(
           className="flex items-center mt-2 justify-between pt-2"
           style={{ borderTop: "1px solid rgb(233, 226, 226)" }}
         >
-          {WoWText && <div style={{ color: "#333333", fontSize: "1rem" }}>{WoWText}</div>}
           <div style={{ color: "#333333", fontSize: "1rem" }}>{subtext}</div>
           {percentage !== undefined && (
             <div
@@ -122,8 +109,6 @@ const MetricCard: React.FC<MetricCardProps> = React.memo(
               <span className="text-xs ml-1">{percentage}%</span>
             </div>
           )}
-
-          {DoDText && <div style={{ color: "#333333", fontSize: "1rem" }}>{DoDText}</div>}
         </div>
       </div>
     );
@@ -131,11 +116,11 @@ const MetricCard: React.FC<MetricCardProps> = React.memo(
 );
 
 const DashboardBoard: React.FC<DashboardBoardProps> = React.memo(
-  ({ acquisitionData, reachData, conversionData }) => {
+  ({ acquisitionData, reachData, privateMessageData }) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
-          title="获取数量"
+          title="总获取笔记"
           value={acquisitionData.value}
           subtext={`今日获取量 ${acquisitionData.dailyValue}`}
           chartType="line"
@@ -153,13 +138,11 @@ const DashboardBoard: React.FC<DashboardBoardProps> = React.memo(
         />
 
         <MetricCard
-          title="转化量"
-          value={conversionData.value}
-          chartType="bar"
-          chartData={conversionData.chartData}
+          title="总私信"
+          value={privateMessageData.value}
+          chartType="pie"
+          chartData={privateMessageData.chartData}
           color="teal"
-          WoWText={`WoW Change ${conversionData.wowChange}%`}
-          DoDText={`DoD Change ${conversionData.dodChange}%`}
         />
       </div>
     );
@@ -176,6 +159,8 @@ const ExampleDataBoard: React.FC = React.memo(
     const { email } = useUserStore();
     const getGainQuantity = useDashEchartStore((state) => state.getGainQuantity);
     const gainQuantityArray = useDashEchartStore((state) => state.gainQuantity);
+    const privateMessageDataArray = useDashEchartStore((state) => state.privateMessageData);
+    const getPrivateMessageData = useDashEchartStore((state) => state.getPrivateMessageData);
     const [acquisitionData, setAcquisitionData] = useState({
       value: "0",
       dailyValue: "0",
@@ -186,11 +171,15 @@ const ExampleDataBoard: React.FC = React.memo(
       percentage: 0,
       chartData: [] as { time: string; value: number }[],
     });
+    const [privateMessageData, setPrivateMessageData] = useState({
+      value: "0",
+      chartData: [] as { time: string; value: number }[],
+    });
     //第一个数据处理
-    // 使用useMemo避免重复计算
+    // 使用useMemo避免重复计算，添加深度比较
     const processedData = useMemo(() => {
       const result = getGainQuantity();
-      return {
+      const newData = {
         value: result.value.toLocaleString(),
         dailyValue: result.dailyValue.toLocaleString(),
         chartData: result.chartData.map((item) => ({
@@ -201,12 +190,28 @@ const ExampleDataBoard: React.FC = React.memo(
           value: item.value,
         })),
       };
+      return newData;
     }, [gainQuantityArray]); // 🔧 依赖原始数组，而不是函数调用结果
+
+    // 使用 useCallback 稳定更新函数，避免不必要的状态更新
+    const updateAcquisitionData = useCallback((newData: typeof processedData) => {
+      setAcquisitionData((prev) => {
+        // 简单的浅比较，避免相同数据的重复更新
+        if (
+          prev.value === newData.value &&
+          prev.dailyValue === newData.dailyValue &&
+          prev.chartData.length === newData.chartData.length
+        ) {
+          return prev; // 返回原对象，避免重新渲染
+        }
+        return newData;
+      });
+    }, []);
 
     // 只在processedData变化时更新状态
     useEffect(() => {
-      setAcquisitionData(processedData);
-    }, [processedData]);
+      updateAcquisitionData(processedData);
+    }, [processedData, updateAcquisitionData]);
 
     //第二个数据处理方法
     const aggReplyData = useCallback((data: any, totalAcquisition: string) => {
@@ -238,33 +243,49 @@ const ExampleDataBoard: React.FC = React.memo(
       }
     }, [email, acquisitionData.value, aggReplyData]);
 
+    //第三个数据处理
+    const processedPrivateMessageData = useMemo(() => {
+      const result = getPrivateMessageData();
+      // result.chartData 是一个对象，需要转换为数组
+      const chartDataArray = Object.entries(result.chartData || {}).map(([key, value]) => ({
+        time: key,
+        value: value as unknown as number,
+      }));
+      return {
+        value: result.value.toLocaleString(),
+        chartData: chartDataArray,
+      };
+    }, [privateMessageDataArray]);
+
+    // 使用 useCallback 稳定私信数据更新函数
+    const updatePrivateMessageData = useCallback((newData: typeof processedPrivateMessageData) => {
+      setPrivateMessageData((prev) => {
+        // 简单的浅比较，避免相同数据的重复更新
+        if (prev.value === newData.value && prev.chartData.length === newData.chartData.length) {
+          return prev; // 返回原对象，避免重新渲染
+        }
+        return newData;
+      });
+    }, []);
+
+    //第三个数据状态更新
+    useEffect(() => {
+      updatePrivateMessageData(processedPrivateMessageData);
+    }, [processedPrivateMessageData, updatePrivateMessageData]);
     const sampleData = useMemo(
       () => ({
         acquisitionData,
         replyData,
-        conversionData: {
-          value: "78%",
-          wowChange: 12,
-          dodChange: 5,
-          chartData: [
-            { time: "Mon", value: 120 },
-            { time: "Tue", value: 200 },
-            { time: "Wed", value: 150 },
-            { time: "Thu", value: 80 },
-            { time: "Fri", value: 70 },
-            { time: "Sat", value: 110 },
-            { time: "Sun", value: 130 },
-          ],
-        },
+        privateMessageData,
       }),
-      [acquisitionData, replyData]
+      [acquisitionData, replyData, privateMessageData]
     );
 
     return (
       <DashboardBoard
         acquisitionData={sampleData.acquisitionData}
         reachData={sampleData.replyData}
-        conversionData={sampleData.conversionData}
+        privateMessageData={sampleData.privateMessageData}
       />
     );
   },

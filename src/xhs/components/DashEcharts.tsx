@@ -4,6 +4,9 @@ import {
   Area,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -22,7 +25,7 @@ import {
 // };
 
 // 图表样式类型
-export type ChartType = "area" | "bar";
+export type ChartType = "area" | "bar" | "pie";
 
 // 数据点类型
 export interface ChartDataPoint {
@@ -55,6 +58,7 @@ const DashEcharts: React.FC<DashEchartsProps> = ({
   const colors = {
     area: "#975fe4",
     bar: "#3aa0ff",
+    pie: ["#975fe4", "#3aa0ff", "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6"],
   };
 
   // 面积图组件
@@ -140,6 +144,36 @@ const DashEcharts: React.FC<DashEchartsProps> = ({
     </ResponsiveContainer>
   );
 
+  // 饼状图组件
+  const PieChartComponent = () => (
+    <ResponsiveContainer width="100%" height={height}>
+      <PieChart>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={40}
+          paddingAngle={2}
+          dataKey="value"
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={colors.pie[index % colors.pie.length]} />
+          ))}
+        </Pie>
+        <Tooltip
+          formatter={(value, name, props) => [`${value}条`, `设备${props.payload.time}`]}
+          contentStyle={{
+            backgroundColor: "#fff",
+            border: "1px solid #e0e0e0",
+            borderRadius: "4px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+
   return (
     <div
       style={{
@@ -160,7 +194,13 @@ const DashEcharts: React.FC<DashEchartsProps> = ({
           {title}
         </div>
       )}
-      {type === "area" ? <AreaChartComponent /> : <BarChartComponent />}
+      {type === "area" ? (
+        <AreaChartComponent />
+      ) : type === "pie" ? (
+        <PieChartComponent />
+      ) : (
+        <BarChartComponent />
+      )}
     </div>
   );
 };
