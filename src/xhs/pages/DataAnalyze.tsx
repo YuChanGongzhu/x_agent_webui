@@ -706,6 +706,13 @@ const DataAnalyze: React.FC = () => {
     }
 
     setFilteredIntents(filtered);
+
+    // 更新selectedComments：只保留仍在筛选结果中的评论ID
+    const filteredCommentIds = filtered.map((item) => item.comment_id);
+    setSelectedComments((prevSelected) =>
+      prevSelected.filter((commentId) => filteredCommentIds.includes(commentId))
+    );
+
     // Reset to first page when filters change
     paginate(1);
   }, [selectedKeyword, selectedIntent, customerIntents, isReply]);
@@ -1005,13 +1012,11 @@ const DataAnalyze: React.FC = () => {
 
       // 从 localStorage 中获取目标邮箱
       const targetEmail = localStorage.getItem("xhs_target_email") || "";
-
       const conf = {
         comment_ids: selectedComments,
         template_ids: selectedTemplateIds,
         email: targetEmail,
       };
-
       const response = await triggerDagRun("comments_template_replier", newDagRunId, conf);
 
       if (response && response.dag_run_id) {
