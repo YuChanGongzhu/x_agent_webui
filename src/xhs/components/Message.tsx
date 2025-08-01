@@ -41,6 +41,7 @@ import { tencentCOSService } from "../../api/tencent_cos";
 import { triggerDagRun, getDagRunDetail } from "../../api/airflow";
 import notifi from "../../utils/notification";
 import { useDashEchartStore } from "../../store/dashEchartStore";
+import OneClickReplyTemplate from "./OneClickReplyTemplate";
 // Define message types
 type MessageType = "user" | "template";
 const { TextArea } = Input;
@@ -809,11 +810,14 @@ const Message: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sendMsg, setSendMsg] = useState("");
   const [messageApi, contextHolder] = message.useMessage();
-  const setPrivateMessageData  = useDashEchartStore((state) => state.setPrivateMessageData);
+  const setPrivateMessageData = useDashEchartStore((state) => state.setPrivateMessageData);
   // 将 PrivateMessage 的状态提升到父组件
   const [formatDeviceMsgList, setFormatDeviceMsgList] = useState<Record<string, any[]>>({});
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
-
+  //一键回复模板
+  const [isOneClickReplyTemplateModalOpen, setIsOneClickReplyTemplateModalOpen] = useState(false);
+  // 存储一键回复当前选中的模板ID
+  const [currentSelectedTemplateIds, setCurrentSelectedTemplateIds] = useState<number[]>([]);
   // 获取设备消息列表的逻辑移到父组件
   const fetchDeviceMsgList = async () => {
     try {
@@ -919,13 +923,14 @@ const Message: React.FC = () => {
       });
   };
 
-  // 一键回复处理函数
-  const handleSend = async (e: any) => {
-    if (!sendMsg.trim()) {
-      notifi("请输入回复内容", "error");
-      return;
-    }
+  const getTemplateIds = (selectedTemplateIds: number[]) => {
+    console.log("一键回复模板ids", selectedTemplateIds);
+    setCurrentSelectedTemplateIds(selectedTemplateIds);
+    return selectedTemplateIds;
+  };
 
+  const handleConfirmTemplateSelection = async () => {
+    console.log("确认选择的模板ids", currentSelectedTemplateIds);
     try {
       setLoading(true);
       // Create timestamp for unique dag_run_id
@@ -935,7 +940,7 @@ const Message: React.FC = () => {
       // Prepare configuration
       const conf = {
         email: email,
-        msg: sendMsg,
+        templates_ids: currentSelectedTemplateIds,
       };
 
       const response = await triggerDagRun("msg_reply", dag_run_id, conf);
@@ -953,8 +958,9 @@ const Message: React.FC = () => {
       notifi("创建回复评论失败", "error");
       setLoading(false);
     }
-  };
 
+    // setIsOneClickReplyTemplateModalOpen(false);
+  };
   return (
     <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
       {contextHolder}
@@ -995,57 +1001,25 @@ const Message: React.FC = () => {
             >
               {loading ? "检查中..." : "检查私信"}
             </Button>
-            <BasePopconfirm
-              popconfirmConfig={{
-                title: (
-                  <>
-                    <div className="p-4 pb-0">您想一键回复什么内容？</div>
-                  </>
-                ),
-                description: (
-                  <>
-                    <div className="w-[24rem] h-[6rem] p-4 pt-1 pb-0">
-                      <BaseInput
-                        type="textarea"
-                        textareaConfig={{
-                          autoSize: {
-                            minRows: 4,
-                            maxRows: 4,
-                          },
-                          value: sendMsg,
-                          onChange: (e: any) => setSendMsg(e.target.value),
-                        }}
-                      />
-                    </div>
-                  </>
-                ),
-                placement: "bottomRight",
-                icon: <></>,
-                okText: "发送",
-                cancelText: "取消",
-                okButtonProps: {
-                  className: "mr-7 mt-2",
-                },
-                onConfirm: handleSend,
+            <Button
+              disabled={loading}
+              type="primary"
+              style={{
+                border: "1px solid #8389FC",
+                background: "linear-gradient(135deg, #8389FC, #D477E1)",
+              }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
+              }}
+              onClick={() => {
+                setIsOneClickReplyTemplateModalOpen(true);
               }}
             >
-              <Button
-                disabled={loading}
-                type="primary"
-                style={{
-                  border: "1px solid #8389FC",
-                  background: "linear-gradient(135deg, #8389FC, #D477E1)",
-                }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.background = "linear-gradient(135deg, #D477E1, #8389FC)";
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.background = "linear-gradient(135deg, #8389FC, #D477E1)";
-                }}
-              >
-                一键回复
-              </Button>
-            </BasePopconfirm>
+              一键回复2
+            </Button>
           </Space>
         </div>
         <PrivateMessage
@@ -1060,6 +1034,19 @@ const Message: React.FC = () => {
       <div style={{ marginTop: "20px" }}>
         <TemplateMessage />
       </div>
+      <Modal
+        title="一键回复模板"
+        closable={{ "aria-label": "Custom Close Button" }}
+        open={isOneClickReplyTemplateModalOpen}
+        onOk={() => {
+          handleConfirmTemplateSelection();
+        }}
+        onCancel={() => {
+          setIsOneClickReplyTemplateModalOpen(false);
+        }}
+      >
+        <OneClickReplyTemplate email={email} isAdmin={true} getTemplateIds={getTemplateIds} />
+      </Modal>
     </div>
   );
 };

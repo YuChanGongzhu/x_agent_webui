@@ -16,6 +16,8 @@ const getTaskTemplatesUrl = process.env.REACT_APP_TECENT_GET_TASK_TEMPLATES;
 const getCommentIntentsUrl = process.env.REACT_APP_TECENT_GET_COMMENT_INTENTS;
 const getAutoResultUrl = process.env.REACT_APP_TECENT_GET_AUTO_RESULTS;
 const getReplyNumUrl = process.env.REACT_APP_TECENT_GET_REPLY_NUM;
+const getMsgTemplatesUrl = process.env.REACT_APP_TECENT_GET_MSG_TEMPLATES;
+const updateMsgTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_MSG_TEMPLATES;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -787,6 +789,17 @@ export interface ReplyTemplate {
 }
 
 /**
+ * Interface for Message Template (一键回复模板)
+ */
+export interface MessageTemplate {
+  id: number;
+  userInfo: string; // Email of the user who owns the template
+  content: string;
+  created_at?: string;
+  image_urls?: string; // Optional image URL for the template
+}
+
+/**
  * Interface for Reply Templates Response
  */
 export interface ReplyTemplatesResponse {
@@ -1370,5 +1383,124 @@ export const getReplyNum = async (email: string | null, start_date?: string, end
     return await response.json();
   } catch (error) {
     console.error("获取回复数量失败", error);
+  }
+};
+//一键回复模板接口
+export const getMsgTemplates = async (email: string | null) => {
+  try {
+    const baseUrl = getMsgTemplatesUrl || "";
+    const params = new URLSearchParams();
+    if (email) params.append("email", email);
+    const url = `${baseUrl}?${params.toString()}`;
+    const response = await fetch(url);
+    console.log("response", response);
+    if (!response.ok) {
+      throw new Error("获取一键回复模板失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("获取一键回复模板失败", error);
+    throw error;
+  }
+};
+
+// 创建一键回复消息模板
+export const createMsgTemplate = async (params: {
+  content: string;
+  email: string;
+  image_urls?: string;
+}) => {
+  try {
+    const baseUrl = updateMsgTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "add",
+        ...params,
+      }),
+    });
+    console.log("创建response", response);
+    if (!response.ok) {
+      throw new Error("创建消息模板失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("创建消息模板失败", error);
+    throw error;
+  }
+};
+
+// 更新一键回复消息模板
+export const updateMsgTemplate = async (
+  templateId: number,
+  params: {
+    content: string;
+    email: string;
+    image_urls?: string;
+  }
+) => {
+  try {
+    const baseUrl = updateMsgTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "update",
+        template_id: templateId,
+        ...params,
+      }),
+    });
+    console.log("更新response", response);
+    if (!response.ok) {
+      throw new Error("更新消息模板失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("更新消息模板失败", error);
+    throw error;
+  }
+};
+
+// 删除一键回复消息模板
+export const deleteMsgTemplate = async (templateId: number, email: string) => {
+  try {
+    const baseUrl = updateMsgTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "delete",
+        template_id: templateId,
+        email: email,
+      }),
+    });
+    console.log("删除response", response);
+    if (!response.ok) {
+      throw new Error("删除消息模板失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("删除消息模板失败", error);
+    throw error;
+  }
+};
+
+// 批量一键回复删除消息模板
+export const deleteMsgTemplates = async (templateIds: number[], email: string) => {
+  try {
+    const deletePromises = templateIds.map((id) => deleteMsgTemplate(id, email));
+    const results = await Promise.all(deletePromises);
+    console.log("批量删除response", results);
+    return results;
+  } catch (error) {
+    console.error("批量删除消息模板失败", error);
+    throw error;
   }
 };

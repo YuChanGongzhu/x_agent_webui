@@ -13,7 +13,7 @@ interface BaseListUserItemProps {
     user_name: string;
     message_type: string;
     reply_status: 0 | 1;
-    msg_content: string;
+    ask_content: string;
   };
   editConfig?: EditConfig[];
 }
@@ -37,7 +37,7 @@ const BaseListUserItem: React.FC<BaseListUserItemProps> = ({ item, editConfig = 
             </div>
             <div className="flex items-center gap-2">
               <div className=" text-black">最新私信内容：</div>
-              <div>{item.msg_content}</div>
+              <div>{item.ask_content}</div>
             </div>
           </div>
         }
