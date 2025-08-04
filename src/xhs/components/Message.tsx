@@ -1018,7 +1018,7 @@ const Message: React.FC = () => {
                 setIsOneClickReplyTemplateModalOpen(true);
               }}
             >
-              一键回复2
+              一键回复
             </Button>
           </Space>
         </div>

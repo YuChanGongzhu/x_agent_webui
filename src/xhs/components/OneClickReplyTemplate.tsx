@@ -43,7 +43,6 @@ const OneClickReplyTemplate = ({
     try {
       setLoading(true);
       const response = await getMsgTemplates(email);
-      console.log("一键回复模板的res", response);
 
       if (response && response.code === 0) {
         // 处理数据结构：response.data 可能直接是数组，也可能是 { total, records } 结构
