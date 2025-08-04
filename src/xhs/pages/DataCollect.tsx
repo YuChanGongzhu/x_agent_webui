@@ -81,7 +81,8 @@ const DataCollect: React.FC = () => {
   const [timeRange, setTimeRange] = useState("一天内");
   const [maxComments, setMaxComments] = useState(10);
   const [browseKeyword, setBrowseKeyword] = useState("");
-
+  const [originalNotesLength, setOriginalNotesLength] = useState(0); //原始笔记数
+  const [originalCommentLength, setOriginalCommentLength] = useState(0); //原始评论数
   // 使用localStorage存储目标邮箱，确保页面刷新后仍然保持选择
   const [targetEmail, setTargetEmail] = useState(() => {
     const savedEmail = localStorage.getItem("xhs_target_email");
@@ -463,7 +464,7 @@ const DataCollect: React.FC = () => {
 
         setNotes(transformedNotes);
         setSortNotes(transformedNotes);
-
+        setOriginalNotesLength(response.data.total);
         // Set total pages from API response
         if (response.data.total_pages) {
           setTotalNotesPages(response.data.total_pages);
@@ -500,7 +501,6 @@ const DataCollect: React.FC = () => {
       console.log(
         `Comments for ${!isAdmin && email ? `email: ${email}` : "admin"} and keyword: ${keyword}`
       );
-
       if (response && response.code === 0 && response.data && response.data.records) {
         const mappedComments: Comment[] = response.data.records.map((record: any) => ({
           id: record.id?.toString() || "",
@@ -519,7 +519,7 @@ const DataCollect: React.FC = () => {
         }));
         setComments(mappedComments);
         setSortComments(mappedComments);
-
+        setOriginalCommentLength(response.data.total);
         // Set total pages from API response
         if (response.data.total_pages) {
           setTotalCommentsPages(response.data.total_pages);
@@ -1339,7 +1339,9 @@ const DataCollect: React.FC = () => {
             </div>
             {notes.length > 0 ? (
               <>
-                <div className="text-sm text-gray-500 mb-2">原始笔记数量: {notes.length}</div>
+                <div className="text-sm text-gray-500 mb-2">
+                  原始笔记数量: {originalNotesLength}
+                </div>
                 <div className="w-full h-full">
                   <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
                     <table className="w-full h-full divide-y divide-gray-200">
@@ -1743,7 +1745,9 @@ const DataCollect: React.FC = () => {
             </div>
             {comments.length > 0 ? (
               <>
-                <div className="text-sm text-gray-500 mb-2">原始评论数量: {comments.length}</div>
+                <div className="text-sm text-gray-500 mb-2">
+                  原始评论数量: {originalCommentLength}
+                </div>
                 <div className="w-full h-full">
                   <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
                     <table className="w-full h-full divide-y divide-gray-200">

@@ -131,7 +131,7 @@ const DashboardBoard: React.FC<DashboardBoardProps> = React.memo(
         <MetricCard
           title="触达用户"
           value={reachData.value}
-          subtext={`触达率 ${reachData.percentage}%`}
+          // subtext={`触达率 ${reachData.percentage}%`}
           chartType="bar"
           chartData={reachData.chartData}
           color="blue"

@@ -122,6 +122,7 @@ const TopUserMessage = React.memo(
     const [tasks, setTasks] = useState<number>(0);
     const [runningTasks, setRunningTasks] = useState<number>(0);
     const displayname = userProfile?.display_name || email?.split("@")[0] || "User";
+    const [successFailedTasks, setSuccessFailedTasks] = useState(0); //任务进度要成功/失败
     const AvatorIcon = (
       <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayname}`} alt="User" />
     );
@@ -141,7 +142,13 @@ const TopUserMessage = React.memo(
       try {
         const response = await getDagRuns("xhs_auto_progress", 200, "-start_date");
         handleRunningTasks(response.dag_runs);
-        setTasks(response.dag_runs.length);
+        //筛选出成功失败
+        const successFailedData = response.dag_runs.filter(
+          (task: any) =>
+            (task.state === "success" && task.note !== "paused") || task.state === "failed"
+        );
+        setSuccessFailedTasks(successFailedData.length);
+        setTasks(response.total_entries);
       } catch (error) {
         console.error("Error fetching tasks:", error);
       }
@@ -172,7 +179,9 @@ const TopUserMessage = React.memo(
             <span style={styles.statsLabel}>任务进度</span>
             <span style={styles.statsValue}>
               {runningTasks ? runningTasks : "--"}
-              <span style={styles.statsValueSmall}>/{tasks ? tasks : "--"}</span>
+              <span style={styles.statsValueSmall}>
+                /{successFailedTasks ? successFailedTasks : "--"}
+              </span>
             </span>
           </div>
         </div>

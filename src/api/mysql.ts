@@ -1358,21 +1358,19 @@ export const getAutoResultApi = async (
 export const getReplyNum = async (email: string | null, start_date?: string, end_date?: string) => {
   try {
     //  如果没有传 start_date，则默认为 7 天前
-    const final_start_date =
-      start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    // const final_start_date =
+    // start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     // 如果没有传 end_date，则默认为今天
-    const final_end_date = end_date || new Date().toISOString().split("T")[0];
-
-    console.log("日期", final_start_date, final_end_date);
+    // const final_end_date = end_date || new Date().toISOString().split("T")[0];
 
     const baseUrl = getReplyNumUrl || "";
 
     // ✅ 构造查询参数（无论 email 是否存在，都应该支持日期参数）
     const params = new URLSearchParams();
     if (email) params.append("email", email);
-    params.append("start_date", final_start_date);
-    params.append("end_date", final_end_date);
+    // params.append("start_date", final_start_date);
+    // params.append("end_date", final_end_date);
 
     const url = `${baseUrl}?${params.toString()}`;
 
