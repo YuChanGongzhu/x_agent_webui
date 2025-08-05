@@ -148,7 +148,12 @@ const TaskRow: React.FC<{
       () => {
         // 任务完成后的回调
         setIsPausing(false);
-        // 触发刷新
+
+        // 手动暂停成功后立即发送通知
+        const keyword = task.keyword || "未知任务";
+        notifi(`⏸️ 任务 "${keyword}" 已暂停`, "warning");
+
+        // 触发刷新，跳过状态记录更新以避免干扰长轮询的状态检测
         if (onRefresh) {
           onRefresh(true);
         }
@@ -547,15 +552,15 @@ const ExampleTaskBoard: React.FC = React.memo(
 
               if (currentState === "success" && currentNote === "paused") {
                 // running -> success + paused
-                // console.log(`发送暂停通知: ${keyword}`);
-                notifi(`⏸️ 任务 "${keyword}" 已结束`, "warning");
+                console.log(`发送暂停通知: ${keyword}`);
+                notifi(`⏸️ 任务 "${keyword}" 已暂停`, "warning");
               } else if (currentState === "success") {
                 // running -> success
-                // console.log(`发送完成通知: ${keyword}`);
+                console.log(`发送完成通知: ${keyword}`);
                 notifi(`🎉 任务 "${keyword}" 已完成`, "success");
               } else if (currentState === "failed") {
                 // running -> failed
-                // console.log(`发送失败通知: ${keyword}`);
+                console.log(`发送失败通知: ${keyword}`);
                 notifi(`❌ 任务 "${keyword}" 执行失败`, "error");
               }
             }

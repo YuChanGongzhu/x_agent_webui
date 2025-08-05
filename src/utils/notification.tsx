@@ -47,7 +47,7 @@ const notifi = (message: string, type: 'success' | 'error' | 'info' | 'warning' 
     }
     notification.open({
         placement: 'bottomLeft',
-        duration: 2,
+        duration: 0,
         ...type_config_fn[type](message),
     });
 };
