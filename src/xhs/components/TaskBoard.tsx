@@ -151,7 +151,8 @@ const TaskRow: React.FC<{
 
         // 手动暂停成功后立即发送通知
         const keyword = task.keyword || "未知任务";
-        notifi(`⏸️ 任务 "${keyword}" 已暂停`, "warning");
+        const startTime = task.start_date ? formatDate(task.start_date) : "";
+        notifi(`⏸️ 任务 "${keyword}" 已暂停`, startTime, "warning");
 
         // 触发刷新，跳过状态记录更新以避免干扰长轮询的状态检测
         if (onRefresh) {
@@ -548,20 +549,20 @@ const ExampleTaskBoard: React.FC = React.memo(
             // 检查从running到其他状态的变化
             if (previousState === "running") {
               const keyword = task.keyword || "未知任务";
-              // const startTime = task.start_date ? formatDate(task.start_date) : "";
+              const startTime = task.start_date ? formatDate(task.start_date) : "";
 
               if (currentState === "success" && currentNote === "paused") {
                 // running -> success + paused
                 console.log(`发送暂停通知: ${keyword}`);
-                notifi(`⏸️ 任务 "${keyword}" 已暂停`, "warning");
+                notifi(`⏸️ 任务 "${keyword}" 已暂停`, startTime, "warning");
               } else if (currentState === "success") {
                 // running -> success
                 console.log(`发送完成通知: ${keyword}`);
-                notifi(`🎉 任务 "${keyword}" 已完成`, "success");
+                notifi(`🎉 任务 "${keyword}" 已完成`, startTime, "success");
               } else if (currentState === "failed") {
                 // running -> failed
                 console.log(`发送失败通知: ${keyword}`);
-                notifi(`❌ 任务 "${keyword}" 执行失败`, "error");
+                notifi(`❌ 任务 "${keyword}" 执行失败`, startTime, "error");
               }
             }
 
@@ -675,13 +676,14 @@ const ExampleTaskBoard: React.FC = React.memo(
                 // 检查从running到其他状态的变化
                 if (previousState === "running" && currentState !== "running") {
                   const keyword = task.keyword || "未知任务";
+                  const startTime = task.start_date ? formatDate(task.start_date) : "";
 
                   if (currentState === "success" && currentNote === "paused") {
-                    notifi(`⏸️ 任务 "${keyword}" 已暂停`, "warning");
+                    notifi(`⏸️ 任务 "${keyword}" 已暂停`, startTime, "warning");
                   } else if (currentState === "success") {
-                    notifi(`🎉 任务 "${keyword}" 已完成`, "success");
+                    notifi(`🎉 任务 "${keyword}" 已完成`, startTime, "success");
                   } else if (currentState === "failed") {
-                    notifi(`❌ 任务 "${keyword}" 执行失败`, "error");
+                    notifi(`❌ 任务 "${keyword}" 执行失败`, startTime, "error");
                   }
                 }
 
