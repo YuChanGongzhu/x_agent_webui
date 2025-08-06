@@ -147,8 +147,16 @@ const TopUserMessage = React.memo(
           (task: any) =>
             (task.state === "success" && task.note !== "paused") || task.state === "failed"
         );
+        //如果不是管理员，筛选账号的任务数量，如果是，直接总数
+        if (!isAdmin && email) {
+          const userTasks = response.dag_runs.filter((tasks: any) => {
+            return tasks.conf.email === email;
+          });
+          setTasks(userTasks.length);
+        } else {
+          setTasks(response.dag_runs.length);
+        }
         setSuccessFailedTasks(successFailedData.length);
-        setTasks(response.total_entries);
       } catch (error) {
         console.error("Error fetching tasks:", error);
       }
