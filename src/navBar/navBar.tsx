@@ -59,6 +59,10 @@ const initialMenuItems: NavItemWithIcons[] = [
     activeIcon: deviceActiveSVG,
     url: "/xhs/dashboard",
     adminOnly: false,
+    subItems: [
+      { name: "获客任务管理", url: "/xhs/dashboard/customerAcquisitionTaskManagement" },
+      { name: "内容创作管理", url: "/xhs/dashboard/contentCreationManagement" },
+    ],
   },
   {
     name: "智能获客",

@@ -1,0 +1,209 @@
+/* 内容创建管理页面样式 */
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 8px !important;
+    gap: 12px !important;
+  }
+
+  .dataReportCard {
+    padding: 12px !important;
+    gap: 8px !important;
+    min-height: 180px !important;
+  }
+
+  .cardHeader {
+    font-size: 14px !important;
+  }
+
+  .tableSection {
+    padding: 8px !important;
+  }
+
+  .statsValue {
+    font-size: 12px !important;
+  }
+}
+
+/* 平板端优化 */
+@media (max-width: 1200px) {
+  .chartsSection {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+}
+
+/* 表格响应式 */
+.ant-table-wrapper {
+  overflow-x: auto;
+}
+
+/* 卡片悬停效果 */
+.dataReportCard:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 状态标签样式优化 */
+.ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* 操作按钮样式 */
+.ant-btn-text:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 分页器样式 */
+.ant-pagination {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* 图表容器优化 */
+.chartContainer {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 统计数据项动画 */
+.statsItem {
+  transition: all 0.2s ease-in-out;
+}
+
+.statsItem:hover {
+  transform: scale(1.05);
+}
+
+/* 加载状态 */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, transparent 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* 自定义弹窗动画 */
+.modal-overlay-enter {
+  opacity: 0;
+  animation: modalOverlayEnter 0.3s ease-out forwards;
+}
+
+@keyframes modalOverlayEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-container-enter {
+  transform: scale(0.7) translateY(-50px);
+  opacity: 0;
+  animation: modalContainerEnter 0.3s ease-out forwards;
+}
+
+@keyframes modalContainerEnter {
+  from {
+    transform: scale(0.7) translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 图片上传组件样式 */
+.upload-container .ant-upload-select-picture-card {
+  width: 104px;
+  height: 104px;
+  margin: 0 8px 8px 0;
+  border-radius: 8px;
+  border: 2px dashed #d9d9d9;
+  transition: all 0.3s ease;
+}
+
+.upload-container .ant-upload-select-picture-card:hover {
+  border-color: #1890ff;
+  background-color: #fafafa;
+}
+
+.upload-container .ant-upload-list-picture-card-container {
+  width: 104px;
+  height: 104px;
+  margin: 0 8px 8px 0;
+}
+
+.upload-container .ant-upload-list-picture-card .ant-upload-list-item {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.upload-container .ant-upload-list-picture-card .ant-upload-list-item-thumbnail img {
+  object-fit: cover;
+}
+
+/* 上传按钮样式 */
+.upload-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-size: 14px;
+}
+
+.upload-button:hover {
+  color: #1890ff;
+}
+
+/* 进度条样式 */
+.ant-upload-list-picture-card .ant-progress {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+}
+
+/* 上传状态样式 */
+.ant-upload-list-picture-card .ant-upload-list-item-uploading {
+  border: 1px solid #1890ff;
+}
+
+.ant-upload-list-picture-card .ant-upload-list-item-error {
+  border: 1px solid #ff4d4f;
+}

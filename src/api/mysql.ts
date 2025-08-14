@@ -18,6 +18,7 @@ const getAutoResultUrl = process.env.REACT_APP_TECENT_GET_AUTO_RESULTS;
 const getReplyNumUrl = process.env.REACT_APP_TECENT_GET_REPLY_NUM;
 const getMsgTemplatesUrl = process.env.REACT_APP_TECENT_GET_MSG_TEMPLATES;
 const updateMsgTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_MSG_TEMPLATES;
+const updateNoteTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_NOTE_TEMPLATES;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1500,5 +1501,32 @@ export const deleteMsgTemplates = async (templateIds: number[], email: string) =
   } catch (error) {
     console.error("批量删除消息模板失败", error);
     throw error;
+  }
+};
+
+//内容创作管理的添加笔记接口
+export const addNoteApi = async (params: {
+  email: string;
+  title: string;
+  content: string;
+  author: string;
+  device_id: string;
+  img_list: string;
+}) => {
+  try {
+    const baseUrl = updateNoteTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "add", ...params }),
+    });
+    if (!response.ok) {
+      throw new Error("添加笔记失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("添加笔记失败", error);
   }
 };

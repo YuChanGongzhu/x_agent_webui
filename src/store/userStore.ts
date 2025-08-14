@@ -3,7 +3,7 @@ import { devtools, persist } from "zustand/middleware";
 import { supabase } from "../auth/supabaseConfig";
 import { UserProfile } from "../context/type";
 import { UserProfileService } from "../management/userManagement/userProfileService";
-
+import { triggerDagRun, getDagRunDetail, getVariable } from "../api/airflow";
 // 用户状态接口 - 与 UserContext 保持一致
 interface UserState {
   // 用户配置信息
@@ -18,6 +18,8 @@ interface UserState {
   email: string | null;
   // 是否已初始化
   isInitialized: boolean;
+  //用户拥有设备的账号昵称列表
+  userDeviceNickNameList: string[];
 }
 
 // 用户操作接口
@@ -32,6 +34,8 @@ interface UserActions {
   setError: (error: string | null) => void;
   // 设置用户邮箱
   setEmail: (email: string | null) => void;
+  // 设置用户设备昵称列表
+  setUserDeviceNickNameList: (nickNameList: string[]) => void;
   // 初始化用户信息
   initialize: () => Promise<void>;
   // 刷新用户配置
@@ -51,6 +55,7 @@ const defaultState: UserState = {
   error: null,
   email: null,
   isInitialized: false,
+  userDeviceNickNameList: [],
 };
 
 /**
@@ -60,7 +65,7 @@ const defaultState: UserState = {
 const checkUserSession = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) {
-    throw new Error('未登录');
+    throw new Error("未登录");
   }
   return sessionData.session.user;
 };
@@ -71,17 +76,102 @@ const checkUserSession = async () => {
  * @param userMetadata 用户元数据
  */
 const determineUserRole = (profile: UserProfile | null, userMetadata: any): boolean => {
-  const userRole = profile?.role || userMetadata?.role || 'user';
-  const isUserAdmin = typeof userRole === 'string' && userRole.toLowerCase() === 'admin';
-  
-  console.log('🔍 用户角色判断:', {
+  const userRole = profile?.role || userMetadata?.role || "user";
+  const isUserAdmin = typeof userRole === "string" && userRole.toLowerCase() === "admin";
+
+  console.log("🔍 用户角色判断:", {
     profileRole: profile?.role,
     metadataRole: userMetadata?.role,
     finalRole: userRole,
-    isAdmin: isUserAdmin
+    isAdmin: isUserAdmin,
   });
-  
+
   return isUserAdmin;
+};
+
+// 用于防止重复调用的标记
+let isGettingDeviceList = false;
+
+//轮训用户设备账号dag，成功就执行获取用户设备账号信息
+const getUserDeviceNickNameList = async (
+  email: string | null,
+  interval = 3 * 1000,
+  isAdmin: boolean
+) => {
+  if (!email) {
+    console.log("❌ 邮箱为空，无法获取设备信息");
+    return;
+  }
+
+  // 防止重复调用
+  if (isGettingDeviceList) {
+    console.log("⏳ 正在获取设备信息中，跳过重复调用");
+    return;
+  }
+
+  isGettingDeviceList = true;
+  console.log("🚀 开始获取用户设备信息...", email);
+
+  const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
+  const dag_run_id = "xhs_account_name_colletor_" + timestamp;
+  const conf = {
+    email: email,
+  };
+
+  const poll = async () => {
+    try {
+      const response = await getDagRunDetail("xhs_account_name_colletor", dag_run_id);
+      if (response.state === "success") {
+        //调用获取用户设备账号
+        const accountResponse = await getVariable("XHS_ACCOUNT_INFO");
+        const accountData = JSON.parse(accountResponse.value);
+        console.log("获取用户设备账号成功", accountData);
+        if (isAdmin) {
+          const mergedArray: any = Object.values(accountData).reduce((acc: any, arr: any) => {
+            return [...acc, ...arr];
+          }, []);
+          console.log("合并后的数组:", mergedArray);
+
+          const store = useUserStore.getState();
+          store.setUserDeviceNickNameList(mergedArray);
+        } else {
+          // 处理数据结构：accountData 是对象 {email: Array}
+          const userAccounts = accountData[email] || [];
+          console.log("当前用户账号:", userAccounts);
+          // 更新到store中
+          const store = useUserStore.getState();
+          store.setUserDeviceNickNameList(userAccounts);
+        }
+
+        console.log("✅ 用户设备账号信息获取完成，停止轮询");
+        isGettingDeviceList = false; // 重置标记
+        return; // 成功后退出轮询
+      } else if (response.state === "failed") {
+        console.log("❌ DAG任务失败，停止轮询");
+        isGettingDeviceList = false; // 重置标记
+        return; // 失败后也要退出轮询
+      }
+      // 如果状态是 running 或其他，继续轮询
+      console.log("⏳ DAG任务状态:", response.state, "继续轮询...");
+    } catch (err) {
+      console.log("poll attempt failed", err);
+    }
+
+    // 只有在任务未完成时才继续轮询
+    setTimeout(poll, interval);
+  };
+
+  // 创建dag任务
+  const promise = triggerDagRun("xhs_account_name_colletor", dag_run_id, conf);
+  promise
+    .then(() => {
+      // 成功就轮询
+      poll();
+    })
+    .catch((err) => {
+      console.log("创建dag任务失败", err);
+      isGettingDeviceList = false; // 创建失败时重置标记
+    });
 };
 
 export const useUserStore = create<UserStore>()(
@@ -93,103 +183,120 @@ export const useUserStore = create<UserStore>()(
 
         // 基础设置方法
         setUserProfile: (profile) => {
-          console.log('📝 设置用户配置:', profile);
-          set({ userProfile: profile }, false, 'setUserProfile');
+          console.log("📝 设置用户配置:", profile);
+          set({ userProfile: profile }, false, "setUserProfile");
         },
 
         setIsAdmin: (isAdmin) => {
-          console.log('👑 设置管理员状态:', isAdmin);
-          set({ isAdmin }, false, 'setIsAdmin');
+          console.log("👑 设置管理员状态:", isAdmin);
+          set({ isAdmin }, false, "setIsAdmin");
         },
 
         setIsLoading: (isLoading) => {
-          set({ isLoading }, false, 'setIsLoading');
+          set({ isLoading }, false, "setIsLoading");
         },
 
         setError: (error) => {
-          console.log('❌ 设置错误信息:', error);
-          set({ error }, false, 'setError');
+          console.log("❌ 设置错误信息:", error);
+          set({ error }, false, "setError");
         },
 
         setEmail: (email) => {
-          console.log('📧 设置用户邮箱:', email);
-          set({ email }, false, 'setEmail');
+          console.log("📧 设置用户邮箱:", email);
+          set({ email }, false, "setEmail");
+        },
+
+        setUserDeviceNickNameList: (nickNameList) => {
+          console.log("📱 设置用户设备昵称列表:", nickNameList);
+          set({ userDeviceNickNameList: nickNameList }, false, "setUserDeviceNickNameList");
         },
 
         // 初始化用户信息
         initialize: async () => {
           const state = get();
-          
+
           // 如果已经在加载中或已初始化，避免重复调用
           if (state.isLoading || state.isInitialized) {
-            console.log('⏳ UserStore: 用户信息正在加载中或已初始化，跳过重复调用', {
+            console.log("⏳ UserStore: 用户信息正在加载中或已初始化，跳过重复调用", {
               isLoading: state.isLoading,
-              isInitialized: state.isInitialized
+              isInitialized: state.isInitialized,
             });
             return;
           }
 
           try {
-            console.log('🚀 UserStore: 开始初始化用户信息...');
-            set({ isLoading: true, error: null }, false, 'initialize:start');
+            console.log("🚀 UserStore: 开始初始化用户信息...");
+            set({ isLoading: true, error: null }, false, "initialize:start");
 
             // 1. 获取用户会话信息
             const user = await checkUserSession();
-            console.log('✅ UserStore: 获取到用户会话:', { id: user.id, email: user.email });
+            console.log("✅ UserStore: 获取到用户会话:", { id: user.id, email: user.email });
 
             // 2. 保存用户邮箱
             if (user.email) {
-              set({ email: user.email }, false, 'initialize:setEmail');
+              set({ email: user.email }, false, "initialize:setEmail");
             }
 
             // 3. 获取用户配置信息
             const profile = await UserProfileService.getUserProfile(user.id);
-            console.log('✅ UserStore: 获取到用户配置:', profile);
+            console.log("✅ UserStore: 获取到用户配置:", profile);
 
             // 4. 判断用户角色
             const isAdmin = determineUserRole(profile, user.user_metadata);
 
             // 5. 更新所有状态
-            set({
-              userProfile: profile,
-              isAdmin,
-              isLoading: false,
-              error: null,
-              isInitialized: true,
-            }, false, 'initialize:complete');
+            set(
+              {
+                userProfile: profile,
+                isAdmin,
+                isLoading: false,
+                error: null,
+                isInitialized: true,
+              },
+              false,
+              "initialize:complete"
+            );
+            // 6. 初始化完成后获取用户设备信息
+            if (user.email) {
+              console.log("🔄 UserStore: 开始获取用户设备信息...");
+              getUserDeviceNickNameList(user.email, 3 * 1000, isAdmin);
+            }
 
-            console.log('🎉 UserStore: 用户信息初始化完成', {
+            console.log("🎉 UserStore: 用户信息初始化完成", {
               profile: !!profile,
               isAdmin,
-              email: user.email
+              email: user.email,
             });
-
           } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : '未知错误';
-            console.error('💥 UserStore: 初始化用户信息失败:', err);
-            
-            set({
-              error: errorMessage,
-              isLoading: false,
-              isInitialized: true, // 即使失败也标记为已初始化，避免无限重试
-            }, false, 'initialize:error');
+            const errorMessage = err instanceof Error ? err.message : "未知错误";
+            console.error("💥 UserStore: 初始化用户信息失败:", err);
+
+            set(
+              {
+                error: errorMessage,
+                isLoading: false,
+                isInitialized: true, // 即使失败也标记为已初始化，避免无限重试
+              },
+              false,
+              "initialize:error"
+            );
           }
         },
 
         // 刷新用户配置
         refreshUserProfile: async () => {
-          console.log('🔄 刷新用户配置...');
+          console.log("🔄 刷新用户配置...");
           await get().initialize();
         },
 
         // 重置状态（登出时使用）
         reset: () => {
-          console.log('🔄 重置用户状态');
-          set(defaultState, false, 'reset');
+          console.log("🔄 重置用户状态");
+          set(defaultState, false, "reset");
         },
       }),
       {
-        name: 'user-store',
+        name: "user-store",
         // 只持久化必要的数据，不持久化 isLoading 等临时状态
         partialize: (state) => ({
           userProfile: state.userProfile,
@@ -200,13 +307,13 @@ export const useUserStore = create<UserStore>()(
         version: 1,
         // 数据迁移函数 - 处理从旧版本到新版本的数据转换
         migrate: (persistedState: any, version: number) => {
-          console.log('🔄 UserStore 数据迁移:', { version, persistedState });
-          
+          console.log("🔄 UserStore 数据迁移:", { version, persistedState });
+
           if (version === 0) {
             // 从版本 0 迁移到版本 1
             // 处理旧的 userStore 结构 { user: User | null }
             const oldState = persistedState as { user?: any };
-            
+
             if (oldState.user) {
               // 将旧的 user 对象转换为新的结构
               return {
@@ -215,7 +322,7 @@ export const useUserStore = create<UserStore>()(
                   display_name: oldState.user.name,
                   role: oldState.user.role,
                 } as UserProfile,
-                isAdmin: oldState.user.role?.toLowerCase() === 'admin',
+                isAdmin: oldState.user.role?.toLowerCase() === "admin",
                 email: oldState.user.email,
                 isInitialized: false, // 强制重新初始化
               };
@@ -229,42 +336,66 @@ export const useUserStore = create<UserStore>()(
               };
             }
           }
-          
+
           // 如果是当前版本或更高版本，直接返回
           return persistedState;
         },
       }
     ),
     {
-      name: 'UserStore',
+      name: "UserStore",
     }
   )
 );
 
+// 用于防止重复处理认证事件的标记
+let lastProcessedSession: string | null = null;
+
 // 监听认证状态变化，自动初始化用户信息
 supabase.auth.onAuthStateChange(async (event, session) => {
-  console.log('🔐 UserStore: 认证状态变化:', {
+  console.log("🔐 UserStore: 认证状态变化:", {
     event,
     hasSession: !!session,
     userId: session?.user?.id,
-    email: session?.user?.email
+    email: session?.user?.email,
   });
-  
+
   const store = useUserStore.getState();
-  console.log('🔐 UserStore: 当前状态:', {
-    isLoading: store.isLoading,
-    isInitialized: store.isInitialized,
-    userProfile: !!store.userProfile,
-    email: store.email
-  });
-  
-  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+  const sessionId = session?.user?.id || null;
+
+  // 对于登录相关事件，如果是同一个session，只处理一次
+  if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+    if (lastProcessedSession === sessionId) {
+      console.log("⏭️ UserStore: 同一会话已处理过，跳过重复处理", { event, sessionId });
+      return;
+    }
+
+    console.log("🔐 UserStore: 当前状态:", {
+      isLoading: store.isLoading,
+      isInitialized: store.isInitialized,
+      userProfile: !!store.userProfile,
+      email: store.email,
+    });
+
+    // 标记当前会话已处理
+    lastProcessedSession = sessionId;
+
     // 用户登录时自动初始化
-    console.log('👤 UserStore: 用户登录，开始自动初始化...');
+    console.log("👤 UserStore: 用户登录，开始自动初始化...");
+    const wasInitialized = store.isInitialized;
     await store.initialize();
-  } else if (event === 'SIGNED_OUT') {
-    // 用户登出时重置状态
-    console.log('👋 UserStore: 用户登出，重置状态...');
+
+    // 只有在用户之前已经初始化过（比如刷新页面后重新登录）才额外获取设备信息
+    // 如果是首次初始化，initialize 方法中已经会调用 getUserDeviceNickNameList
+    if (wasInitialized && session.user.email) {
+      console.log("🔄 UserStore: 用户已初始化，获取最新设备信息...");
+      getUserDeviceNickNameList(session.user.email, 3 * 1000, store.isAdmin);
+    }
+  } else if (event === "SIGNED_OUT") {
+    // 用户登出时重置状态和标记
+    console.log("👋 UserStore: 用户登出，重置状态...");
+    lastProcessedSession = null;
+    isGettingDeviceList = false; // 同时重置设备获取标记
     store.reset();
   }
 });
@@ -277,4 +408,5 @@ export const userSelectors = {
   error: (state: UserStore) => state.error,
   email: (state: UserStore) => state.email,
   isInitialized: (state: UserStore) => state.isInitialized,
+  userDeviceNickNameList: (state: UserStore) => state.userDeviceNickNameList,
 };

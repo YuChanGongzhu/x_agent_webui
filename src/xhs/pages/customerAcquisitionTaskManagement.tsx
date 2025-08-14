@@ -10,7 +10,7 @@ const StableDataBoard = () => <ExampleDataBoard />;
 const StableMessage = () => <ExampleMessage />;
 const StableTopUserMessage = () => <TopUserMessage />;
 
-const Dashboard: React.FC = React.memo(
+const CustomerAcquisitionTaskManagement: React.FC = React.memo(
   () => {
     return (
       <div className="flex flex-col">
@@ -42,4 +42,4 @@ const Dashboard: React.FC = React.memo(
   }
 );
 
-export default Dashboard;
+export default CustomerAcquisitionTaskManagement;
