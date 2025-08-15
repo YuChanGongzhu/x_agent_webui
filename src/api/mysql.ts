@@ -20,6 +20,7 @@ const getMsgTemplatesUrl = process.env.REACT_APP_TECENT_GET_MSG_TEMPLATES;
 const updateMsgTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_MSG_TEMPLATES;
 const updateNoteTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_NOTE_TEMPLATES;
 const beautifyNoteContentUrl = process.env.REACT_APP_TECENT_BEAUTIFY_NOTE_CONTENT;
+const getNoteTemplatesUrl = process.env.REACT_APP_TECENT_GET_NOTE_TEMPLATES;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1548,5 +1549,34 @@ export const beautifyNoteContentApi = async (params: { text: string }) => {
     return await response.json();
   } catch (error) {
     console.error("内容美化失败", error);
+  }
+};
+//获取所有小红书笔记的数据
+export const getNoteApi = async ({
+  email,
+  action = "get_all",
+  page = 1,
+  page_size = 10,
+}: {
+  email: string | null;
+  action?: string | null;
+  page?: number;
+  page_size?: number;
+}) => {
+  try {
+    const baseUrl = getNoteTemplatesUrl || "";
+    const params = new URLSearchParams();
+    if (email) params.append("email", email);
+    if (action) params.append("action", action);
+    const url = `${baseUrl}?${params.toString()}`;
+    const response = await fetch(url);
+    console.log("response", response);
+    if (!response.ok) {
+      throw new Error("获取一键回复模板失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("获取一键回复模板失败", error);
+    throw error;
   }
 };

@@ -15,7 +15,7 @@ import TemplateManager from "./xhs/pages/TemplateManager";
 import DeviceManagement from "./devices/DeviceManagement";
 import ModuleBoard from "./xhs/components/ModuleBoard";
 import CustomerAcquisitionTaskManagement from "./xhs/pages/customerAcquisitionTaskManagement";
-import ContentCreationManagement from "./xhs/pages/contentCreationManagement";
+import ContentCreationManagement from "./xhs/pages/contentCreationManagement/ContentCreationManagement";
 import { ConfigProvider } from "antd";
 import config from "./themeConfig/config";
 import BasePermission from "./components/BaseComponents/BasePermission";
