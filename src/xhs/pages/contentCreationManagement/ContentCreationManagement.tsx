@@ -153,8 +153,9 @@ const ContentCreationManagement = () => {
   // 状态渲染函数
   const renderStatus = (status: number | null) => {
     const statusConfig = {
+      0: { color: "blue", text: "草稿" },
       1: { color: "green", text: "成功" },
-      0: { color: "orange", text: "等待" },
+      2: { color: "orange", text: "等待" },
       [-1]: { color: "red", text: "失败" },
     };
 

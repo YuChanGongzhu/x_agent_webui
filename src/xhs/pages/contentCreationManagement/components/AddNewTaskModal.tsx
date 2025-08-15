@@ -141,6 +141,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({ visible, onClose, onS
         author: data.account || "",
         device_id: data.device_id || "",
         img_list: data.images || "",
+        status: 2,
       });
 
       if (result.code === 0 && result.message === "success") {

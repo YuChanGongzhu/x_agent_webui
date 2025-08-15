@@ -1514,6 +1514,7 @@ export const addNoteApi = async (params: {
   author: string;
   device_id: string;
   img_list: string;
+  status:number
 }) => {
   try {
     const baseUrl = updateNoteTemplatesUrl || "";
