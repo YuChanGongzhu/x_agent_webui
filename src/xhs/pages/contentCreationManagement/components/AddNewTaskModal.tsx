@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, message } from "antd";
+import { Button } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import AddNewTaskContent from "./AddNewTaskContent";
 import { NoteFormData } from "../types";
@@ -9,6 +9,7 @@ import { tencentCOSService } from "../../../../api/tencent_cos";
 import { addNoteApi } from "../../../../api/mysql";
 import { triggerDagRun } from "../../../../api/airflow";
 import { useUserStore } from "../../../../store/userStore";
+import { useMessage } from "./message";
 
 interface AddNewTaskModalProps {
   visible: boolean;
@@ -18,6 +19,7 @@ interface AddNewTaskModalProps {
 
 const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({ visible, onClose, onSuccess }) => {
   const { email } = useUserStore();
+  const message = useMessage();
   const [currentModalStep, setCurrentModalStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [noteData, setNoteData] = useState<Partial<NoteFormData>>(CONSTANTS.INITIAL_NOTE_DATA);

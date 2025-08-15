@@ -1,14 +1,15 @@
 import React, { CSSProperties, useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import ContentTopUserMessage from "../../components/ContentTopUserMessage";
 import { Table, Button, Tag, Space } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined, LoadingOutlined } from "@ant-design/icons";
 import "./contentCreationManagement.module.css";
 import { useUserStore } from "../../../store/userStore";
-import { getNoteApi } from "../../../api/mysql";
+import { getNoteApi, deleteNoteApi } from "../../../api/mysql";
 import AddNewTaskModal from "./components/AddNewTaskModal";
 import DataReport from "./components/DataReport";
 import StatsItem from "./components/StatsItem";
-
+import { useMessage } from "./components/message";
 // 样式对象
 const styles = {
   pageContainer: {
@@ -87,6 +88,7 @@ const mockdata = [
 
 const ContentCreationManagement = () => {
   const { email, userDeviceNickNameList } = useUserStore();
+  const message = useMessage();
 
   // 状态管理
   const [tableLoading, setTableLoading] = useState(false);
@@ -97,7 +99,7 @@ const ContentCreationManagement = () => {
     pageSize: 10,
     total: 0,
   });
-
+  const navigate = useNavigate();
   // 获取小红书笔记数据
   const fetchNoteList = useCallback(
     async (page = 1, pageSize = 10, showLoading = true) => {
@@ -175,8 +177,22 @@ const ContentCreationManagement = () => {
     console.log("编辑记录:", record);
   };
 
-  const handleDelete = (record: any) => {
+  const handleDelete = async (record: any) => {
     console.log("删除记录:", record);
+    try {
+      const res = await deleteNoteApi({ id: record.key });
+      console.log("删除笔记结果:", res);
+      if (res.code === 0 && res.message === "success") {
+        message.success("删除笔记成功");
+        // 刷新当前页面数据
+        fetchNoteList(pagination.current, pagination.pageSize, true);
+      } else {
+        message.error("删除笔记失败");
+      }
+    } catch (error) {
+      console.error("删除笔记出错:", error);
+      message.error("删除笔记出错，请稍后重试");
+    }
   };
 
   // 格式化笔记数据为表格数据
@@ -237,31 +253,31 @@ const ContentCreationManagement = () => {
       key: "publishTime",
       width: 160,
     },
-    {
-      title: "操作",
-      key: "action",
-      width: 120,
-      align: "center" as const,
-      render: (_: any, record: any) => (
-        <Space size="small">
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            title="编辑"
-            onClick={() => handleEdit(record)}
-          />
-          <Button
-            type="text"
-            size="small"
-            icon={<DeleteOutlined />}
-            danger
-            title="删除"
-            onClick={() => handleDelete(record)}
-          />
-        </Space>
-      ),
-    },
+    // {
+    //   title: "操作",
+    //   key: "action",
+    //   width: 120,
+    //   align: "center" as const,
+    //   render: (_: any, record: any) => (
+    //     <Space size="small">
+    //       <Button
+    //         type="text"
+    //         size="small"
+    //         icon={<EditOutlined />}
+    //         title="编辑"
+    //         onClick={() => handleEdit(record)}
+    //       />
+    //       <Button
+    //         type="text"
+    //         size="small"
+    //         icon={<DeleteOutlined />}
+    //         danger
+    //         title="删除"
+    //         onClick={() => handleDelete(record)}
+    //       />
+    //     </Space>
+    //   ),
+    // },
   ];
 
   // 检测屏幕宽度（简单的响应式逻辑）
@@ -332,7 +348,9 @@ const ContentCreationManagement = () => {
         <div style={styles.tableHeader}>
           <span>内容创作管理</span>
           <div style={styles.tableHeaderRight}>
-            <Button>草稿箱</Button>
+            <Button onClick={() => navigate("/xhs/pages/contentCreationManagement/drafts")}>
+              草稿箱
+            </Button>
             <Button
               type="primary"
               icon={userDeviceNickNameList.length > 0 ? <PlusOutlined /> : <LoadingOutlined />}

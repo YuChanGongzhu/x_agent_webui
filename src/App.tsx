@@ -12,11 +12,12 @@ import DataFilter from "./xhs/pages/DataFilter";
 import DataAnalyze from "./xhs/pages/DataAnalyze";
 import GenerateMsg from "./xhs/pages/GenerateMsg";
 import TemplateManager from "./xhs/pages/TemplateManager";
+import Drafts from "./xhs/pages/contentCreationManagement/drafts";
 import DeviceManagement from "./devices/DeviceManagement";
 import ModuleBoard from "./xhs/components/ModuleBoard";
 import CustomerAcquisitionTaskManagement from "./xhs/pages/customerAcquisitionTaskManagement";
 import ContentCreationManagement from "./xhs/pages/contentCreationManagement/ContentCreationManagement";
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import config from "./themeConfig/config";
 import BasePermission from "./components/BaseComponents/BasePermission";
 import DashTaskVeiw from "./xhs/pages/DashTaskView";
@@ -46,41 +47,47 @@ function App() {
               <ProtectedRoute>
                 <UserProvider>
                   <KeywordProvider>
-                    <div className="flex w-full h-full">
-                      <NavBar />
-                      <main
-                        className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4"
-                        style={{ margin: "1rem", height: "calc(100vh - 2rem)" }}
-                      >
-                        <Routes>
-                          <Route path="/" element={<Navigate to="/xhs/collect" replace />} />
-                          <Route
-                            path="/manage"
-                            element={
-                              <BasePermission>
-                                <ManagementPage />
-                              </BasePermission>
-                            }
-                          />
-                          <Route path="/xhs/collect" element={<DataCollect />} />
-                          {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
-                          <Route path="/xhs/analyze" element={<DataAnalyze />} />
-                          <Route path="/xhs/generate" element={<GenerateMsg />} />
-                          <Route path="/xhs/dashboard/taskview" element={<DashTaskVeiw />} />
-                          {/* <Route path="/xhs/templates" element={<TemplateManager />} /> */}
-                          <Route path="/xhs/dashboard/modules" element={<ModuleBoard />} />
-                          <Route path="/devices" element={<DeviceManagement />} />
-                          <Route
-                            path="/xhs/dashboard/customerAcquisitionTaskManagement"
-                            element={<CustomerAcquisitionTaskManagement />}
-                          />
-                          <Route
-                            path="/xhs/dashboard/contentCreationManagement"
-                            element={<ContentCreationManagement />}
-                          />
-                        </Routes>
-                      </main>
-                    </div>
+                    <AntdApp>
+                      <div className="flex w-full h-full">
+                        <NavBar />
+                        <main
+                          className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4"
+                          style={{ margin: "1rem", height: "calc(100vh - 2rem)" }}
+                        >
+                          <Routes>
+                            <Route path="/" element={<Navigate to="/xhs/collect" replace />} />
+                            <Route
+                              path="/manage"
+                              element={
+                                <BasePermission>
+                                  <ManagementPage />
+                                </BasePermission>
+                              }
+                            />
+                            <Route path="/xhs/collect" element={<DataCollect />} />
+                            {/* <Route path="/xhs/filter" element={<DataFilter />} /> */}
+                            <Route path="/xhs/analyze" element={<DataAnalyze />} />
+                            <Route path="/xhs/generate" element={<GenerateMsg />} />
+                            <Route path="/xhs/dashboard/taskview" element={<DashTaskVeiw />} />
+                            {/* <Route path="/xhs/templates" element={<TemplateManager />} /> */}
+                            <Route path="/xhs/dashboard/modules" element={<ModuleBoard />} />
+                            <Route path="/devices" element={<DeviceManagement />} />
+                            <Route
+                              path="/xhs/dashboard/customerAcquisitionTaskManagement"
+                              element={<CustomerAcquisitionTaskManagement />}
+                            />
+                            <Route
+                              path="/xhs/dashboard/contentCreationManagement"
+                              element={<ContentCreationManagement />}
+                            />
+                            <Route
+                              path="/xhs/pages/contentCreationManagement/drafts"
+                              element={<Drafts />}
+                            />
+                          </Routes>
+                        </main>
+                      </div>
+                    </AntdApp>
                   </KeywordProvider>
                 </UserProvider>
               </ProtectedRoute>

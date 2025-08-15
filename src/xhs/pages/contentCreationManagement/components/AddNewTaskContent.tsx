@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, Input, Select, Upload, Button, Image, message } from "antd";
+import { Form, Input, Select, Upload, Button, Image } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useUserStore } from "../../../../store/userStore";
@@ -7,6 +7,7 @@ import { beautifyNoteContentApi } from "../../../../api/mysql";
 import { NoteFormData } from "../types";
 import { CONSTANTS } from "../constants";
 import ProgressSteps from "./ProgressSteps";
+import { useMessage } from "./message";
 
 type FileType = Parameters<NonNullable<UploadProps["beforeUpload"]>>[0];
 
@@ -37,6 +38,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   setFileList,
 }) => {
   const { email, userDeviceNickNameList } = useUserStore();
+  const message = useMessage();
   const [form] = Form.useForm();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");

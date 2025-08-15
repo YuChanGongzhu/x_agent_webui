@@ -1514,7 +1514,7 @@ export const addNoteApi = async (params: {
   author: string;
   device_id: string;
   img_list: string;
-  status:number
+  status: number;
 }) => {
   try {
     const baseUrl = updateNoteTemplatesUrl || "";
@@ -1531,6 +1531,25 @@ export const addNoteApi = async (params: {
     return await response.json();
   } catch (error) {
     console.error("添加笔记失败", error);
+  }
+};
+//删除已发布的笔记
+export const deleteNoteApi = async (params: { id: string }) => {
+  try {
+    const baseUrl = updateNoteTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "delete", template_id: params.id }),
+    });
+    if (!response.ok) {
+      throw new Error("删除笔记失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("删除笔记失败", error);
   }
 };
 //内容创作管理的笔记内容美化接口
