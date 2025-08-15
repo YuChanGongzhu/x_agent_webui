@@ -19,6 +19,7 @@ const getReplyNumUrl = process.env.REACT_APP_TECENT_GET_REPLY_NUM;
 const getMsgTemplatesUrl = process.env.REACT_APP_TECENT_GET_MSG_TEMPLATES;
 const updateMsgTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_MSG_TEMPLATES;
 const updateNoteTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_NOTE_TEMPLATES;
+const beautifyNoteContentUrl = process.env.REACT_APP_TECENT_BEAUTIFY_NOTE_CONTENT;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1528,5 +1529,24 @@ export const addNoteApi = async (params: {
     return await response.json();
   } catch (error) {
     console.error("添加笔记失败", error);
+  }
+};
+//内容创作管理的笔记内容美化接口
+export const beautifyNoteContentApi = async (params: { text: string }) => {
+  try {
+    const baseUrl = beautifyNoteContentUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...params }),
+    });
+    if (!response.ok) {
+      throw new Error("内容美化失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("内容美化失败", error);
   }
 };

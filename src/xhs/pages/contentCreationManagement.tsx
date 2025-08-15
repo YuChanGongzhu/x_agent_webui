@@ -23,11 +23,12 @@ import {
   CheckOutlined,
   PlusOutlined,
   CloseOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import "./contentCreationManagement.module.css";
 import { useUserStore } from "../../store/userStore";
 import { tencentCOSService } from "../../api/tencent_cos";
-import { addNoteApi } from "../../api/mysql";
+import { addNoteApi, beautifyNoteContentApi } from "../../api/mysql";
 import { triggerDagRun } from "../../api/airflow";
 // 类型定义
 type FileType = Parameters<NonNullable<UploadProps["beforeUpload"]>>[0];
@@ -648,6 +649,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [aiBeautifying, setAiBeautifying] = useState(false);
 
   // 图片预览处理
   const handlePreview = async (file: UploadFile) => {
@@ -1081,6 +1083,58 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                         autoSize={{ minRows: 1, maxRows: 2 }}
                       />
                     </Form.Item>
+
+                    {/* AI润色按钮区域 */}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <Button
+                        color="primary"
+                        loading={aiBeautifying}
+                        type="link"
+                        size="small"
+                        disabled={aiBeautifying || !noteData.note_content}
+                        onClick={async () => {
+                          if (!noteData.note_content) {
+                            message.warning("请先输入笔记内容");
+                            return;
+                          }
+
+                          try {
+                            setAiBeautifying(true);
+                            const result = await beautifyNoteContentApi({
+                              text: noteData.note_content || "",
+                            });
+                            console.log("AI润色结果:", result);
+
+                            if (result.polished_text !== null) {
+                              // 更新表单中的内容
+                              form.setFieldsValue({
+                                content: result.polished_text,
+                              });
+                              // 同时更新状态数据
+                              onDataChange({
+                                note_content: result.polished_text,
+                              });
+                              message.success("AI润色完成！");
+                            } else {
+                              message.error("AI润色失败，请稍后重试");
+                            }
+                          } catch (error) {
+                            console.error("AI润色出错:", error);
+                            message.error("AI润色出错，请稍后重试");
+                          } finally {
+                            setAiBeautifying(false);
+                          }
+                        }}
+                      >
+                        {aiBeautifying ? "AI润色中..." : "✨ 一键AI润色"}
+                      </Button>
+                    </div>
+
                     <Form.Item
                       label="正文内容"
                       name="content"
@@ -1195,7 +1249,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
 };
 //表格任务组件
 const ContentCreationManagement = () => {
-  const { email } = useUserStore();
+  const { email, userDeviceNickNameList } = useUserStore();
   const [formRef] = Form.useForm();
   // 状态管理
   const [currentModalStep, setCurrentModalStep] = useState(0);
@@ -1241,7 +1295,11 @@ const ContentCreationManagement = () => {
 
         console.log(`${file.name} 上传成功:`, result);
         console.log("result.url", result.url);
-        return result.url; // 返回COS上的实际URL
+
+        // 返回自定义路径格式而不是腾讯云COS URL
+        const customPath = `${email}/${account}/${file.name}`;
+        console.log(`使用自定义路径格式: ${customPath}`);
+        return customPath;
       } catch (error) {
         console.error(`${file.name} 上传失败:`, error);
         throw error;
@@ -1249,9 +1307,9 @@ const ContentCreationManagement = () => {
     });
 
     try {
-      const uploadedUrls = await Promise.all(uploadPromises);
-      console.log("所有图片上传完成:", uploadedUrls);
-      return uploadedUrls;
+      const uploadedPaths = await Promise.all(uploadPromises);
+      console.log("所有图片上传完成，使用自定义路径格式:", uploadedPaths);
+      return uploadedPaths;
     } catch (error) {
       console.error("图片上传过程中出现错误:", error);
       throw error;
@@ -1390,11 +1448,11 @@ const ContentCreationManagement = () => {
             message.loading({ content: "正在上传图片...", key: "uploading", duration: 0 });
             console.log("开始上传图片到COS...");
 
-            const uploadedUrls = await uploadImagesToCOS(fileList, noteData.account);
+            const uploadedPaths = await uploadImagesToCOS(fileList, noteData.account);
 
-            // 更新图片路径为实际的COS URL
-            finalImageUrls = uploadedUrls.join(",");
-            console.log("图片上传完成，最终COS URLs:", finalImageUrls);
+            // 更新图片路径为自定义路径格式
+            finalImageUrls = uploadedPaths.join(",");
+            console.log("图片上传完成，最终自定义路径:", finalImageUrls);
 
             // 更新状态中的图片路径
             handleDataChange({
@@ -1415,7 +1473,7 @@ const ContentCreationManagement = () => {
           note_content: noteData.note_content,
           note_tags_list: noteData.note_tags_list || [],
           at_users: noteData.at_users || "[]", // 默认为空数组的JSON字符串
-          images: finalImageUrls, // 使用最终的COS URL
+          images: finalImageUrls, // 使用最终的自定义路径格式
           visibility: noteData.visibility,
           account: noteData.account,
           device_id: noteData.device_id || "",
@@ -1423,7 +1481,7 @@ const ContentCreationManagement = () => {
 
         console.log("=== 提交笔记数据 ===");
         console.log("完整数据对象:", completeData);
-        console.log("最终图片路径字符串:", completeData.images);
+        console.log("最终图片路径字符串 (自定义格式):", completeData.images);
         console.log("图片数量:", completeData.images ? completeData.images.split(",").length : 0);
         console.log("话题数组:", completeData.note_tags_list);
         console.log("话题数量:", completeData.note_tags_list.length);
@@ -1701,7 +1759,8 @@ const ContentCreationManagement = () => {
             <Button>草稿箱</Button>
             <Button
               type="primary"
-              icon={<PlusOutlined />}
+              icon={userDeviceNickNameList.length > 0 ? <PlusOutlined /> : <LoadingOutlined />}
+              disabled={userDeviceNickNameList.length === 0}
               onClick={() => {
                 console.log("点击添加新笔记");
                 setShowAddNewTask(true);

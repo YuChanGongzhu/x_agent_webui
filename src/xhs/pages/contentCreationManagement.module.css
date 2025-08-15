@@ -207,3 +207,60 @@
 .ant-upload-list-picture-card .ant-upload-list-item-error {
   border: 1px solid #ff4d4f;
 }
+
+/* AI润色按钮流动渐变效果 */
+.ai-beautify-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
+  background-size: 400% 400%;
+  animation: gradientFlow 4s ease infinite;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.ai-beautify-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  animation-duration: 2s; /* 悬停时加快动画速度 */
+}
+
+.ai-beautify-button:active {
+  transform: translateY(0);
+}
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* AI润色按钮加载状态 */
+.ai-beautify-button.loading {
+  background: linear-gradient(-45deg, #a0a0a0, #b0b0b0, #c0c0c0, #d0d0d0);
+  background-size: 400% 400%;
+  animation: gradientFlowLoading 2s ease infinite;
+  cursor: not-allowed;
+}
+
+@keyframes gradientFlowLoading {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
