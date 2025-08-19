@@ -1515,6 +1515,8 @@ export const addNoteApi = async (params: {
   device_id: string;
   img_list: string;
   status: number;
+  at_users: string;
+  note_tags: string;
 }) => {
   try {
     const baseUrl = updateNoteTemplatesUrl || "";
@@ -1525,9 +1527,6 @@ export const addNoteApi = async (params: {
       },
       body: JSON.stringify({ action: "add", ...params }),
     });
-    if (!response.ok) {
-      throw new Error("添加笔记失败");
-    }
     return await response.json();
   } catch (error) {
     console.error("添加笔记失败", error);
@@ -1544,12 +1543,37 @@ export const deleteNoteApi = async (params: { id: string }) => {
       },
       body: JSON.stringify({ action: "delete", template_id: params.id }),
     });
-    if (!response.ok) {
-      throw new Error("删除笔记失败");
-    }
     return await response.json();
   } catch (error) {
     console.error("删除笔记失败", error);
+  }
+};
+//更新存在草稿箱的笔记
+export const updateNoteApi = async (params: {
+  template_id: number;
+  email: string;
+  title: string;
+  content: string;
+  author: string;
+  device_id: string;
+  img_list: string;
+  status: number;
+  at_users: string;
+  note_tags: string;
+}) => {
+  try {
+    const baseUrl = updateNoteTemplatesUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "update", ...params }),
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error("更新笔记失败", error);
   }
 };
 //内容创作管理的笔记内容美化接口

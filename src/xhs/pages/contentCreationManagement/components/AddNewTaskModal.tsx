@@ -13,11 +13,17 @@ import { useMessage } from "./message";
 
 interface AddNewTaskModalProps {
   visible: boolean;
+  isDraft: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({ visible, onClose, onSuccess }) => {
+const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
+  visible,
+  isDraft,
+  onClose,
+  onSuccess,
+}) => {
   const { email } = useUserStore();
   const message = useMessage();
   const [currentModalStep, setCurrentModalStep] = useState(0);
@@ -136,17 +142,58 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({ visible, onClose, onS
 
     setSubmitting(true);
     try {
-      const result = await addNoteApi({
+      // 处理图片列表格式 - 转换为JSON字符串数组格式
+      let processedImageList = "";
+      if (data.images) {
+        try {
+          // 尝试解析为JSON数组
+          const parsed = JSON.parse(data.images);
+          if (Array.isArray(parsed)) {
+            processedImageList = JSON.stringify(parsed);
+          } else {
+            // 如果不是数组，作为单个路径处理
+            processedImageList = JSON.stringify([parsed]);
+          }
+        } catch {
+          // 如果JSON解析失败，作为单个路径字符串处理（避免使用逗号分割）
+          console.warn("图片数据不是JSON格式，作为单个路径处理:", data.images);
+          processedImageList = JSON.stringify([data.images]);
+        }
+      }
+
+      // 处理标签列表格式 - 转换为JSON字符串数组格式，由于user在填写的时候就已经转换成转义字符串格式了，所以这里就直接用data.at_users
+      let processedTagsList = "";
+      if (data.note_tags_list && data.note_tags_list.length > 0) {
+        processedTagsList = JSON.stringify(data.note_tags_list);
+      }
+      const apiParams = {
         email: email || "",
         title: data.note_title || "",
         content: data.note_content || "",
         author: data.account || "",
         device_id: data.device_id || "",
-        img_list: data.images || "",
-        status: 2,
-      });
+        img_list: processedImageList,
+        status: isDraft ? 0 : 2,
+        visiable_scale: data.visibility,
+        at_users: data.at_users || "[]",
+        note_tags: processedTagsList,
+      };
 
-      if (result.code === 0 && result.message === "success") {
+      console.log("发送到API的参数:", apiParams);
+      const result = await addNoteApi(apiParams);
+
+      //草稿箱不触发dag任务
+      if (result.code === 0 && result.message === "success" && isDraft) {
+        message.success("草稿保存成功！");
+        setNoteData(CONSTANTS.INITIAL_NOTE_DATA);
+        setFileList([]);
+        setCurrentModalStep(0);
+        onSuccess();
+        onClose();
+        return;
+      }
+      //非草稿箱触发dag
+      if (result.code === 0 && result.message === "success" && !isDraft) {
         message.success("笔记提交成功！");
 
         const conf = {
@@ -239,7 +286,8 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({ visible, onClose, onS
           try {
             message.loading({ content: "正在上传图片...", key: "uploading", duration: 0 });
             const uploadedPaths = await uploadImagesToCOS(fileList, noteData.account);
-            finalImageUrls = uploadedPaths.join(",");
+            // 使用JSON格式存储图片路径数组，避免逗号分割问题
+            finalImageUrls = JSON.stringify(uploadedPaths);
             handleDataChange({ images: finalImageUrls });
             message.success({ content: "图片上传完成！", key: "uploading", duration: 2 });
           } catch (error) {
@@ -259,7 +307,9 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({ visible, onClose, onS
           account: noteData.account,
           device_id: noteData.device_id || "",
         };
+        console.log("收集完整数据", completeData);
 
+        // 提交笔记数据
         await submitNote(completeData);
       } catch (error) {
         console.error("提交失败:", error);

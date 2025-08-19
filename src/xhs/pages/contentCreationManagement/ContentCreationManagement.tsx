@@ -396,6 +396,7 @@ const ContentCreationManagement = () => {
       {/* 添加新任务弹窗 */}
       <AddNewTaskModal
         visible={showAddNewTask}
+        isDraft={false}
         onClose={() => setShowAddNewTask(false)}
         onSuccess={handleModalSuccess}
       />

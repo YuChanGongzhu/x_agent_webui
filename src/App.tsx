@@ -51,8 +51,12 @@ function App() {
                       <div className="flex w-full h-full">
                         <NavBar />
                         <main
-                          className="flex-1 overflow-y-auto bg-white rounded-lg shadow-lg p-4"
-                          style={{ margin: "1rem", height: "calc(100vh - 2rem)" }}
+                          className="flex-1 bg-white rounded-lg shadow-lg p-4 overflow-y-auto"
+                          style={{
+                            margin: "1rem",
+                            height: "calc(100vh - 2rem)",
+                            border: "1px solid red",
+                          }}
                         >
                           <Routes>
                             <Route path="/" element={<Navigate to="/xhs/collect" replace />} />
