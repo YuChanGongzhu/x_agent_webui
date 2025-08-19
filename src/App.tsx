@@ -55,7 +55,6 @@ function App() {
                           style={{
                             margin: "1rem",
                             height: "calc(100vh - 2rem)",
-                            border: "1px solid red",
                           }}
                         >
                           <Routes>
