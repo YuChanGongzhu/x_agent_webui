@@ -83,6 +83,12 @@ const formatAtUsersForDisplay = (users: string[]): string => {
   return users.join(", ");
 };
 
+// 处理文件名中的逗号，替换为下划线
+const sanitizeFileName = (fileName: string): string => {
+  // 替换中文逗号和英文逗号为下划线
+  return fileName.replace(/[,，]/g, "_");
+};
+
 const Drafts = () => {
   const navigate = useNavigate();
   const { email, userDeviceNickNameList } = useUserStore();
@@ -192,41 +198,33 @@ const Drafts = () => {
       user: formatAtUsersForDisplay(existingAtUsers),
     });
 
-    // 解析图片列表
+    // 解析图片列表 - 按逗号分隔的字符串格式
     if (draft.img_list) {
       console.log("原始图片列表数据:", draft.img_list);
       let imageUrls: string[] = [];
 
-      try {
-        // 尝试解析JSON格式的图片列表
-        const parsed = JSON.parse(draft.img_list);
-        console.log("JSON解析结果:", parsed);
-        if (Array.isArray(parsed)) {
-          imageUrls = parsed.filter((url: string) => url && url.trim());
-        } else {
-          // 如果不是数组，可能是单个字符串
-          imageUrls = [parsed].filter((url: string) => url && url.trim());
-        }
-      } catch (error) {
-        // 如果JSON解析失败，尝试按逗号分割（兼容旧格式）
-        console.warn("图片列表JSON解析失败，尝试按逗号分割:", error);
-        imageUrls = draft.img_list.split(",").filter((url: string) => url.trim());
+      if (typeof draft.img_list === "string" && draft.img_list.trim()) {
+        // 按逗号分割图片文件名
+        imageUrls = draft.img_list
+          .split(",")
+          .map((filename: string) => filename.trim())
+          .filter((filename: string) => filename.length > 0);
       }
 
-      console.log("解析后的图片URLs:", imageUrls);
+      console.log("解析后的图片文件名:", imageUrls);
 
-      const initialFileList = imageUrls.map((url: string, index: number) => {
-        const fullUrl = url.startsWith("http")
-          ? url
-          : `https://xhs-notes-resources-1347723456.cos.ap-guangzhou.myqcloud.com/${encodeURI(
-              url
-            )}`;
+      const initialFileList = imageUrls.map((filename: string, index: number) => {
+        // 构建完整的图片URL，使用草稿中的账号信息
+        const account = draft.author || "";
+        const fullUrl = `https://xhs-notes-resources-1347723456.cos.ap-guangzhou.myqcloud.com/${email}/${account}/${encodeURI(
+          filename
+        )}`;
 
-        console.log(`图片${index + 1}: ${url} -> ${fullUrl}`);
+        console.log(`图片${index + 1}: ${filename} -> ${fullUrl}`);
 
         return {
           uid: `existing-${index}`,
-          name: `image-${index}.jpg`,
+          name: filename, // 使用实际的文件名
           status: "done" as const,
           url: fullUrl,
         };
@@ -348,29 +346,42 @@ const Drafts = () => {
 
     const uploadPromises = fileList.map(async (file) => {
       try {
-        // 如果是已存在的图片（从草稿中加载的），直接返回路径
+        // 如果是已存在的图片（从草稿中加载的），直接返回文件名
         if (file.uid.startsWith("existing-")) {
           const url = file.url || "";
           if (url.includes("myqcloud.com/")) {
-            return url.split("myqcloud.com/")[1];
+            const fileName = url.split("/").pop() || "";
+            return sanitizeFileName(fileName);
           }
-          return url;
+          return sanitizeFileName(url);
         }
 
         if (!file.originFileObj) {
           throw new Error(`文件 ${file.name} 缺少原始文件对象`);
         }
 
+        // 处理文件名，替换逗号为下划线
+        const sanitizedFileName = sanitizeFileName(file.name);
+        console.log(`原文件名: ${file.name} -> 处理后文件名: ${sanitizedFileName}`);
+
         const uploadPath = `${email}/${account}`;
         const cosService = tencentCOSService;
+
+        // 创建一个新的File对象，使用处理后的文件名
+        const sanitizedFile = new File([file.originFileObj], sanitizedFileName, {
+          type: file.originFileObj.type,
+          lastModified: file.originFileObj.lastModified,
+        });
+
         await cosService.uploadFile(
-          file.originFileObj as File,
+          sanitizedFile,
           uploadPath,
           undefined,
           "xhs-notes-resources-1347723456"
         );
 
-        return `${email}/${account}/${file.name}`;
+        // 返回处理后的文件名（不带路径前缀）
+        return sanitizedFileName;
       } catch (error) {
         console.error(`${file.name} 上传失败:`, error);
         throw error;
@@ -379,7 +390,7 @@ const Drafts = () => {
 
     try {
       const uploadedPaths = await Promise.all(uploadPromises);
-      console.log("所有图片上传完成，使用自定义路径格式:", uploadedPaths);
+      console.log("所有图片上传完成，文件名列表:", uploadedPaths);
       return uploadedPaths;
     } catch (error) {
       console.error("图片上传过程中出现错误:", error);
@@ -407,8 +418,9 @@ const Drafts = () => {
         try {
           message.loading({ content: "正在上传图片...", key: "uploading", duration: 0 });
           const uploadedPaths = await uploadImagesToCOS(fileList, values.account);
-          // 将图片路径数组转换为JSON字符串格式，与后端期望的格式一致
-          finalImageUrls = JSON.stringify(uploadedPaths);
+          // 将文件名数组转换为逗号分隔的字符串格式
+          finalImageUrls = uploadedPaths.join(",");
+          console.log("最终图片字符串:", finalImageUrls);
           message.success({ content: "图片上传完成！", key: "uploading", duration: 2 });
         } catch (error) {
           message.error({ content: "图片上传失败，请重试", key: "uploading", duration: 3 });
@@ -483,8 +495,9 @@ const Drafts = () => {
         try {
           message.loading({ content: "正在上传图片...", key: "uploading", duration: 0 });
           const uploadedPaths = await uploadImagesToCOS(fileList, values.account);
-          // 将图片路径数组转换为JSON字符串格式，与后端期望的格式一致
-          finalImageUrls = JSON.stringify(uploadedPaths);
+          // 将文件名数组转换为逗号分隔的字符串格式
+          finalImageUrls = uploadedPaths.join(",");
+          console.log("最终图片字符串:", finalImageUrls);
           message.success({ content: "图片上传完成！", key: "uploading", duration: 2 });
         } catch (error) {
           message.error({ content: "图片上传失败，请重试", key: "uploading", duration: 3 });

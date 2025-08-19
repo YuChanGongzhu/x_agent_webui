@@ -4,7 +4,7 @@ export const CONSTANTS = {
   MAX_IMAGE_COUNT: 9,
   MAX_TITLE_LENGTH: 20,
   MAX_CONTENT_LENGTH: 1000,
-  SUPPORTED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/gif"],
+  SUPPORTED_IMAGE_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"],
   TOPIC_SEPARATOR_REGEX: /[,，]/, // 中英文逗号
   INITIAL_NOTE_DATA: {
     note_title: "",
