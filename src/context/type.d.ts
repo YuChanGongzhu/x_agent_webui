@@ -15,7 +15,11 @@ export interface UserContextType {
   email: string | null;
   /** 刷新用户配置信息的方法 */
   refreshUserProfile: () => Promise<void>;
-} 
+  /** 刷新用户设备信息的方法 */
+  refreshUserDeviceList: () => Promise<void>;
+  /** 用户设备昵称列表 */
+  userDeviceNickNameList: string[];
+}
 
 /**
  * 用户配置信息--usermanagement
@@ -50,4 +54,4 @@ export interface UserData {
   role: string;
   display_name?: string;
   profile?: UserProfile | null;
-} 
+}

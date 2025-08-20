@@ -1,56 +1,60 @@
-import supabase from './supabaseConfig';
-import { User, Session } from '@supabase/supabase-js';
+import supabase from "./supabaseConfig";
+import { User, Session } from "@supabase/supabase-js";
 
 // 用户注册功能已移除
 
 // 用户登录
-export const loginUser = async (email: string, password: string): Promise<{ user: User | null; session: Session | null }> => {
+export const loginUser = async (
+  email: string,
+  password: string
+): Promise<{ user: User | null; session: Session | null }> => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     });
-    
+
     if (error) throw error;
-    
+
     // 登录成功后更新用户资料中的updated_at字段以及email字段
     if (data.user) {
       try {
         const now = new Date().toISOString();
-        
+
         // 1. 首先检查用户资料是否存在
         const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', data.user.id)
+          .from("user_profiles")
+          .select("*")
+          .eq("user_id", data.user.id)
           .single();
-          
+
         if (profileError) {
-          if (profileError.code === 'PGRST116') { // PGRST116 是"没有找到记录"的错误
-            console.error('用户资料不存在:', data.user.id);
+          if (profileError.code === "PGRST116") {
+            // PGRST116 是"没有找到记录"的错误
+            console.error("用户资料不存在:", data.user.id);
           } else {
-            console.error('查询用户资料失败:', profileError);
+            console.error("查询用户资料失败:", profileError);
           }
         } else if (profileData) {
           // 2. 如果用户资料存在，更新它
           const { error: updateError } = await supabase
-            .from('user_profiles')
-            .update({ 
+            .from("user_profiles")
+            .update({
               updated_at: now,
-              email: data.user.email
+              email: data.user.email,
             })
-            .eq('user_id', data.user.id);
-          
+            .eq("user_id", data.user.id);
+
           if (updateError) {
-            console.error('更新用户最后登录时间和邮箱失败:', updateError);
+            console.error("更新用户最后登录时间和邮箱失败:", updateError);
           }
         }
       } catch (profileUpdateError) {
         // 确保即使资料更新失败，也不会影响登录过程
-        console.error('用户资料更新过程中发生错误:', profileUpdateError);
+        console.error("用户资料更新过程中发生错误:", profileUpdateError);
       }
     }
-    
+
     return data;
   } catch (error) {
     throw error;
@@ -60,7 +64,7 @@ export const loginUser = async (email: string, password: string): Promise<{ user
 // 用户退出
 export const logoutUser = async (): Promise<void> => {
   try {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: "global" });
     if (error) throw error;
   } catch (error) {
     throw error;
@@ -77,7 +81,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
 export const resetPassword = async (email: string): Promise<void> => {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) throw error;
   } catch (error) {
@@ -91,8 +95,8 @@ export const updateUserProfile = async (displayName: string, photoURL?: string):
     const { error } = await supabase.auth.updateUser({
       data: {
         name: displayName,
-        avatar_url: photoURL || null
-      }
+        avatar_url: photoURL || null,
+      },
     });
     if (error) throw error;
   } catch (error) {
@@ -104,7 +108,7 @@ export const updateUserProfile = async (displayName: string, photoURL?: string):
 export const updateUserEmail = async (newEmail: string): Promise<void> => {
   try {
     const { error } = await supabase.auth.updateUser({
-      email: newEmail
+      email: newEmail,
     });
     if (error) throw error;
     // Supabase 会自动发送验证邮件
@@ -117,7 +121,7 @@ export const updateUserEmail = async (newEmail: string): Promise<void> => {
 export const updateUserPassword = async (newPassword: string): Promise<void> => {
   try {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword
+      password: newPassword,
     });
     if (error) throw error;
   } catch (error) {

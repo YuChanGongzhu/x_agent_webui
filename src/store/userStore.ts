@@ -37,9 +37,11 @@ interface UserActions {
   // 设置用户设备昵称列表
   setUserDeviceNickNameList: (nickNameList: string[]) => void;
   // 初始化用户信息
-  initialize: () => Promise<void>;
+  initialize: (force?: boolean) => Promise<void>;
   // 刷新用户配置
   refreshUserProfile: () => Promise<void>;
+  // 刷新用户设备信息
+  refreshUserDeviceList: () => Promise<void>;
   // 重置状态（登出时使用）
   reset: () => void;
 }
@@ -212,11 +214,11 @@ export const useUserStore = create<UserStore>()(
         },
 
         // 初始化用户信息
-        initialize: async () => {
+        initialize: async (force = false) => {
           const state = get();
 
           // 如果已经在加载中或已初始化，避免重复调用
-          if (state.isLoading || state.isInitialized) {
+          if ((state.isLoading || state.isInitialized) && !force) {
             console.log("⏳ UserStore: 用户信息正在加载中或已初始化，跳过重复调用", {
               isLoading: state.isLoading,
               isInitialized: state.isInitialized,
@@ -256,10 +258,24 @@ export const useUserStore = create<UserStore>()(
               false,
               "initialize:complete"
             );
-            // 6. 初始化完成后获取用户设备信息
+            // 6. 根据情况获取用户设备信息
             if (user.email) {
-              console.log("🔄 UserStore: 开始获取用户设备信息...");
-              getUserDeviceNickNameList(user.email, 3 * 1000, isAdmin);
+              const hasDeviceList = get().userDeviceNickNameList.length > 0;
+              if (force || !hasDeviceList) {
+                // 强制初始化或没有设备列表时才获取
+                console.log("🔄 UserStore: 开始获取用户设备信息...", {
+                  force,
+                  hasDeviceList,
+                  isAdmin,
+                  email: user.email,
+                });
+                getUserDeviceNickNameList(user.email, 3 * 1000, isAdmin);
+              } else {
+                console.log("✅ UserStore: 已有设备信息，跳过获取", {
+                  deviceCount: get().userDeviceNickNameList.length,
+                  currentIsAdmin: isAdmin,
+                });
+              }
             }
 
             console.log("🎉 UserStore: 用户信息初始化完成", {
@@ -289,6 +305,17 @@ export const useUserStore = create<UserStore>()(
           await get().initialize();
         },
 
+        // 刷新用户设备信息(手动)
+        refreshUserDeviceList: async () => {
+          const state = get();
+          if (state.email) {
+            console.log("🔄 手动刷新用户设备信息...");
+            getUserDeviceNickNameList(state.email, 3 * 1000, state.isAdmin);
+          } else {
+            console.log("❌ 无法刷新设备信息：用户邮箱为空");
+          }
+        },
+
         // 重置状态（登出时使用）
         reset: () => {
           console.log("🔄 重置用户状态");
@@ -303,6 +330,7 @@ export const useUserStore = create<UserStore>()(
           isAdmin: state.isAdmin,
           email: state.email,
           isInitialized: state.isInitialized,
+          userDeviceNickNameList: state.userDeviceNickNameList,
         }),
         version: 1,
         // 数据迁移函数 - 处理从旧版本到新版本的数据转换
@@ -363,10 +391,20 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   const store = useUserStore.getState();
   const sessionId = session?.user?.id || null;
 
-  // 对于登录相关事件，如果是同一个session，只处理一次
-  if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-    if (lastProcessedSession === sessionId) {
-      console.log("⏭️ UserStore: 同一会话已处理过，跳过重复处理", { event, sessionId });
+  // 登录/初始/刷新/用户更新事件
+  if (
+    (event === "SIGNED_IN" ||
+      event === "INITIAL_SESSION" ||
+      event === "TOKEN_REFRESHED" ||
+      event === "USER_UPDATED") &&
+    session?.user
+  ) {
+    const isSameUser = store.email === session.user.email;
+    const isPageRefresh = event === "INITIAL_SESSION" && store.isInitialized;
+
+    // 仅在会话相同、邮箱也相同、且不是页面刷新时才跳过
+    if (lastProcessedSession === sessionId && isSameUser && !isPageRefresh) {
+      console.log("⏭️ UserStore: 同一会话且邮箱一致，跳过重复处理", { event, sessionId });
       return;
     }
 
@@ -375,22 +413,30 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       isInitialized: store.isInitialized,
       userProfile: !!store.userProfile,
       email: store.email,
+      isPageRefresh,
     });
 
     // 标记当前会话已处理
     lastProcessedSession = sessionId;
 
-    // 用户登录时自动初始化
-    console.log("👤 UserStore: 用户登录，开始自动初始化...");
-    const wasInitialized = store.isInitialized;
-    await store.initialize();
-
-    // 只有在用户之前已经初始化过（比如刷新页面后重新登录）才额外获取设备信息
-    // 如果是首次初始化，initialize 方法中已经会调用 getUserDeviceNickNameList
-    if (wasInitialized && session.user.email) {
-      console.log("🔄 UserStore: 用户已初始化，获取最新设备信息...");
-      getUserDeviceNickNameList(session.user.email, 3 * 1000, store.isAdmin);
+    // 先同步邮箱，减少短暂不一致
+    if (!isSameUser && session.user.email) {
+      store.setEmail(session.user.email);
+      // 用户切换时清空设备列表，强制重新获取
+      store.setUserDeviceNickNameList([]);
+      console.log("🔄 UserStore: 用户切换，清空设备列表");
     }
+
+    // 页面刷新或用户切换时强制重新初始化
+    const shouldForceInit = !isSameUser || isPageRefresh;
+    console.log("👤 UserStore: 用户登录/刷新，开始初始化...", {
+      isSameUser,
+      isPageRefresh,
+      shouldForceInit,
+      sessionEmail: session.user.email,
+      storedEmail: store.email,
+    });
+    await store.initialize(shouldForceInit);
   } else if (event === "SIGNED_OUT") {
     // 用户登出时重置状态和标记
     console.log("👋 UserStore: 用户登出，重置状态...");
@@ -409,4 +455,5 @@ export const userSelectors = {
   email: (state: UserStore) => state.email,
   isInitialized: (state: UserStore) => state.isInitialized,
   userDeviceNickNameList: (state: UserStore) => state.userDeviceNickNameList,
+  refreshUserDeviceList: (state: UserStore) => state.refreshUserDeviceList,
 };
