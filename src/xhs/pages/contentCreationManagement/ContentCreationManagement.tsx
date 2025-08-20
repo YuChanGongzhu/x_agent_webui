@@ -180,7 +180,7 @@ const ContentCreationManagement = () => {
   const handleDelete = async (record: any) => {
     console.log("删除记录:", record);
     try {
-      const res = await deleteNoteApi({ id: record.key });
+      const res = await deleteNoteApi({ id: record.key, email: email || "" });
       console.log("删除笔记结果:", res);
       if (res.code === 0 && res.message === "success") {
         message.success("删除笔记成功");

@@ -1533,7 +1533,7 @@ export const addNoteApi = async (params: {
   }
 };
 //删除已发布的笔记
-export const deleteNoteApi = async (params: { id: string }) => {
+export const deleteNoteApi = async (params: { id: number; email: string }) => {
   try {
     const baseUrl = updateNoteTemplatesUrl || "";
     const response = await fetch(baseUrl, {
@@ -1541,7 +1541,7 @@ export const deleteNoteApi = async (params: { id: string }) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ action: "delete", template_id: params.id }),
+      body: JSON.stringify({ action: "delete", template_id: params.id, email: params.email }),
     });
     return await response.json();
   } catch (error) {

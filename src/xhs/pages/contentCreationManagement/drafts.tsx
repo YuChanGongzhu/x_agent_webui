@@ -106,6 +106,24 @@ const Drafts = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [currentDeviceId, setCurrentDeviceId] = useState<string>("");
+
+  // 根据账号名称查找对应的设备ID
+  const findDeviceIdByAccount = (accountName: string): string => {
+    let deviceId = "";
+    userDeviceNickNameList.forEach((item) => {
+      if (typeof item === "object" && item !== null) {
+        const entries = Object.entries(item);
+        if (entries.length > 0) {
+          const [deviceIdKey, nickname] = entries[0];
+          if (nickname === accountName) {
+            deviceId = deviceIdKey;
+          }
+        }
+      }
+    });
+    return deviceId;
+  };
 
   // 获取草稿数据
   const fetchDraftList = useCallback(async () => {
@@ -141,7 +159,7 @@ const Drafts = () => {
   // 删除草稿
   const handleDelete = async (draftId: number) => {
     try {
-      const res = await deleteNoteApi({ id: draftId.toString() });
+      const res = await deleteNoteApi({ id: draftId, email: email || "" });
       console.log("删除草稿结果:", res);
       if (res.code === 0 && res.message === "success") {
         message.success("删除草稿成功");
@@ -159,15 +177,7 @@ const Drafts = () => {
   // 编辑草稿
   const handleEdit = (draft: any) => {
     console.log("编辑草稿:", draft);
-    console.log("草稿字段详情:", {
-      note_tags: draft.note_tags,
-      note_tags_list: draft.note_tags_list,
-      at_users: draft.at_users,
-      note_at_users: draft.note_at_users,
-      visiable_scale: draft.visiable_scale,
-      note_visit_scale: draft.note_visit_scale,
-      img_list: draft.img_list,
-    });
+
     setEditingDraft(draft);
 
     // 解析现有数据 - 修复字段名匹配
@@ -189,14 +199,20 @@ const Drafts = () => {
     const existingAtUsers = safeParseAtUsers(draft.at_users || draft.note_at_users || "[]");
 
     // 设置表单初始值 - 修复字段名匹配
+    const accountName = draft.author || "";
     editForm.setFieldsValue({
       title: draft.title || "",
       content: draft.content || "",
-      account: draft.author || "",
+      account: accountName,
       visibility: draft.visiable_scale || draft.note_visit_scale || draft.visibility || "",
       topic: formatTopicsForDisplay(existingTopics),
       user: formatAtUsersForDisplay(existingAtUsers),
     });
+
+    // 设置对应的设备ID
+    const deviceId = findDeviceIdByAccount(accountName);
+    setCurrentDeviceId(deviceId);
+    console.log("编辑草稿时设置的设备ID:", { accountName, deviceId });
 
     // 解析图片列表 - 按逗号分隔的字符串格式
     if (draft.img_list) {
@@ -242,6 +258,7 @@ const Drafts = () => {
   const handleCloseEdit = () => {
     setEditingDraft(null);
     setFileList([]);
+    setCurrentDeviceId("");
     editForm.resetFields();
   };
 
@@ -406,7 +423,13 @@ const Drafts = () => {
     try {
       setSubmitting(true);
       const values = await editForm.validateFields();
+      console.log("values", values);
 
+      // 获取设备ID和账号名称
+      const nickname = values.account;
+      const deviceId = currentDeviceId;
+
+      console.log("解析后的设备信息:", { deviceId, nickname });
       if (!editingDraft) {
         message.error("没有正在编辑的草稿");
         return;
@@ -436,28 +459,30 @@ const Drafts = () => {
         email: email || "",
         title: values.title || "",
         content: values.content || "",
-        author: values.account || "",
-        device_id: values.device_id || "",
+        author: nickname || "",
+        device_id: deviceId || "",
         img_list: finalImageUrls,
         status: 2,
         at_users: JSON.stringify(usersArray),
         note_tags: JSON.stringify(topicsArray),
       };
+      console.log("params", params);
       const updateResult = await updateNoteApi(params);
-
+      console.log("params", params);
       if (updateResult.code === 0 && updateResult.message === "success") {
         message.success("笔记提交成功！");
 
         const conf = {
           email: email,
-          device_id: values.device_id || "",
+          device_id: deviceId || "",
           note_title: values.title || "",
           note_content: values.content || "",
           note_tags_list: topicsArray,
           note_at_users: JSON.stringify(usersArray),
           note_visit_scale: values.visibility,
         };
-
+        console.log("conf", conf);
+        // return;
         const promise = triggerDagRun("notes_publish", dag_run_id, conf);
         promise
           .then(() => {
@@ -508,13 +533,17 @@ const Drafts = () => {
       // 处理话题和@用户数据
       const topicsArray = parseTopics(values.topic || "");
       const usersArray = parseAtUsers(values.user || "");
+      // 获取设备ID和账号名称
+      const nickname = values.account;
+      const deviceId = currentDeviceId;
+
       const params = {
         template_id: editingDraft.id || "",
         email: email || "",
         title: values.title || "",
         content: values.content || "",
-        author: values.account || "",
-        device_id: values.device_id || "",
+        author: nickname || "",
+        device_id: deviceId || "",
         img_list: finalImageUrls,
         status: 0,
         at_users: JSON.stringify(usersArray),
@@ -775,7 +804,20 @@ const Drafts = () => {
                 }}
               >
                 {/* 选择账号 */}
-                <Form form={editForm} layout="vertical" onFinish={handleSaveEdit}>
+                <Form
+                  form={editForm}
+                  layout="vertical"
+                  onFinish={handleSaveEdit}
+                  onValuesChange={(changedValues) => {
+                    // 当账号选择变化时，更新对应的设备ID
+                    if ("account" in changedValues) {
+                      const accountName = changedValues.account;
+                      const deviceId = findDeviceIdByAccount(accountName);
+                      setCurrentDeviceId(deviceId);
+                      console.log("账号选择变化:", { accountName, deviceId });
+                    }
+                  }}
+                >
                   <Form.Item
                     label="选择小红书账号"
                     name="account"
