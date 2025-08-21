@@ -3,6 +3,7 @@ import { Button, Table, message, Empty } from "antd";
 import ReplyModal from "./components/ReplyModal";
 import { getRepliedCommentApi } from "../../../api/mysql";
 import { useUserStore } from "../../../store/userStore";
+import { getDagRunDetail } from "../../../api/airflow";
 // 封装样式
 const styles = {
   container: {
@@ -46,7 +47,7 @@ const styles = {
   },
 };
 const ReplyToComments = () => {
-  const { email } = useUserStore();
+  const { email, isAdmin } = useUserStore();
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [repliedCommentList, setRepliedCommentList] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,7 +108,11 @@ const ReplyToComments = () => {
     try {
       const res = await getRepliedCommentApi({ email, page: currentPage, page_size: pageSize });
       if (res?.data?.records) {
-        setRepliedCommentList(res.data.records);
+        if (isAdmin) {
+          setRepliedCommentList(res.data.records);
+        } else {
+          setRepliedCommentList(res.data.records.filter((item: any) => item.userInfo === email));
+        }
         setTotal(res.data.total || 0);
         setError(null); // 清除错误
       } else {
