@@ -9,7 +9,7 @@ import { tencentCOSService } from "../../../../api/tencent_cos";
 import { addNoteApi } from "../../../../api/mysql";
 import { triggerDagRun } from "../../../../api/airflow";
 import { useUserStore } from "../../../../store/userStore";
-import { useMessage } from "./message";
+import { useMessage } from "../../../../components/message";
 
 interface AddNewTaskModalProps {
   visible: boolean;

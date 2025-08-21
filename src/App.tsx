@@ -13,6 +13,7 @@ import DataAnalyze from "./xhs/pages/DataAnalyze";
 import GenerateMsg from "./xhs/pages/GenerateMsg";
 import TemplateManager from "./xhs/pages/TemplateManager";
 import Drafts from "./xhs/pages/contentCreationManagement/drafts";
+import ReplyToComments from "./xhs/pages/ReplyToComments/ReplyToComments";
 import DeviceManagement from "./devices/DeviceManagement";
 import ModuleBoard from "./xhs/components/ModuleBoard";
 import CustomerAcquisitionTaskManagement from "./xhs/pages/customerAcquisitionTaskManagement";
@@ -86,6 +87,10 @@ function App() {
                             <Route
                               path="/xhs/pages/contentCreationManagement/drafts"
                               element={<Drafts />}
+                            />
+                            <Route
+                              path="/xhs/pages/ReplyToComments"
+                              element={<ReplyToComments />}
                             />
                           </Routes>
                         </main>

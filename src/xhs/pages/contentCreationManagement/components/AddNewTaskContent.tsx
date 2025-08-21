@@ -7,7 +7,7 @@ import { beautifyNoteContentApi } from "../../../../api/mysql";
 import { NoteFormData } from "../types";
 import { CONSTANTS } from "../constants";
 import ProgressSteps from "./ProgressSteps";
-import { useMessage } from "./message";
+import { useMessage } from "../../../../components/message";
 
 type FileType = Parameters<NonNullable<UploadProps["beforeUpload"]>>[0];
 

@@ -21,6 +21,7 @@ const updateMsgTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_MSG_TEMPLATES;
 const updateNoteTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_NOTE_TEMPLATES;
 const beautifyNoteContentUrl = process.env.REACT_APP_TECENT_BEAUTIFY_NOTE_CONTENT;
 const getNoteTemplatesUrl = process.env.REACT_APP_TECENT_GET_NOTE_TEMPLATES;
+const getRepliedCommentUrl = process.env.REACT_APP_TECENT_GET_REPLIED_RECOMMENT;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1612,15 +1613,43 @@ export const getNoteApi = async ({
     const params = new URLSearchParams();
     if (email) params.append("email", email);
     if (action) params.append("action", action);
+    if (page) params.append("page", page.toString());
+    if (page_size) params.append("page_size", page_size.toString());
     const url = `${baseUrl}?${params.toString()}`;
     const response = await fetch(url);
-    console.log("response", response);
     if (!response.ok) {
       throw new Error("获取一键回复模板失败");
     }
     return await response.json();
   } catch (error) {
     console.error("获取一键回复模板失败", error);
+    throw error;
+  }
+};
+//获取我们回复小红书的评论的任务数据
+export const getRepliedCommentApi = async ({
+  email,
+  page = 1,
+  page_size = 10,
+}: {
+  email: string | null;
+  page: number;
+  page_size: number;
+}) => {
+  try {
+    const baseUrl = getRepliedCommentUrl || "";
+    const params = new URLSearchParams();
+    if (email) params.append("email", email);
+    if (page) params.append("page", page.toString());
+    if (page_size) params.append("page_size", page_size.toString());
+    const url = `${baseUrl}?${params.toString()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("获取回复小红书评论的任务数据失败");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("获取回复小红书评论的任务数据失败", error);
     throw error;
   }
 };

@@ -9,7 +9,7 @@ import { getNoteApi, deleteNoteApi } from "../../../api/mysql";
 import AddNewTaskModal from "./components/AddNewTaskModal";
 import DataReport from "./components/DataReport";
 import StatsItem from "./components/StatsItem";
-import { useMessage } from "./components/message";
+import { useMessage } from "../../../components/message";
 // 样式对象
 const styles = {
   pageContainer: {

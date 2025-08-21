@@ -26,7 +26,7 @@ import type { UploadFile, UploadProps } from "antd";
 import { useUserStore } from "../../../store/userStore";
 import { getNoteApi, deleteNoteApi, updateNoteApi } from "../../../api/mysql";
 import { triggerDagRun } from "../../../api/airflow";
-import { useMessage } from "./components/message";
+import { useMessage } from "../../../components/message";
 import AddNewTaskModal from "./components/AddNewTaskModal";
 import { tencentCOSService } from "../../../api/tencent_cos";
 import { CONSTANTS } from "./constants";

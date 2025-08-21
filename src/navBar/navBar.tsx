@@ -76,6 +76,7 @@ const initialMenuItems: NavItemWithIcons[] = [
       { name: "数据分析", url: "/xhs/analyze" },
       // { name: '触达用户', url: '/xhs/templates' },
       { name: "私信管理", url: "/xhs/generate" },
+      { name: "跟评回复", url: "/xhs/pages/ReplyToComments" },
     ],
     expanded: false,
   },
