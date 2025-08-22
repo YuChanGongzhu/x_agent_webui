@@ -110,7 +110,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
 
     const uploadPromises = fileList.map(async (file) => {
       try {
-        if (!file.originFileObj) {·
+        if (!file.originFileObj) {
           throw new Error(`文件 ${file.name} 缺少原始文件对象`);
         }
 
