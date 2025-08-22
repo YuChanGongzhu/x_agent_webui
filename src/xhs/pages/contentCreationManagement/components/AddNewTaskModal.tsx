@@ -110,7 +110,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
 
     const uploadPromises = fileList.map(async (file) => {
       try {
-        if (!file.originFileObj) {
+        if (!file.originFileObj) {·
           throw new Error(`文件 ${file.name} 缺少原始文件对象`);
         }
 
@@ -376,7 +376,6 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
           device_id: noteData.device_id || "",
         };
         console.log("收集完整数据", completeData);
-        return;
         // 提交笔记数据
         await submitNote(completeData);
       } catch (error) {
