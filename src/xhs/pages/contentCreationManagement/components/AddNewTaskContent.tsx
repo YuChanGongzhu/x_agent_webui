@@ -56,16 +56,17 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
 
   // 文件上传前的验证
   const beforeUpload = (file: FileType) => {
+    console.log("查看文件格式", file);
     const isValidType = CONSTANTS.SUPPORTED_IMAGE_TYPES.includes(file.type as any);
     if (!isValidType) {
-      message.error("只能上传 JPG/PNG/GIF 格式的图片!");
-      return false;
+      message.error("只能上传 JPG/PNG 格式的图片!");
+      return Upload.LIST_IGNORE;
     }
 
     const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE;
     if (!isLtMaxSize) {
       message.error(`图片大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
-      return false;
+      return Upload.LIST_IGNORE;
     }
 
     return true;
@@ -335,8 +336,8 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                       添加图片
                     </h3>
                     <p style={{ fontSize: "14px", color: "#666", margin: 0 }}>
-                      最多可上传{CONSTANTS.MAX_IMAGE_COUNT}张图片，支持JPG、PNG、GIF格式，
-                      单张图片不超过{CONSTANTS.MAX_FILE_SIZE}MB
+                      最多可上传{CONSTANTS.MAX_IMAGE_COUNT}张图片，支持JPG、PNG格式， 单张图片不超过
+                      {CONSTANTS.MAX_FILE_SIZE}MB
                     </p>
                   </div>
                   <div className="upload-container">
@@ -349,7 +350,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                       onRemove={handleRemove}
                       beforeUpload={beforeUpload}
                       multiple
-                      accept="image/*"
+                      accept={CONSTANTS.SUPPORTED_IMAGE_TYPES.join(",")}
                       showUploadList={{
                         showPreviewIcon: true,
                         showRemoveIcon: true,
