@@ -87,7 +87,8 @@ const mockdata = [
 ];
 
 const ContentCreationManagement = () => {
-  const { email, userDeviceNickNameList } = useUserStore();
+  const { email, userDeviceNickNameList, refreshUserDeviceList, isRefreshingDeviceList } =
+    useUserStore();
   const message = useMessage();
 
   // 状态管理
@@ -352,9 +353,18 @@ const ContentCreationManagement = () => {
               草稿箱
             </Button>
             <Button
+              onClick={() => {
+                console.log("手动刷新设备列表");
+                refreshUserDeviceList();
+              }}
+            >
+              刷新设备
+            </Button>
+            <Button
               type="primary"
               icon={userDeviceNickNameList.length > 0 ? <PlusOutlined /> : <LoadingOutlined />}
               disabled={userDeviceNickNameList.length === 0}
+              loading={isRefreshingDeviceList}
               onClick={() => {
                 console.log("点击添加新笔记");
                 setShowAddNewTask(true);

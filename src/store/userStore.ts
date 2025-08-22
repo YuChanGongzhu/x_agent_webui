@@ -12,6 +12,8 @@ interface UserState {
   isAdmin: boolean;
   // 是否正在加载用户信息
   isLoading: boolean;
+  // 是否正在刷新设备列表
+  isRefreshingDeviceList: boolean;
   // 加载用户信息时的错误信息
   error: string | null;
   // 用户邮箱
@@ -20,6 +22,8 @@ interface UserState {
   isInitialized: boolean;
   //用户拥有设备的账号昵称列表
   userDeviceNickNameList: string[];
+  // 本次登录是否已触发过设备列表轮询
+  hasPolledDeviceList: boolean;
 }
 
 // 用户操作接口
@@ -30,12 +34,16 @@ interface UserActions {
   setIsAdmin: (isAdmin: boolean) => void;
   // 设置加载状态
   setIsLoading: (isLoading: boolean) => void;
+  // 设置设备刷新状态
+  setIsRefreshingDeviceList: (isRefreshing: boolean) => void;
   // 设置错误信息
   setError: (error: string | null) => void;
   // 设置用户邮箱
   setEmail: (email: string | null) => void;
   // 设置用户设备昵称列表
   setUserDeviceNickNameList: (nickNameList: string[]) => void;
+  // 设置是否已轮询过设备列表
+  setHasPolledDeviceList: (hasPolled: boolean) => void;
   // 初始化用户信息
   initialize: (force?: boolean) => Promise<void>;
   // 刷新用户配置
@@ -54,10 +62,12 @@ const defaultState: UserState = {
   userProfile: null,
   isAdmin: false,
   isLoading: false, // 改为 false，避免初始化时的竞态条件
+  isRefreshingDeviceList: false,
   error: null,
   email: null,
   isInitialized: false,
   userDeviceNickNameList: [],
+  hasPolledDeviceList: false,
 };
 
 /**
@@ -114,6 +124,14 @@ const getUserDeviceNickNameList = async (
   isGettingDeviceList = true;
   console.log("🚀 开始获取用户设备信息...", email);
 
+  // 标记开始刷新设备列表
+  try {
+    const store = useUserStore.getState();
+    store.setIsRefreshingDeviceList(true);
+  } catch (e) {
+    // ignore
+  }
+
   const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
   const dag_run_id = "xhs_account_name_colletor_" + timestamp;
   const conf = {
@@ -147,10 +165,24 @@ const getUserDeviceNickNameList = async (
 
         console.log("✅ 用户设备账号信息获取完成，停止轮询");
         isGettingDeviceList = false; // 重置标记
+        // 刷新结束
+        try {
+          const store = useUserStore.getState();
+          store.setIsRefreshingDeviceList(false);
+        } catch (e) {
+          // ignore
+        }
         return; // 成功后退出轮询
       } else if (response.state === "failed") {
         console.log("❌ DAG任务失败，停止轮询");
         isGettingDeviceList = false; // 重置标记
+        // 刷新结束
+        try {
+          const store = useUserStore.getState();
+          store.setIsRefreshingDeviceList(false);
+        } catch (e) {
+          // ignore
+        }
         return; // 失败后也要退出轮询
       }
       // 如果状态是 running 或其他，继续轮询
@@ -198,6 +230,10 @@ export const useUserStore = create<UserStore>()(
           set({ isLoading }, false, "setIsLoading");
         },
 
+        setIsRefreshingDeviceList: (isRefreshing) => {
+          set({ isRefreshingDeviceList: isRefreshing }, false, "setIsRefreshingDeviceList");
+        },
+
         setError: (error) => {
           console.log("❌ 设置错误信息:", error);
           set({ error }, false, "setError");
@@ -211,6 +247,11 @@ export const useUserStore = create<UserStore>()(
         setUserDeviceNickNameList: (nickNameList) => {
           console.log("📱 设置用户设备昵称列表:", nickNameList);
           set({ userDeviceNickNameList: nickNameList }, false, "setUserDeviceNickNameList");
+        },
+
+        setHasPolledDeviceList: (hasPolled) => {
+          console.log("🔁 设置已轮询设备标记:", hasPolled);
+          set({ hasPolledDeviceList: hasPolled }, false, "setHasPolledDeviceList");
         },
 
         // 初始化用户信息
@@ -260,18 +301,18 @@ export const useUserStore = create<UserStore>()(
             );
             // 6. 根据情况获取用户设备信息
             if (user.email) {
-              const hasDeviceList = get().userDeviceNickNameList.length > 0;
-              if (force || !hasDeviceList) {
-                // 强制初始化或没有设备列表时才获取
-                console.log("🔄 UserStore: 开始获取用户设备信息...", {
-                  force,
-                  hasDeviceList,
+              const hasPolled = get().hasPolledDeviceList;
+              if (!hasPolled) {
+                console.log("🔄 UserStore: 首次登录，开始轮询获取用户设备信息...", {
                   isAdmin,
                   email: user.email,
                 });
+                // 仅首次登录触发一次轮询
                 getUserDeviceNickNameList(user.email, 3 * 1000, isAdmin);
+                // 设置已触发标记，避免后续刷新或路由切换再次轮询
+                set({ hasPolledDeviceList: true }, false, "initialize:setHasPolledDeviceList");
               } else {
-                console.log("✅ UserStore: 已有设备信息，跳过获取", {
+                console.log("✅ UserStore: 本次登录已轮询过设备信息，跳过", {
                   deviceCount: get().userDeviceNickNameList.length,
                   currentIsAdmin: isAdmin,
                 });
@@ -331,6 +372,7 @@ export const useUserStore = create<UserStore>()(
           email: state.email,
           isInitialized: state.isInitialized,
           userDeviceNickNameList: state.userDeviceNickNameList,
+          hasPolledDeviceList: state.hasPolledDeviceList,
         }),
         version: 1,
         // 数据迁移函数 - 处理从旧版本到新版本的数据转换
@@ -424,6 +466,8 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       store.setEmail(session.user.email);
       // 用户切换时清空设备列表，强制重新获取
       store.setUserDeviceNickNameList([]);
+      // 用户切换时重置已轮询标记，确保新用户可重新轮询
+      store.setHasPolledDeviceList(false);
       console.log("🔄 UserStore: 用户切换，清空设备列表");
     }
 
@@ -451,6 +495,7 @@ export const userSelectors = {
   userProfile: (state: UserStore) => state.userProfile,
   isAdmin: (state: UserStore) => state.isAdmin,
   isLoading: (state: UserStore) => state.isLoading,
+  isRefreshingDeviceList: (state: UserStore) => state.isRefreshingDeviceList,
   error: (state: UserStore) => state.error,
   email: (state: UserStore) => state.email,
   isInitialized: (state: UserStore) => state.isInitialized,
