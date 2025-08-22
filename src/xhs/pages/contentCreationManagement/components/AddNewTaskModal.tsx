@@ -134,8 +134,8 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
           "xhs-notes-resources-1347723456"
         );
 
-        // 返回处理后的文件名（不带路径前缀）
-        return sanitizedFileName;
+        // 返回完整路径（带路径前缀）
+        return `${uploadPath}/${sanitizedFileName}`;
       } catch (error) {
         console.error(`${file.name} 上传失败:`, error);
         throw error;
@@ -376,7 +376,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
           device_id: noteData.device_id || "",
         };
         console.log("收集完整数据", completeData);
-
+        return;
         // 提交笔记数据
         await submitNote(completeData);
       } catch (error) {
