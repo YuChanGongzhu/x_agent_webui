@@ -292,10 +292,18 @@ const Drafts = () => {
       return false;
     }
 
-    const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE;
-    if (!isLtMaxSize) {
-      message.error(`图片大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
-      return false;
+    if (file.type === "video/mp4") {
+      const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE_VIDEO;
+      if (!isLtMaxSize) {
+        message.error(`视频大小不能超过 ${CONSTANTS.MAX_FILE_SIZE_VIDEO}MB!`);
+        return Upload.LIST_IGNORE;
+      }
+    } else {
+      const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE;
+      if (!isLtMaxSize) {
+        message.error(`文件大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
+        return Upload.LIST_IGNORE;
+      }
     }
 
     return true;

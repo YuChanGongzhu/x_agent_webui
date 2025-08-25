@@ -101,10 +101,18 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
     }
 
     // 检查文件大小
-    const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE;
-    if (!isLtMaxSize) {
-      message.error(`文件大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
-      return Upload.LIST_IGNORE;
+    if (file.type === "video/mp4") {
+      const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE_VIDEO;
+      if (!isLtMaxSize) {
+        message.error(`视频大小不能超过 ${CONSTANTS.MAX_FILE_SIZE_VIDEO}MB!`);
+        return Upload.LIST_IGNORE;
+      }
+    } else {
+      const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE;
+      if (!isLtMaxSize) {
+        message.error(`文件大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
+        return Upload.LIST_IGNORE;
+      }
     }
 
     // 检查文件数量限制
@@ -482,7 +490,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                     最多可上传{CONSTANTS.MAX_IMAGE_COUNT}
                     张图片或一个视频，视频支持MP4格式，图片支持JPG、PNG格式，单张图片不超过
                     {CONSTANTS.MAX_FILE_SIZE}
-                    MB，视频不超过{CONSTANTS.MAX_FILE_SIZE}MB
+                    MB，视频不超过{CONSTANTS.MAX_FILE_SIZE_VIDEO}MB
                   </p>
                 </div>
                 <div className={styles.uploadContainer}>

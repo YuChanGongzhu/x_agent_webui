@@ -1,6 +1,7 @@
 // 常量定义
 export const CONSTANTS = {
   MAX_FILE_SIZE: 5, // MB
+  MAX_FILE_SIZE_VIDEO: 100, // MB
   MAX_IMAGE_COUNT: 9,
   MAX_VIDEO_COUNT: 1,
   MAX_TITLE_LENGTH: 20,
