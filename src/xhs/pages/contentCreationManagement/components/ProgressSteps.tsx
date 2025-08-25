@@ -5,7 +5,7 @@ interface ProgressStepsProps {
 }
 
 const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
-  const steps = ["编辑笔记", "发布设置"];
+  const steps = ["账号设置", "笔记内容", "发布设置"];
 
   return (
     <div
@@ -28,7 +28,7 @@ const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
           marginBottom: "4px",
         }}
       >
-        {/* 第一个步骤圆点 */}
+        {/* 第一个步骤圆点 - 账号设置 */}
         <div
           style={{
             width: "12px",
@@ -40,7 +40,7 @@ const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
           }}
         />
 
-        {/* 连接线 */}
+        {/* 第一条连接线 */}
         <div
           style={{
             height: "2px",
@@ -50,13 +50,34 @@ const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
           }}
         />
 
-        {/* 第二个步骤圆点 */}
+        {/* 第二个步骤圆点 - 笔记内容 */}
         <div
           style={{
             width: "12px",
             height: "12px",
             borderRadius: "50%",
             backgroundColor: currentStep >= 1 ? "#3b82f6" : "#cbd5e1",
+            transition: "all 0.3s ease",
+          }}
+        />
+
+        {/* 第二条连接线 */}
+        <div
+          style={{
+            height: "2px",
+            flex: 1,
+            backgroundColor: currentStep > 1 ? "#3b82f6" : "#e2e8f0",
+            transition: "background-color 0.3s ease",
+          }}
+        />
+
+        {/* 第三个步骤圆点 - 发布设置 */}
+        <div
+          style={{
+            width: "12px",
+            height: "12px",
+            borderRadius: "50%",
+            backgroundColor: currentStep >= 2 ? "#3b82f6" : "#cbd5e1",
             transition: "all 0.3s ease",
             marginRight: "30px",
           }}

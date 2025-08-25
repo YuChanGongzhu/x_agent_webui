@@ -103,7 +103,11 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
   };
 
   // 实际上传图片到COS的方法
-  const uploadImagesToCOS = async (fileList: UploadFile[], account: string): Promise<string[]> => {
+  const uploadVedioOrImagesToCOS = async (
+    fileList: UploadFile[],
+    account: string
+  ): Promise<string[]> => {
+    const escapedEmail = (email || "").replace(/@/g, "_at_").replace(/\./g, "_dot_");
     if (!fileList.length || !account || !email) return [];
 
     console.log(`开始上传 ${fileList.length} 张图片到COS...`);
@@ -118,7 +122,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
         const sanitizedFileName = sanitizeFileName(file.name);
         console.log(`原文件名: ${file.name} -> 处理后文件名: ${sanitizedFileName}`);
 
-        const uploadPath = `${email}/${account}`;
+        const uploadPath = `${escapedEmail}/${account}`;
         const cosService = tencentCOSService;
 
         // 创建一个新的File对象，使用处理后的文件名
@@ -177,6 +181,8 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
       }
       // 判断是否为草稿状态：原本的 isDraft 或者 forceDraft 参数
       const isActuallyDraft = isDraft || forceDraft;
+      //
+      const finallyNoteType = data.note_type === "image" ? "图片" : "视频";
 
       const apiParams = {
         email: email || "",
@@ -189,6 +195,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
         visiable_scale: data.visibility,
         at_users: data.at_users || "[]",
         note_tags: processedTagsList,
+        type: finallyNoteType || "图片",
       };
 
       console.log("发送到API的参数:", apiParams);
@@ -264,6 +271,10 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
         message.error("请选择发布账号");
         return;
       }
+      if (!noteData.note_type) {
+        message.error("请选择笔记类型");
+        return;
+      }
       if (!noteData.note_title) {
         message.error("请填写笔记标题");
         return;
@@ -280,7 +291,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
       if (fileList.length > 0) {
         try {
           message.loading({ content: "正在上传图片...", key: "uploading", duration: 0 });
-          const uploadedPaths = await uploadImagesToCOS(fileList, noteData.account);
+          const uploadedPaths = await uploadVedioOrImagesToCOS(fileList, noteData.account);
           // 将文件名数组转换为逗号分隔的字符串格式
           finalImageUrls = uploadedPaths.join(",");
           handleDataChange({ images: finalImageUrls });
@@ -302,6 +313,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
         visibility: noteData.visibility || "",
         account: noteData.account || "",
         device_id: noteData.device_id || "",
+        note_type: noteData.note_type || "image",
       };
       console.log("保存草稿完整数据:", completeData);
 
@@ -317,19 +329,29 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
 
   // 处理下一步/提交按钮点击
   const handleNextStepOrSubmit = async () => {
-    if (currentModalStep < 1) {
-      // 验证第一步数据
-      if (!noteData.account) {
-        message.error("请选择发布账号");
-        return;
+    if (currentModalStep < 2) {
+      // 验证第一步数据（账号设置）
+      if (currentModalStep === 0) {
+        if (!noteData.account) {
+          message.error("请选择发布账号");
+          return;
+        }
+        if (!noteData.note_user_type) {
+          message.error("请选择笔记类型");
+          return;
+        }
       }
-      if (!noteData.note_title) {
-        message.error("请填写笔记标题");
-        return;
-      }
-      if (!noteData.note_content) {
-        message.error("请填写笔记内容");
-        return;
+
+      // 验证第二步数据（笔记内容）
+      if (currentModalStep === 1) {
+        if (!noteData.note_title) {
+          message.error("请填写笔记标题");
+          return;
+        }
+        if (!noteData.note_content) {
+          message.error("请填写笔记内容");
+          return;
+        }
       }
 
       setCurrentModalStep(currentModalStep + 1);
@@ -352,7 +374,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
         if (fileList.length > 0) {
           try {
             message.loading({ content: "正在上传图片...", key: "uploading", duration: 0 });
-            const uploadedPaths = await uploadImagesToCOS(fileList, noteData.account);
+            const uploadedPaths = await uploadVedioOrImagesToCOS(fileList, noteData.account);
             // 将文件名数组转换为逗号分隔的字符串格式
             finalImageUrls = uploadedPaths.join(",");
             handleDataChange({ images: finalImageUrls });
@@ -374,8 +396,10 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
           visibility: noteData.visibility,
           account: noteData.account,
           device_id: noteData.device_id || "",
+          note_type: noteData.note_type || "image",
         };
         console.log("收集完整数据", completeData);
+        // return;
         // 提交笔记数据
         await submitNote(completeData);
       } catch (error) {
@@ -451,7 +475,7 @@ const AddNewTaskModal: React.FC<AddNewTaskModalProps> = ({
             {savingDraft ? "保存中..." : "保存草稿"}
           </Button>
           <Button type="primary" loading={submitting} onClick={handleNextStepOrSubmit}>
-            {submitting ? "提交中..." : currentModalStep < 1 ? "下一步" : "提交笔记"}
+            {submitting ? "提交中..." : currentModalStep < 2 ? "下一步" : "提交笔记"}
           </Button>
         </div>
       </div>

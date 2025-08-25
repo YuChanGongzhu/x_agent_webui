@@ -1518,6 +1518,7 @@ export const addNoteApi = async (params: {
   status: number;
   at_users: string;
   note_tags: string;
+  type: string;
 }) => {
   try {
     const baseUrl = updateNoteTemplatesUrl || "";

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, Input, Select, Upload, Button, Image } from "antd";
+import { Form, Input, Select, Upload, Button, Image, Checkbox } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useUserStore } from "../../../../store/userStore";
@@ -7,6 +7,7 @@ import { beautifyNoteContentApi } from "../../../../api/mysql";
 import { NoteFormData } from "../types";
 import { CONSTANTS } from "../constants";
 import ProgressSteps from "./ProgressSteps";
+import styles from "./AddNewTaskContent.module.css";
 import { useMessage } from "../../../../components/message";
 
 type FileType = Parameters<NonNullable<UploadProps["beforeUpload"]>>[0];
@@ -28,7 +29,8 @@ const getBase64 = (file: FileType): Promise<string> =>
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
-
+// 使用 constants 中的真实 xiaohongshu 联动数据
+type IndustryKey = keyof typeof CONSTANTS.INDUSTRY;
 const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   currentStep,
   setCurrentStep,
@@ -44,6 +46,39 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   const [previewImage, setPreviewImage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [aiBeautifying, setAiBeautifying] = useState(false);
+  const [selectedUserType, setSelectedUserType] = useState<string>(noteData.note_user_type || "");
+  // xiaohongshu 联动选择器（来自 constants.INDUSTRY）
+  const industryCategories = Object.keys(CONSTANTS.INDUSTRY || {}) as string[];
+  const defaultIndustryPrimary = noteData.industry_primary || (industryCategories[0] as string);
+  const defaultIndustrySecondary =
+    noteData.industry_secondary ||
+    (CONSTANTS.INDUSTRY?.[defaultIndustryPrimary as IndustryKey] || [])[0];
+  const [industryPrimary, setIndustryPrimary] = useState<string>(defaultIndustryPrimary);
+  const [industrySecondary, setIndustrySecondary] = useState<string>(defaultIndustrySecondary);
+  // 标签选项（与UI一致）
+  const titleTagOptions = [
+    "默认",
+    "角色代入",
+    "通俗口语",
+    "提问式",
+    "前后对比",
+    "名人效应",
+    "干货攻略",
+    "避雷种草",
+    "实时热词",
+  ];
+
+  const contentTagOptions = [
+    "默认",
+    "植入",
+    "特色单品/服务",
+    "优惠套餐",
+    "活动节日",
+    "新店开业",
+    "店铺环境",
+    "地方特色",
+    "品牌故事",
+  ];
 
   // 图片预览处理
   const handlePreview = async (file: UploadFile) => {
@@ -57,16 +92,54 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   // 文件上传前的验证
   const beforeUpload = (file: FileType) => {
     console.log("查看文件格式", file);
-    const isValidType = CONSTANTS.SUPPORTED_IMAGE_TYPES.includes(file.type as any);
+
+    // 检查文件类型
+    const isValidType = CONSTANTS.SUPPORTED_FILE_TYPES.includes(file.type as any);
     if (!isValidType) {
-      message.error("只能上传 JPG/PNG 格式的图片!");
+      message.error("只能上传 JPG/PNG 格式的图片或 MP4 格式的视频!");
       return Upload.LIST_IGNORE;
     }
 
+    // 检查文件大小
     const isLtMaxSize = file.size / 1024 / 1024 < CONSTANTS.MAX_FILE_SIZE;
     if (!isLtMaxSize) {
-      message.error(`图片大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
+      message.error(`文件大小不能超过 ${CONSTANTS.MAX_FILE_SIZE}MB!`);
       return Upload.LIST_IGNORE;
+    }
+
+    // 检查文件数量限制
+    const isImage = CONSTANTS.SUPPORTED_IMAGE_TYPES.includes(file.type as any);
+    const isVideo = CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(file.type as any);
+    console.log("fileList", fileList);
+    const currentImages = fileList.filter(
+      (f) => f.type && CONSTANTS.SUPPORTED_IMAGE_TYPES.includes(f.type as any)
+    );
+    const currentVideos = fileList.filter(
+      (f) => f.type && CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(f.type as any)
+    );
+
+    if (isVideo) {
+      // 如果上传视频，检查是否已有视频或图片
+      if (currentVideos.length >= CONSTANTS.MAX_VIDEO_COUNT) {
+        message.error("最多只能上传1个视频!");
+        return Upload.LIST_IGNORE;
+      }
+      if (currentImages.length > 0) {
+        message.error("上传视频时不能同时上传图片!");
+        return Upload.LIST_IGNORE;
+      }
+    }
+
+    if (isImage) {
+      // 如果上传图片，检查是否已有视频或图片数量是否超限
+      if (currentVideos.length > 0) {
+        message.error("上传图片时不能同时上传视频!");
+        return Upload.LIST_IGNORE;
+      }
+      if (currentImages.length >= CONSTANTS.MAX_IMAGE_COUNT) {
+        message.error(`最多只能上传${CONSTANTS.MAX_IMAGE_COUNT}张图片!`);
+        return Upload.LIST_IGNORE;
+      }
     }
 
     return true;
@@ -76,7 +149,10 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     setFileList(newFileList);
     const imagePaths = generateImagePaths(newFileList);
-    onDataChange({ images: imagePaths });
+    const hasVideo = newFileList.some(
+      (f) => f.type && CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(f.type as any)
+    );
+    onDataChange({ images: imagePaths, note_type: hasVideo ? "video" : "image" });
   };
 
   // 生成图片路径字符串
@@ -174,7 +250,12 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   const handleRemove = (file: UploadFile) => {
     const newFileList = fileList.filter((item) => item.uid !== file.uid);
     setFileList(newFileList);
-    message.success("图片删除成功！");
+    const isVideo = file.type && CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(file.type as any);
+    message.success(isVideo ? "视频删除成功！" : "图片删除成功！");
+    const stillHasVideo = newFileList.some(
+      (f) => f.type && CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(f.type as any)
+    );
+    onDataChange({ note_type: stillHasVideo ? "video" : "image" });
   };
 
   const uploadButton = (
@@ -190,7 +271,24 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
     >
       <PlusOutlined />
       <div style={{ marginTop: 8, fontSize: "14px", color: "#666" }}>
-        {uploading ? "上传中..." : "上传图片"}
+        {uploading
+          ? "上传中..."
+          : (() => {
+              const currentImages = fileList.filter(
+                (f) => f.type && CONSTANTS.SUPPORTED_IMAGE_TYPES.includes(f.type as any)
+              );
+              const currentVideos = fileList.filter(
+                (f) => f.type && CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(f.type as any)
+              );
+
+              if (currentVideos.length > 0) {
+                return "已有视频";
+              } else if (currentImages.length > 0) {
+                return "添加图片";
+              } else {
+                return "图片/视频";
+              }
+            })()}
       </div>
     </button>
   );
@@ -220,6 +318,10 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
     }
     if ("visibility" in changedValues) {
       updatedData.visibility = changedValues.visibility;
+    }
+    if ("note_user_type" in changedValues) {
+      updatedData.note_user_type = changedValues.note_user_type;
+      setSelectedUserType(changedValues.note_user_type);
     }
     if ("account" in changedValues) {
       updatedData.account = changedValues.account;
@@ -251,13 +353,32 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
     onDataChange(updatedData);
   };
 
-  // 处理清空所有图片
-  const handleClearAllImages = () => {
+  // 处理清空所有文件
+  const handleClearAllFiles = () => {
     setFileList([]);
-    onDataChange({ images: "" });
-    message.success("已清空所有图片");
+    onDataChange({ images: "", note_type: "image" });
+    message.success("已清空所有文件");
   };
 
+  // xiaohongshu 联动选择器事件
+  const handleIndustryPrimaryChange = (value: string) => {
+    setIndustryPrimary(value);
+    const list = CONSTANTS.INDUSTRY?.[value as IndustryKey] || [];
+    const first = list[0];
+    setIndustrySecondary(first);
+    onDataChange({ industry_primary: value, industry_secondary: first });
+  };
+
+  const handleIndustrySecondaryChange = (value: string) => {
+    setIndustrySecondary(value);
+    onDataChange({ industry_secondary: value });
+  };
+
+  // marketing 单选（使用 BLOGGER 数组，无联动）
+  const handleMarketingCategoryChange = (value: string) => {
+    setIndustryPrimary(value);
+    onDataChange({ industry_primary: value });
+  };
   // 渲染当前步骤的内容
   const renderStepContent = () => {
     switch (currentStep) {
@@ -312,193 +433,117 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
               </Form>
             </div>
 
-            {/* 内容编辑区域 */}
-            {noteData.account && (
-              <div style={{ display: "flex", flexDirection: "row", gap: "20px" }}>
-                {/* 图片上传区域 */}
-                <div
-                  style={{
-                    padding: "10px",
-                    border: "1px solid #e8e8e8",
-                    borderRadius: "8px",
-                    flex: 1,
-                  }}
-                >
-                  <div style={{ marginBottom: "20px" }}>
-                    <h3
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        marginBottom: "8px",
-                        color: "#333",
-                      }}
-                    >
-                      添加图片
-                    </h3>
-                    <p style={{ fontSize: "14px", color: "#666", margin: 0 }}>
-                      最多可上传{CONSTANTS.MAX_IMAGE_COUNT}张图片，支持JPG、PNG格式， 单张图片不超过
-                      {CONSTANTS.MAX_FILE_SIZE}MB
-                    </p>
-                  </div>
-                  <div className="upload-container">
-                    <Upload
-                      customRequest={handleUpload}
-                      listType="picture-card"
-                      fileList={fileList}
-                      onPreview={handlePreview}
-                      onChange={handleChange}
-                      onRemove={handleRemove}
-                      beforeUpload={beforeUpload}
-                      multiple
-                      accept={CONSTANTS.SUPPORTED_IMAGE_TYPES.join(",")}
-                      showUploadList={{
-                        showPreviewIcon: true,
-                        showRemoveIcon: true,
-                        showDownloadIcon: false,
-                      }}
-                    >
-                      {fileList.length >= CONSTANTS.MAX_IMAGE_COUNT ? null : uploadButton}
-                    </Upload>
-                  </div>
-                  {/* 图片预览模态框 */}
-                  {previewImage && (
-                    <Image
-                      wrapperStyle={{ display: "none" }}
-                      preview={{
-                        visible: previewOpen,
-                        onVisibleChange: (visible) => setPreviewOpen(visible),
-                        afterOpenChange: (visible) => !visible && setPreviewImage(""),
-                      }}
-                      src={previewImage}
-                    />
-                  )}
-                  {/* 操作按钮 */}
-                  {fileList.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: "16px",
-                        display: "flex",
-                        gap: "8px",
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <Button size="small" onClick={handleClearAllImages}>
-                        清空所有
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 表单编辑区域 */}
-                <div
-                  style={{
-                    flex: 1,
-                    border: "1px solid #e8e8e8",
-                    borderRadius: "8px",
-                    padding: "10px",
-                  }}
-                >
-                  <Form
-                    labelCol={{ span: 6 }}
-                    wrapperCol={{ span: 20 }}
-                    form={form}
-                    onValuesChange={onFormValuesChange}
-                    initialValues={{
-                      title: noteData.note_title,
-                      content: noteData.note_content,
-                      topic: noteData.note_tags_list
-                        ? formatTopicsForDisplay(noteData.note_tags_list)
-                        : "",
-                      user: formatAtUsersForDisplay(safeParseAtUsers(noteData.at_users || "")),
+            {/* 笔记类型选择区域 */}
+            <div className={styles.card}>
+              <h3 className={styles.sectionTitle}>选择笔记类型</h3>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {CONSTANTS.NOTE_TYPES.map((noteType) => (
+                  <div
+                    key={noteType.value}
+                    style={{
+                      flex: 1,
+                      minWidth: "200px",
                     }}
                   >
-                    <Form.Item
-                      label="标题"
-                      name="title"
-                      rules={[
-                        { required: true, message: "请输入笔记标题" },
-                        {
-                          max: CONSTANTS.MAX_TITLE_LENGTH,
-                          message: `标题不能超过${CONSTANTS.MAX_TITLE_LENGTH}个字符`,
-                        },
-                      ]}
-                    >
-                      <Input.TextArea
-                        showCount
-                        maxLength={CONSTANTS.MAX_TITLE_LENGTH}
-                        placeholder="请输入吸引人的笔记标题..."
-                        autoSize={{ minRows: 1, maxRows: 2 }}
-                      />
-                    </Form.Item>
-
-                    {/* AI润色按钮区域 */}
-                    <div
+                    <Checkbox
+                      checked={selectedUserType === noteType.value}
+                      onChange={() => {
+                        setSelectedUserType(noteType.value);
+                        onDataChange({ note_user_type: noteType.value });
+                      }}
                       style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
+                        fontSize: "14px",
+                        fontWeight: selectedUserType === noteType.value ? "600" : "normal",
                       }}
                     >
-                      <Button
-                        color="primary"
-                        loading={aiBeautifying}
-                        type="link"
-                        size="small"
-                        disabled={aiBeautifying || !noteData.note_content}
-                        onClick={async () => {
-                          if (!noteData.note_content) {
-                            message.warning("请先输入笔记内容");
-                            return;
-                          }
+                      <span style={{ marginRight: "8px" }}>{noteType.icon}</span>
+                      {noteType.label}
+                    </Checkbox>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: "12px", color: "#666", margin: "12px 0 0 0" }}>
+                请选择一种笔记类型，每次只能选择一种类型
+              </p>
+            </div>
 
-                          try {
-                            setAiBeautifying(true);
-                            const result = await beautifyNoteContentApi({
-                              text: noteData.note_content || "",
-                            });
-
-                            if (result.polished_text !== null) {
-                              form.setFieldsValue({
-                                content: result.polished_text,
-                              });
-                              onDataChange({
-                                note_content: result.polished_text,
-                              });
-                              message.success("AI润色完成！");
-                            } else {
-                              message.error("AI润色失败，请稍后重试");
-                            }
-                          } catch (error) {
-                            console.error("AI润色出错:", error);
-                            message.error("AI润色出错，请稍后重试");
-                          } finally {
-                            setAiBeautifying(false);
-                          }
-                        }}
-                      >
-                        {aiBeautifying ? "AI润色中..." : "✨ 一键AI润色"}
-                      </Button>
-                    </div>
-
-                    <Form.Item
-                      label="正文内容"
-                      name="content"
-                      rules={[
-                        { required: true, message: "请输入笔记内容" },
-                        {
-                          max: CONSTANTS.MAX_CONTENT_LENGTH,
-                          message: `内容不能超过${CONSTANTS.MAX_CONTENT_LENGTH}个字符`,
-                        },
-                      ]}
-                    >
-                      <Input.TextArea
-                        showCount
-                        maxLength={CONSTANTS.MAX_CONTENT_LENGTH}
-                        placeholder="分享你的想法和体验..."
-                        autoSize={{ minRows: 4, maxRows: 8 }}
-                      />
-                    </Form.Item>
-                  </Form>
+            {/* 图片和现在类型区域 */}
+            {noteData.account && (
+              <div className={styles.card}>
+                <div style={{ marginBottom: "20px" }}>
+                  <h3 className={styles.sectionTitle}>添加媒体文件</h3>
+                  <p style={{ fontSize: "14px", color: "#666", margin: 0 }}>
+                    最多可上传{CONSTANTS.MAX_IMAGE_COUNT}
+                    张图片或一个视频，视频支持MP4格式，图片支持JPG、PNG格式，单张图片不超过
+                    {CONSTANTS.MAX_FILE_SIZE}
+                    MB，视频不超过{CONSTANTS.MAX_FILE_SIZE}MB
+                  </p>
                 </div>
+                <div className={styles.uploadContainer}>
+                  <Upload
+                    customRequest={handleUpload}
+                    listType="picture-card"
+                    fileList={fileList}
+                    onPreview={handlePreview}
+                    onChange={handleChange}
+                    onRemove={handleRemove}
+                    beforeUpload={beforeUpload}
+                    multiple
+                    accept={CONSTANTS.SUPPORTED_FILE_TYPES.join(",")}
+                    showUploadList={{
+                      showPreviewIcon: true,
+                      showRemoveIcon: true,
+                      showDownloadIcon: false,
+                    }}
+                  >
+                    {(() => {
+                      const currentImages = fileList.filter(
+                        (f) => f.type && CONSTANTS.SUPPORTED_IMAGE_TYPES.includes(f.type as any)
+                      );
+                      const currentVideos = fileList.filter(
+                        (f) => f.type && CONSTANTS.SUPPORTED_VIDEO_TYPES.includes(f.type as any)
+                      );
+
+                      // 如果已有视频，不显示上传按钮
+                      if (currentVideos.length >= CONSTANTS.MAX_VIDEO_COUNT) {
+                        return null;
+                      }
+
+                      // 如果已有图片达到最大数量，不显示上传按钮
+                      if (currentImages.length >= CONSTANTS.MAX_IMAGE_COUNT) {
+                        return null;
+                      }
+
+                      return uploadButton;
+                    })()}
+                  </Upload>
+                </div>
+                {/* 图片预览模态框 */}
+                {previewImage && (
+                  <Image
+                    wrapperStyle={{ display: "none" }}
+                    preview={{
+                      visible: previewOpen,
+                      onVisibleChange: (visible) => setPreviewOpen(visible),
+                      afterOpenChange: (visible) => !visible && setPreviewImage(""),
+                    }}
+                    src={previewImage}
+                  />
+                )}
+                {/* 操作按钮 */}
+                {fileList.length > 0 && (
+                  <div className={styles.actions}>
+                    <Button size="small" onClick={handleClearAllFiles}>
+                      清空所有
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -524,13 +569,229 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
       case 1:
         return (
           <div style={{ padding: "20px" }}>
+            <div>
+              {selectedUserType === "xiaohongshu" && (
+                <div className={styles.row}>
+                  <div className={styles.inlineFormItem}>
+                    <span className={styles.subText}>选择你的博主类型</span>
+                    <Select
+                      style={{ width: 180, marginTop: 6 }}
+                      value={industryPrimary}
+                      onChange={handleIndustryPrimaryChange}
+                      options={industryCategories.map((k) => ({ label: k, value: k }))}
+                    />
+                  </div>
+                  <div className={styles.inlineFormItem}>
+                    <span className={styles.subText}>选择细分方向</span>
+                    <Select
+                      style={{ width: 180, marginTop: 6 }}
+                      value={industrySecondary}
+                      onChange={handleIndustrySecondaryChange}
+                      options={(CONSTANTS.INDUSTRY[industryPrimary as IndustryKey] || []).map(
+                        (c) => ({
+                          label: c,
+                          value: c,
+                        })
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+              {selectedUserType === "marketing" && (
+                <div className={styles.row}>
+                  <div className={styles.inlineFormItem}>
+                    <span className={styles.subText}>选择行业</span>
+                    <Select
+                      style={{ width: 180, marginTop: 6 }}
+                      value={industryPrimary}
+                      onChange={handleMarketingCategoryChange}
+                      options={(CONSTANTS.BLOGGER as readonly string[]).map((v) => ({
+                        label: v,
+                        value: v,
+                      }))}
+                    />
+                  </div>
+                </div>
+              )}
+              <Form
+                wrapperCol={{ span: 24 }}
+                form={form}
+                layout="vertical"
+                onValuesChange={onFormValuesChange}
+                initialValues={{
+                  title: noteData.note_title,
+                  content: noteData.note_content,
+                }}
+              >
+                <Form.Item label="笔记标题" required style={{ marginBottom: 8 }}>
+                  <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12 }}>
+                    <Form.Item
+                      name="title"
+                      rules={[
+                        { required: true, message: "请输入笔记标题" },
+                        {
+                          max: CONSTANTS.MAX_TITLE_LENGTH,
+                          message: `标题不能超过${CONSTANTS.MAX_TITLE_LENGTH}个字符`,
+                        },
+                      ]}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <Input.TextArea
+                        showCount
+                        maxLength={CONSTANTS.MAX_TITLE_LENGTH}
+                        placeholder="直接输入笔记标题或笔记主题"
+                        autoSize={{ minRows: 1, maxRows: 2 }}
+                      />
+                    </Form.Item>
+
+                    {/* 标签 + AI生成 行 */}
+                    <div
+                      style={{
+                        marginTop: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {titleTagOptions.map((tag) => (
+                          <Button
+                            key={tag}
+                            size="small"
+                            type="default"
+                            style={{
+                              borderRadius: 12,
+                              fontSize: 12,
+                              height: 24,
+                              padding: "0 8px",
+                              border: "1px solid #d9d9d9",
+                              color: "#666",
+                            }}
+                            onClick={() => {
+                              message.warning("提示词功能，敬请期待");
+                            }}
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        type="link"
+                        size="small"
+                        style={{ paddingRight: 0, color: "#7c3aed" }}
+                        onClick={() => {
+                          message.warning("标题AI生成功能，敬请期待");
+                        }}
+                      >
+                        ✨AI生成
+                      </Button>
+                    </div>
+                  </div>
+                </Form.Item>
+
+                <Form.Item label="正文内容" required style={{ marginBottom: 8 }}>
+                  <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12 }}>
+                    <Form.Item
+                      name="content"
+                      rules={[
+                        { required: true, message: "请输入笔记内容" },
+                        {
+                          max: CONSTANTS.MAX_CONTENT_LENGTH,
+                          message: `内容不能超过${CONSTANTS.MAX_CONTENT_LENGTH}个字符`,
+                        },
+                      ]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Input.TextArea
+                        showCount
+                        maxLength={CONSTANTS.MAX_CONTENT_LENGTH}
+                        placeholder="直接输入正文或笔记要求"
+                        autoSize={{ minRows: 6, maxRows: 10 }}
+                      />
+                    </Form.Item>
+                    <div
+                      style={{
+                        marginTop: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {contentTagOptions.map((tag) => (
+                          <Button
+                            key={tag}
+                            size="small"
+                            type="default"
+                            style={{
+                              borderRadius: 12,
+                              fontSize: 12,
+                              height: 24,
+                              padding: "0 8px",
+                              border: "1px solid #d9d9d9",
+                              color: "#666",
+                            }}
+                            onClick={() => {
+                              message.warning("提示词功能，敬请期待");
+                            }}
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        type="link"
+                        size="small"
+                        style={{ paddingRight: 0, color: "#7c3aed" }}
+                        onClick={async () => {
+                          if (!noteData.note_content) {
+                            message.warning("请先输入笔记内容");
+                            return;
+                          }
+                          try {
+                            setAiBeautifying(true);
+                            const result = await beautifyNoteContentApi({
+                              text: noteData.note_content || "",
+                            });
+                            if (result.polished_text !== null) {
+                              form.setFieldsValue({ content: result.polished_text });
+                              onDataChange({ note_content: result.polished_text });
+                              message.success("AI润色完成！");
+                            } else {
+                              message.error("AI润色失败，请稍后重试");
+                            }
+                          } catch (error) {
+                            console.error("AI润色出错:", error);
+                            message.error("AI润色出错，请稍后重试");
+                          } finally {
+                            setAiBeautifying(false);
+                          }
+                        }}
+                      >
+                        ✨AI生成
+                      </Button>
+                    </div>
+                  </div>
+                </Form.Item>
+              </Form>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div style={{ padding: "20px" }}>
             <Form
               form={form}
               layout="vertical"
               onValuesChange={onFormValuesChange}
               initialValues={{
                 visibility: noteData.visibility,
-                account: noteData.account,
+                topic: noteData.note_tags_list
+                  ? formatTopicsForDisplay(noteData.note_tags_list)
+                  : "",
+                user: formatAtUsersForDisplay(safeParseAtUsers(noteData.at_users || "")),
               }}
             >
               <Form.Item
