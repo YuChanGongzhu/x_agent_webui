@@ -22,6 +22,7 @@ const updateNoteTemplatesUrl = process.env.REACT_APP_TECENT_UPDATE_NOTE_TEMPLATE
 const beautifyNoteContentUrl = process.env.REACT_APP_TECENT_BEAUTIFY_NOTE_CONTENT;
 const getNoteTemplatesUrl = process.env.REACT_APP_TECENT_GET_NOTE_TEMPLATES;
 const getRepliedCommentUrl = process.env.REACT_APP_TECENT_GET_REPLIED_RECOMMENT;
+const xhsAIChatUrl = process.env.REACT_APP_TECENT_XHS_AI_CHAT;
 export interface ChatMessage {
   msg_id: string;
   wx_user_id: string;
@@ -1651,6 +1652,30 @@ export const getRepliedCommentApi = async ({
     return await response.json();
   } catch (error) {
     console.error("获取回复小红书评论的任务数据失败", error);
+    throw error;
+  }
+};
+//小红书灵感聊天功能
+export const xhsAIChatApi = async (params: {
+  text: string;
+  theme?: string;
+  script_type?: string;
+  ui_input_prompt: string;
+}) => {
+  try {
+    const baseUrl = xhsAIChatUrl || "";
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...params }),
+    });
+    if (response.status === 200) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.error("小红书灵感聊天功能失败", error);
     throw error;
   }
 };

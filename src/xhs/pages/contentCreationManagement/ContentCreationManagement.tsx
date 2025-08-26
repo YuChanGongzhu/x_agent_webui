@@ -8,6 +8,7 @@ import { useUserStore } from "../../../store/userStore";
 import { getNoteApi, deleteNoteApi } from "../../../api/mysql";
 import AddNewTaskModal from "./components/AddNewTaskModal";
 import DataReport from "./components/DataReport";
+import Chat from "./chat";
 import StatsItem from "./components/StatsItem";
 import { useMessage } from "../../../components/message";
 // 样式对象
@@ -36,15 +37,35 @@ const styles = {
     width: "100%",
     display: "flex",
     flexDirection: "row" as const,
-    justifyContent: "space-between",
     alignItems: "stretch",
     gap: "16px",
-    flex: "0 0 auto",
+  } as CSSProperties,
+
+  chartsLeft: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "16px",
+    flex: "1 1 auto",
+    minWidth: 0,
+  } as CSSProperties,
+
+  chartsRight: {
+    width: 360,
+    flex: "0 0 360px",
   } as CSSProperties,
 
   chartsSectionMobile: {
     flexDirection: "column" as const,
     gap: "12px",
+  } as CSSProperties,
+  chartsLeftMobile: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: "12px",
+  } as CSSProperties,
+  chartsRightMobile: {
+    width: "100%",
+    flex: "0 0 auto",
   } as CSSProperties,
 
   tableSection: {
@@ -303,103 +324,141 @@ const ContentCreationManagement = () => {
       <div style={styles.topSection}>
         <ContentTopUserMessage />
       </div>
-
       <div
         style={{
-          ...styles.chartsSection,
-          ...(isMobile ? styles.chartsSectionMobile : {}),
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          gap: "16px",
         }}
       >
-        <DataReport
-          title="内容阅读量"
-          tooltipText="显示最近7天的内容阅读量趋势"
-          total={100}
-          chartData={mockdata}
-          bottomChildren={<StatsItem label="总阅读量" value="2.1万" />}
-        />
-        <DataReport
-          title="内容发布量"
-          total={100}
-          chartData={mockdata.map((item) => ({ ...item, value: item.value * 0.3 }))}
-          bottomChildren={<StatsItem label="今日发布" value="12" />}
-        />
-        <DataReport
-          title="互动数据统计"
-          total={100}
-          chartData={mockdata.map((item) => ({ ...item, value: item.value * 0.5 }))}
-          bottomChildren={
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column" as const,
+            gap: "16px",
+            flex: "1 1 auto",
+          }}
+        >
+          {/* echart图标 */}
+          <div
+            style={{
+              ...styles.chartsSection,
+              ...(isMobile ? styles.chartsSectionMobile : {}),
+            }}
+          >
+            <div
+              style={{
+                ...(isMobile ? styles.chartsLeftMobile : styles.chartsLeft),
+              }}
+            >
+              <DataReport
+                title="内容阅读量"
+                tooltipText="显示最近7天的内容阅读量趋势"
+                total={100}
+                chartData={mockdata}
+                bottomChildren={<StatsItem label="总阅读量" value="2.1万" />}
+              />
+              <DataReport
+                title="内容发布量"
+                total={100}
+                chartData={mockdata.map((item) => ({ ...item, value: item.value * 0.3 }))}
+                bottomChildren={<StatsItem label="今日发布" value="12" />}
+              />
+              <DataReport
+                title="互动数据统计"
+                total={100}
+                chartData={mockdata.map((item) => ({ ...item, value: item.value * 0.5 }))}
+                bottomChildren={
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "16px",
+                      flexWrap: "wrap",
+                      justifyContent: "space-around",
+                    }}
+                  >
+                    <StatsItem label="今日互动" value="300" />
+                    <StatsItem label="今日点赞" value="180" />
+                    <StatsItem label="今日评论" value="85" />
+                    <StatsItem label="今日收藏" value="35" />
+                  </div>
+                }
+              />
+            </div>
+          </div>
+          {/* 表格 */}
+          <div style={{ display: "flex", gap: "16px", flexDirection: "row" }}>
+            <div style={styles.tableSection}>
+              <div style={styles.tableHeader}>
+                <span>内容创作管理</span>
+                <div style={styles.tableHeaderRight}>
+                  <Button onClick={() => navigate("/xhs/pages/contentCreationManagement/drafts")}>
+                    草稿箱
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      console.log("手动刷新设备列表");
+                      refreshUserDeviceList();
+                    }}
+                  >
+                    刷新设备
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={
+                      userDeviceNickNameList.length > 0 ? <PlusOutlined /> : <LoadingOutlined />
+                    }
+                    disabled={userDeviceNickNameList.length === 0}
+                    loading={isRefreshingDeviceList}
+                    onClick={() => {
+                      console.log("点击添加新笔记");
+                      setShowAddNewTask(true);
+                    }}
+                  >
+                    添加新笔记
+                  </Button>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                <Table
+                  dataSource={formatNoteDataForTable}
+                  columns={columns}
+                  loading={tableLoading}
+                  scroll={{ x: 1000 }}
+                  pagination={{
+                    current: pagination.current,
+                    pageSize: pagination.pageSize,
+                    total: pagination.total,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+                    onChange: (page, pageSize) => {
+                      console.log("分页变化:", { page, pageSize });
+                      fetchNoteList(page, pageSize || pagination.pageSize, true); // 手动分页显示loading
+                    },
+                    onShowSizeChange: (current, size) => {
+                      console.log("页面大小变化:", { current, size });
+                      fetchNoteList(1, size, true); // 改变页面大小时回到第一页，显示loading
+                    },
+                  }}
+                  locale={{
+                    emptyText: noteList.length === 0 ? "暂无笔记数据" : "暂无数据",
+                  }}
+                />
+              </div>
+            </div>
             <div
               style={{
                 display: "flex",
-                gap: "16px",
-                flexWrap: "wrap",
-                justifyContent: "space-around",
+                flexDirection: "column" as const,
+                width: isMobile ? "100%" : 360,
+                flex: isMobile ? "0 0 auto" : "0 0 360px",
+                alignSelf: "stretch",
               }}
             >
-              <StatsItem label="今日互动" value="300" />
-              <StatsItem label="今日点赞" value="180" />
-              <StatsItem label="今日评论" value="85" />
-              <StatsItem label="今日收藏" value="35" />
+              <Chat />
             </div>
-          }
-        />
-      </div>
-
-      <div style={styles.tableSection}>
-        <div style={styles.tableHeader}>
-          <span>内容创作管理</span>
-          <div style={styles.tableHeaderRight}>
-            <Button onClick={() => navigate("/xhs/pages/contentCreationManagement/drafts")}>
-              草稿箱
-            </Button>
-            <Button
-              onClick={() => {
-                console.log("手动刷新设备列表");
-                refreshUserDeviceList();
-              }}
-            >
-              刷新设备
-            </Button>
-            <Button
-              type="primary"
-              icon={userDeviceNickNameList.length > 0 ? <PlusOutlined /> : <LoadingOutlined />}
-              disabled={userDeviceNickNameList.length === 0}
-              loading={isRefreshingDeviceList}
-              onClick={() => {
-                console.log("点击添加新笔记");
-                setShowAddNewTask(true);
-              }}
-            >
-              添加新笔记
-            </Button>
           </div>
-        </div>
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <Table
-            dataSource={formatNoteDataForTable}
-            columns={columns}
-            loading={tableLoading}
-            scroll={{ x: 1000 }}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-              onChange: (page, pageSize) => {
-                console.log("分页变化:", { page, pageSize });
-                fetchNoteList(page, pageSize || pagination.pageSize, true); // 手动分页显示loading
-              },
-              onShowSizeChange: (current, size) => {
-                console.log("页面大小变化:", { current, size });
-                fetchNoteList(1, size, true); // 改变页面大小时回到第一页，显示loading
-              },
-            }}
-            locale={{
-              emptyText: noteList.length === 0 ? "暂无笔记数据" : "暂无数据",
-            }}
-          />
         </div>
       </div>
 
