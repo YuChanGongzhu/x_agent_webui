@@ -91,7 +91,6 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
 
   // 文件上传前的验证
   const beforeUpload = (file: FileType) => {
-    console.log("你拍二");
     console.log("查看文件格式", file);
 
     // 检查文件类型
@@ -153,91 +152,9 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
 
     return true;
   };
-  //检查是否es9浏览器
-  function getBrowserType() {
-    const ua = navigator.userAgent;
 
-    // 是否为 Opera
-    if (ua.includes("Opera") || ua.includes("OPR/")) {
-      return "Opera";
-    }
-
-    // 是否为 Edge (基于 Chromium)
-    if (ua.includes("Edg/")) {
-      return "Edge";
-    }
-
-    // 是否为 IE11
-    if (ua.includes("Trident/") && ua.includes("rv:11.0")) {
-      return "IE11";
-    }
-
-    // 是否为 IE 7-10
-    if (ua.includes("compatible") && ua.includes("MSIE ")) {
-      // 使用 exec 提取版本号，避免依赖全局 RegExp 状态
-      const match = /MSIE (\d+\.?\d*)/.exec(ua);
-      if (match) {
-        const ver = parseFloat(match[1]);
-        switch (ver) {
-          case 7:
-            return "IE7";
-          case 8:
-            return "IE8";
-          case 9:
-            return "IE9";
-          case 10:
-            return "IE10";
-          default:
-            return "IE";
-        }
-      }
-      return "IE"; // fallback
-    }
-
-    // 是否为 Firefox
-    if (ua.includes("Firefox")) {
-      return "Firefox";
-    }
-
-    // 是否为 Chrome (排除 Edge 和 Opera)
-    if (
-      ua.includes("Chrome") &&
-      ua.includes("Safari") &&
-      !ua.includes("Edg/") &&
-      !ua.includes("OPR/")
-    ) {
-      return "Chrome";
-    }
-
-    // 是否为 Safari (排除 Chrome)
-    if (ua.includes("Safari") && !ua.includes("Chrome")) {
-      return "Safari";
-    }
-
-    // 是否为 UC 浏览器
-    if (ua.includes("UBrowser")) {
-      return "UC";
-    }
-
-    // 是否为 QQ 浏览器
-    if (ua.includes("QQBrowser")) {
-      return "QQ";
-    }
-
-    // 都不是
-    return "Unknown";
-  }
   // 文件列表变化处理
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
-    if (getBrowserType() === "IE9") {
-      const isValidType = CONSTANTS.SUPPORTED_FILE_TYPES.includes(newFileList[0].type as any);
-      if (!isValidType) {
-        message.error("只能上传 JPG/PNG 格式的图片或 MP4 格式的视频!");
-        return Upload.LIST_IGNORE;
-      }
-      return;
-    }
-    console.log("你拍一");
     setFileList(newFileList);
     const imagePaths = generateImagePaths(newFileList);
     const hasVideo = newFileList.some(

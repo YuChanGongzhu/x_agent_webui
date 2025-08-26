@@ -14,7 +14,6 @@ const panelStyles = {
     maxHeight: "91vh",
   },
   header: {
-    border: "1px solid red",
     padding: "12px 16px",
     borderBottom: "1px solid #f0f0f0",
     color: "#333",

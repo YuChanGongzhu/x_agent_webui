@@ -8,7 +8,7 @@ export const CONSTANTS = {
   MAX_CONTENT_LENGTH: 1000,
   SUPPORTED_IMAGE_TYPES: ["image/jpg", "image/png", "image/jpeg"],
   SUPPORTED_VIDEO_TYPES: ["video/mp4"],
-  SUPPORTED_FILE_TYPES: ["image/jpg", "image/png", "video/mp4"],
+  SUPPORTED_FILE_TYPES: ["image/jpeg", "image/jpg", "image/png", "video/mp4"],
   TOPIC_SEPARATOR_REGEX: /[,，]/, // 中英文逗号
   NOTE_TYPES: [
     { value: "xiaohongshu", label: "小红书笔记", icon: "📝" },
