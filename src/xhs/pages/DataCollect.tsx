@@ -14,7 +14,8 @@ import notifi from "../../utils/notification";
 import BaseSelect from "../../components/BaseComponents/BaseSelect";
 import BaseInput from "../../components/BaseComponents/BaseInput";
 import TooltipIcon from "../../components/BaseComponents/TooltipIcon";
-import { Tabs, Button, Input } from "antd";
+import { Tabs, Button, Input, Table } from "antd";
+import type { ColumnsType } from "antd/es/table";
 
 const { TabPane } = Tabs;
 
@@ -552,13 +553,296 @@ const DataCollect: React.FC = () => {
     return date.toLocaleString("zh-CN");
   };
 
+  // antd Table columns for comments
+  const commentColumns: ColumnsType<Comment> = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: 100,
+    },
+    {
+      title: "笔记链接",
+      dataIndex: "note_url",
+      key: "note_url",
+      render: (_: any, record) => (
+        <Tooltipwrap title={record.note_url}>
+          <a
+            href={record.note_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[rgba(248,213,126,1)] hover:underline break-all"
+          >
+            {record.note_url}
+          </a>
+        </Tooltipwrap>
+      ),
+    },
+    {
+      title: "关键词",
+      dataIndex: "keyword",
+      key: "keyword",
+      width: 120,
+    },
+    {
+      title: "内容",
+      dataIndex: "content",
+      key: "content",
+      render: (text: string) => <Tooltipwrap title={text}>{text || "无内容"}</Tooltipwrap>,
+      ellipsis: true,
+    },
+    {
+      title: "作者",
+      dataIndex: "author",
+      key: "author",
+      width: 120,
+    },
+    {
+      title: "点赞数",
+      dataIndex: "likes",
+      key: "likes",
+      sorter: (a, b) => (a.likes || 0) - (b.likes || 0),
+      width: 100,
+    },
+    {
+      title: "采集时间",
+      dataIndex: "collect_time",
+      key: "collect_time",
+      sorter: (a, b) =>
+        new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime(),
+      render: (value: string | undefined) => (value ? formatDate(value) : "未采集"),
+      width: 180,
+    },
+    {
+      title: "评论时间",
+      dataIndex: "comment_time",
+      key: "comment_time",
+      sorter: (a, b) =>
+        new Date(a.comment_time || 0).getTime() - new Date(b.comment_time || 0).getTime(),
+      render: (value: string | undefined) => formatDate(value || ""),
+      width: 180,
+    },
+  ];
+
+  // derive task rows with parsed conf
+  const taskRows = tasks.map((task) => {
+    let keyword = "";
+    let collectionQuantity = 0;
+    let isCommentTask = false;
+    let noteType = "";
+    try {
+      const conf = JSON.parse(task.conf);
+      keyword = conf.keyword || "";
+      isCommentTask = task.dag_run_id.includes("xhs_comments");
+      collectionQuantity = isCommentTask ? conf.max_comments || 0 : conf.max_notes || 0;
+      noteType = conf.note_type || "";
+    } catch (e) {
+      // ignore
+    }
+    return {
+      ...task,
+      _keyword: keyword,
+      _collectionQuantity: collectionQuantity,
+      _isCommentTask: isCommentTask,
+      _noteType: noteType,
+    } as Task & {
+      _keyword: string;
+      _collectionQuantity: number;
+      _isCommentTask: boolean;
+      _noteType: string;
+    };
+  });
+
+  // antd Table columns for tasks
+  const taskColumns: ColumnsType<(typeof taskRows)[number]> = [
+    {
+      title: "关键词",
+      dataIndex: "_keyword",
+      key: "keyword",
+      width: 180,
+    },
+    {
+      title: "收集数量",
+      dataIndex: "_collectionQuantity",
+      key: "collectionQuantity",
+      render: (value: number, record) => `${value} ${record._isCommentTask ? "评论" : "笔记"}`,
+      width: 140,
+    },
+    {
+      title: "采集类型",
+      dataIndex: "_noteType",
+      key: "noteType",
+      render: (v?: string) => (v ? v : "图文"),
+      width: 120,
+    },
+    {
+      title: "任务ID",
+      dataIndex: "dag_run_id",
+      key: "dag_run_id",
+      width: 260,
+    },
+    {
+      title: "状态",
+      dataIndex: "state",
+      key: "state",
+      render: (_: any, task) => (
+        <span
+          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+            task.state === "success" && (task as any).note !== "paused"
+              ? "bg-green-100 text-green-800"
+              : task.state === "running"
+              ? "bg-blue-100 text-blue-800"
+              : task.state === "failed"
+              ? "bg-red-100 text-red-800"
+              : task.state === "success" && (task as any).note === "paused"
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {task.state === "success" && (task as any).note !== "paused"
+            ? "成功"
+            : task.state === "running"
+            ? "运行中"
+            : task.state === "failed"
+            ? "失败"
+            : task.state === "success" && (task as any).note === "paused"
+            ? "已结束"
+            : task.state}
+        </span>
+      ),
+      width: 120,
+    },
+    {
+      title: "开始时间",
+      dataIndex: "start_date",
+      key: "start_date",
+      render: (v: string) => formatDate(v),
+      width: 180,
+    },
+    {
+      title: "结束时间",
+      dataIndex: "end_date",
+      key: "end_date",
+      render: (v: string) => formatDate(v),
+      width: 180,
+    },
+    {
+      title: "操作",
+      key: "action",
+      render: (_: any, record) => (
+        <Button
+          onClick={() => {
+            pauseTask(
+              record._isCommentTask ? "comments_collector" : "notes_collector",
+              record.dag_run_id
+            );
+          }}
+          disabled={record.state === "success" || record.state === "failed"}
+          loading={pausingTasks.has(record.dag_run_id)}
+        >
+          暂停任务
+        </Button>
+      ),
+      width: 140,
+    },
+  ];
+
+  // antd Table columns for notes
+  const noteColumns: ColumnsType<Note> = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: 100,
+    },
+    {
+      title: "采集类型",
+      dataIndex: "note_type",
+      key: "note_type",
+      render: (v?: string) => (v ? v : "图文"),
+      width: 120,
+    },
+    {
+      title: "标题",
+      dataIndex: "title",
+      key: "title",
+      render: (text: string) => <Tooltipwrap title={text}>{text}</Tooltipwrap>,
+    },
+    {
+      title: "笔记链接",
+      dataIndex: "note_url",
+      key: "note_url",
+      render: (_: any, record) => (
+        <Tooltipwrap title={record.note_url}>
+          <a
+            href={record.note_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[rgba(248,213,126,1)] hover:underline break-all"
+          >
+            {record.note_url}
+          </a>
+        </Tooltipwrap>
+      ),
+    },
+    {
+      title: "作者",
+      dataIndex: "author",
+      key: "author",
+      width: 120,
+    },
+    {
+      title: "内容",
+      dataIndex: "content",
+      key: "content",
+      render: (text: string) => <Tooltipwrap title={text}>{text || "无内容"}</Tooltipwrap>,
+      ellipsis: true,
+    },
+    {
+      title: "点赞数",
+      dataIndex: "likes",
+      key: "likes",
+      sorter: (a, b) => (a.likes || 0) - (b.likes || 0),
+      width: 100,
+    },
+    {
+      title: "评论数",
+      dataIndex: "comments",
+      key: "comments",
+      sorter: (a, b) => (a.comments || 0) - (b.comments || 0),
+      width: 100,
+    },
+    {
+      title: "采集时间",
+      dataIndex: "collected_at",
+      key: "collected_at",
+      sorter: (a, b) =>
+        new Date(a.collected_at || 0).getTime() - new Date(b.collected_at || 0).getTime(),
+      render: (value: string | undefined) => formatDate(value || ""),
+      width: 180,
+    },
+    {
+      title: "评论采集时间",
+      dataIndex: "last_comments_collected_at",
+      key: "last_comments_collected_at",
+      sorter: (a, b) =>
+        new Date(a.last_comments_collected_at || 0).getTime() -
+        new Date(b.last_comments_collected_at || 0).getTime(),
+      render: (value: string | null | undefined) =>
+        value ? formatDate(value as string) : "未采集",
+      width: 200,
+    },
+  ];
+
+  const noteRowSelection = {
+    selectedRowKeys: selectedNotes,
+    onChange: (selectedKeys: React.Key[]) => {
+      setSelectedNotes(selectedKeys as string[]);
+    },
+  };
+
   const indexOfLastTask = currentPage * tasksPerPage;
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
-  const currentTasks = tasks.slice(indexOfFirstTask, indexOfLastTask);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-  const paginateNotes = (pageNumber: number) => setCurrentNotesPage(pageNumber);
-  const paginateComments = (pageNumber: number) => setCurrentCommentsPage(pageNumber);
 
   const handleJumpToNotesPage = async () => {
     if (!jumpToPage || !selectedKeyword) return;
@@ -892,7 +1176,7 @@ const DataCollect: React.FC = () => {
             </form>
           </div>
           {/* Recent Tasks */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
+          <div className="bg-white rounded-lg shadow-md p-6 pb-0">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold">最近的笔记采集任务</h2>
               <button
@@ -951,230 +1235,24 @@ const DataCollect: React.FC = () => {
             </div>
             {tasks.length > 0 ? (
               <>
-                <div className="mb-4">
-                  <div className="text-sm text-gray-500 mb-2">
-                    显示 {indexOfFirstTask + 1} - {Math.min(indexOfLastTask, tasks.length)} 条，共{" "}
-                    {tasks.length} 条记录
-                  </div>
-                </div>
-
                 <div className="w-full h-full">
-                  <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
-                    <table className="w-full h-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            关键词
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            收集数量
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            采集类型
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            任务ID
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            状态
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            开始时间
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            结束时间
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            操作
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {currentTasks.map((task) => {
-                          let keyword = "";
-                          let collectionQuantity = 0;
-                          let isCommentTask = false;
-                          let noteType = "";
-
-                          try {
-                            const conf = JSON.parse(task.conf);
-                            keyword = conf.keyword || "";
-
-                            // Determine if this is a comments collection task
-                            isCommentTask = task.dag_run_id.includes("xhs_comments");
-
-                            // Set the appropriate collection quantity based on task type
-                            if (isCommentTask) {
-                              collectionQuantity = conf.max_comments || 0;
-                            } else {
-                              collectionQuantity = conf.max_notes || 0;
-                            }
-                            noteType = conf.note_type || "";
-                          } catch (e) {
-                            // Handle parsing error
-                            console.error("Error parsing task configuration:", e);
-                          }
-
-                          return (
-                            <tr key={task.dag_run_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {keyword}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {collectionQuantity} {isCommentTask ? "评论" : "笔记"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {noteType ? noteType : "图文"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {task.dag_run_id}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span
-                                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    task.state === "success" && task.note !== "paused"
-                                      ? "bg-green-100 text-green-800"
-                                      : task.state === "running"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : task.state === "failed"
-                                      ? "bg-red-100 text-red-800"
-                                      : task.state === "success" && task.note === "paused"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-gray-100 text-gray-800"
-                                  }`}
-                                >
-                                  {task.state === "success" && task.note !== "paused"
-                                    ? "成功"
-                                    : task.state === "running"
-                                    ? "运行中"
-                                    : task.state === "failed"
-                                    ? "失败"
-                                    : task.state === "success" && task.note === "paused"
-                                    ? "已结束"
-                                    : task.state}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(task.start_date)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(task.end_date)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <Button
-                                  onClick={() => {
-                                    pauseTask(
-                                      isCommentTask ? "comments_collector" : "notes_collector",
-                                      task.dag_run_id
-                                    );
-                                  }}
-                                  disabled={task.state === "success" || task.state === "failed"}
-                                  loading={pausingTasks.has(task.dag_run_id)}
-                                >
-                                  暂停任务
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div className="overflow-x-auto w-full">
+                    <Table
+                      rowKey={(record) => record.dag_run_id}
+                      columns={taskColumns}
+                      dataSource={taskRows}
+                      scroll={{ y: "35vh" }}
+                      pagination={{
+                        current: currentPage,
+                        pageSize: tasksPerPage,
+                        total: tasks.length,
+                        showSizeChanger: false,
+                      }}
+                      onChange={(pagination) => {
+                        setCurrentPage(pagination.current || 1);
+                      }}
+                    />
                   </div>
-                  {/* Pagination for tasks */}
-                  {tasks.length > tasksPerPage && (
-                    <div className="flex justify-center mt-4">
-                      <nav className="flex items-center">
-                        <button
-                          onClick={() => paginate(1)}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          首页
-                        </button>
-                        <button
-                          onClick={() => paginate(currentPage - 1)}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          上一页
-                        </button>
-
-                        {[...Array(Math.min(5, Math.ceil(tasks.length / tasksPerPage)))].map(
-                          (_, i) => {
-                            let pageNum: number = 0; // Initialize with default value
-                            const totalPages = Math.ceil(tasks.length / tasksPerPage);
-
-                            // Logic to show page numbers centered around current page
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-
-                            if (pageNum > 0 && pageNum <= totalPages) {
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => paginate(pageNum)}
-                                  className={`px-3 py-1 mx-1 rounded ${
-                                    currentPage === pageNum
-                                      ? "bg-[rgba(248,213,126,1)] text-white"
-                                      : "border border-gray-300"
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            }
-                            return null;
-                          }
-                        )}
-
-                        <button
-                          onClick={() => paginate(currentPage + 1)}
-                          disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          下一页
-                        </button>
-                        <button
-                          onClick={() => paginate(Math.ceil(tasks.length / tasksPerPage))}
-                          disabled={currentPage === Math.ceil(tasks.length / tasksPerPage)}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          末页
-                        </button>
-                      </nav>
-                    </div>
-                  )}
                 </div>
               </>
             ) : (
@@ -1185,7 +1263,7 @@ const DataCollect: React.FC = () => {
         <TabPane tab="笔记" key="notes">
           {/* Notes Tab Content */}
           {/* Keyword Selection */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
+          <div className="bg-white rounded-lg shadow-md p-6 pt-0 mb-2">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">选择关键字</h2>
               <button
@@ -1252,13 +1330,11 @@ const DataCollect: React.FC = () => {
                 setSelectedKeyword(value);
                 setLatestKeyword(value);
               }}
-            >
-              <label className="block text-sm font-medium text-gray-700 mb-1">选择关键字</label>
-            </BaseSelect>
+            ></BaseSelect>
           </div>
 
           {/* Display Collected Notes */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6 pb-0 mb-6">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-semibold">已采集的笔记</h2>
@@ -1343,293 +1419,44 @@ const DataCollect: React.FC = () => {
                   原始笔记数量: {originalNotesLength}
                 </div>
                 <div className="w-full h-full">
-                  <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
-                    <table className="w-full h-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            选择
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            ID
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            采集类型
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            标题
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            笔记链接
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            作者
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            内容
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            点赞数
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            评论数
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            <span className="inline-flex items-center">
-                              <span>采集时间</span>
-                              <SortUpOrDownButton
-                                onUp={() => {
-                                  const sortNotes = [...notes].sort((a, b) => {
-                                    return (
-                                      new Date(a.collected_at || 0).getTime() -
-                                      new Date(b.collected_at || 0).getTime()
-                                    );
-                                  });
-                                  setNotes(sortNotes);
-                                }}
-                                onDown={() => {
-                                  const sortNotes = [...notes].sort((a, b) => {
-                                    return (
-                                      new Date(b.collected_at || 0).getTime() -
-                                      new Date(a.collected_at || 0).getTime()
-                                    );
-                                  });
-                                  setNotes(sortNotes);
-                                }}
-                                onReset={() => {
-                                  setNotes(sortNotes);
-                                }}
-                              />
-                            </span>
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            <span className="inline-flex items-center">
-                              <span>评论采集时间</span>
-                              <SortUpOrDownButton
-                                onUp={() => {
-                                  const sortNotes = [...notes].sort((a, b) => {
-                                    return (
-                                      new Date(a.last_comments_collected_at || 0).getTime() -
-                                      new Date(b.last_comments_collected_at || 0).getTime()
-                                    );
-                                  });
-                                  setNotes(sortNotes);
-                                }}
-                                onDown={() => {
-                                  const sortNotes = [...notes].sort((a, b) => {
-                                    return (
-                                      new Date(b.last_comments_collected_at || 0).getTime() -
-                                      new Date(a.last_comments_collected_at || 0).getTime()
-                                    );
-                                  });
-                                  setNotes(sortNotes);
-                                }}
-                                onReset={() => {
-                                  setNotes(sortNotes);
-                                }}
-                              />
-                            </span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {notes
-                          .slice(
-                            (currentNotesPage - 1) * notesPerPage,
-                            currentNotesPage * notesPerPage
-                          )
-                          .map((note) => (
-                            <tr key={note.id}>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedNotes.includes(note.note_url)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedNotes([...selectedNotes, note.note_url]);
-                                    } else {
-                                      setSelectedNotes(
-                                        selectedNotes.filter((url) => url !== note.note_url)
-                                      );
-                                    }
-                                  }}
-                                  className="h-4 w-4 text-[rgba(248,213,126,1)] focus:ring-[rgba(248,213,126,0.5)] border-gray-300 rounded"
-                                />
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {note.id}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {note.note_type ? note.note_type : "图文"}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                <Tooltipwrap title={note.title}>{note.title}</Tooltipwrap>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                <Tooltipwrap title={note.note_url}>
-                                  <a
-                                    href={note.note_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[rgba(248,213,126,1)] hover:underline break-all"
-                                  >
-                                    {note.note_url}
-                                  </a>
-                                </Tooltipwrap>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {note.author}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-500 max-w-md">
-                                <Tooltipwrap title={note.content}>
-                                  {note.content || "无内容"}
-                                </Tooltipwrap>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {note.likes}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {note.comments}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(note.collected_at)}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {note.last_comments_collected_at
-                                  ? formatDate(note.last_comments_collected_at)
-                                  : "未采集"}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
+                  <div className="overflow-x-auto w-full">
+                    <Table
+                      rowKey={(record) => record.note_url}
+                      columns={noteColumns}
+                      dataSource={notes}
+                      rowSelection={noteRowSelection}
+                      scroll={{ y: "35vh" }}
+                      pagination={{
+                        current: currentNotesPage,
+                        pageSize: notesPerPage,
+                        total: notes.length,
+                        showSizeChanger: false,
+                      }}
+                      onChange={(pagination) => {
+                        setCurrentNotesPage(pagination.current || 1);
+                      }}
+                    />
                   </div>
-                  {/* Pagination for notes */}
-                  {notes.length > 0 && (
-                    <div className="flex justify-center mt-4">
-                      <nav className="flex items-center flex-wrap">
+                  {totalNotesPages > 1 && (
+                    <div className="flex items-center mt-4">
+                      <Tooltipwrap title="每个大页有1000条笔记，跳转到指定大页">
+                        <input
+                          type="number"
+                          value={jumpToPage}
+                          onChange={(e) => setJumpToPage(e.target.value)}
+                          placeholder={`共${totalNotesPages}大页`}
+                          min="1"
+                          max={totalNotesPages.toString()}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded mr-2"
+                        />
                         <button
-                          onClick={() => paginateNotes(1)}
-                          disabled={currentNotesPage === 1}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                          onClick={handleJumpToNotesPage}
+                          disabled={loading || !jumpToPage}
+                          className="px-3 py-1 rounded bg-[rgba(248,213,126,1)] text-white hover:bg-[rgba(248,213,126,0.8)] disabled:opacity-50"
                         >
-                          首页
+                          跳转
                         </button>
-                        <button
-                          onClick={() => paginateNotes(currentNotesPage - 1)}
-                          disabled={currentNotesPage === 1}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          上一页
-                        </button>
-
-                        {[...Array(Math.min(5, Math.ceil(notes.length / notesPerPage)))].map(
-                          (_, i) => {
-                            let pageNum: number = 0; // Initialize with default value
-                            const totalPages = Math.ceil(notes.length / notesPerPage);
-
-                            // Logic to show page numbers centered around current page
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentNotesPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentNotesPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentNotesPage - 2 + i;
-                            }
-
-                            if (pageNum > 0 && pageNum <= totalPages) {
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => paginateNotes(pageNum)}
-                                  className={`px-3 py-1 mx-1 rounded ${
-                                    currentNotesPage === pageNum
-                                      ? "bg-[rgba(248,213,126,1)] text-white"
-                                      : "border border-gray-300"
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            }
-                            return null;
-                          }
-                        )}
-
-                        <button
-                          onClick={() => paginateNotes(currentNotesPage + 1)}
-                          disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          下一页
-                        </button>
-                        <button
-                          onClick={() => paginateNotes(Math.ceil(notes.length / notesPerPage))}
-                          disabled={currentNotesPage === Math.ceil(notes.length / notesPerPage)}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          末页
-                        </button>
-
-                        {/* Jump to page input and button */}
-                        {totalNotesPages > 1 && (
-                          <div className="flex items-center ml-4 mt-2 sm:mt-0">
-                            <Tooltipwrap title="每个大页有1000条笔记，跳转到指定大页">
-                              <input
-                                type="number"
-                                value={jumpToPage}
-                                onChange={(e) => setJumpToPage(e.target.value)}
-                                placeholder={`共${totalNotesPages}大页`}
-                                min="1"
-                                max={totalNotesPages.toString()}
-                                className="w-24 px-2 py-1 border border-gray-300 rounded mr-2"
-                              />
-                              <button
-                                onClick={handleJumpToNotesPage}
-                                disabled={loading || !jumpToPage}
-                                className="px-3 py-1 rounded bg-[rgba(248,213,126,1)] text-white hover:bg-[rgba(248,213,126,0.8)] disabled:opacity-50"
-                              >
-                                跳转
-                              </button>
-                            </Tooltipwrap>
-                          </div>
-                        )}
-                      </nav>
+                      </Tooltipwrap>
                     </div>
                   )}
                 </div>
@@ -1642,7 +1469,7 @@ const DataCollect: React.FC = () => {
         <TabPane tab="评论" key="comments">
           {/* Comments Tab Content */}
           {/* Keyword Selection and Comment Collection */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-2">
+          <div className="bg-white rounded-lg shadow-md p-6 pt-0 mb-2">
             <h2 className="text-lg font-semibold mb-4">选择关键字</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <BaseSelect
@@ -1686,7 +1513,7 @@ const DataCollect: React.FC = () => {
             </div>
           </div>
           {/* Display Collected Comments - Only shown in the Comments tab */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6 pb-0">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold">已采集的评论</h2>
               <button
@@ -1749,257 +1576,43 @@ const DataCollect: React.FC = () => {
                   原始评论数量: {originalCommentLength}
                 </div>
                 <div className="w-full h-full">
-                  <div className="h-[36vh] overflow-y-auto overflow-x-auto w-full">
-                    <table className="w-full h-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            ID
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            笔记链接
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            关键词
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            内容
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            作者
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            点赞数
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            <span className="inline-flex items-center">
-                              <span>采集时间</span>
-                              <SortUpOrDownButton
-                                onUp={() => {
-                                  const sortComments = [...comments].sort((a, b) => {
-                                    return (
-                                      new Date(a.collect_time || 0).getTime() -
-                                      new Date(b.collect_time || 0).getTime()
-                                    );
-                                  });
-                                  setComments(sortComments);
-                                }}
-                                onDown={() => {
-                                  const sortComments = [...comments].sort((a, b) => {
-                                    return (
-                                      new Date(b.collect_time || 0).getTime() -
-                                      new Date(a.collect_time || 0).getTime()
-                                    );
-                                  });
-                                  setComments(sortComments);
-                                }}
-                                onReset={() => {
-                                  setComments(sortComments);
-                                }}
-                              />
-                            </span>
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            <span className="inline-flex items-center">
-                              <span>评论时间</span>
-                              <SortUpOrDownButton
-                                onUp={() => {
-                                  const sortComments = [...comments].sort((a, b) => {
-                                    return (
-                                      new Date(a.comment_time || 0).getTime() -
-                                      new Date(b.comment_time || 0).getTime()
-                                    );
-                                  });
-                                  setComments(sortComments);
-                                }}
-                                onDown={() => {
-                                  const sortComments = [...comments].sort((a, b) => {
-                                    return (
-                                      new Date(b.comment_time || 0).getTime() -
-                                      new Date(a.comment_time || 0).getTime()
-                                    );
-                                  });
-                                  setComments(sortComments);
-                                }}
-                                onReset={() => {
-                                  setComments(sortComments);
-                                }}
-                              />
-                            </span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {comments
-                          .slice(
-                            (currentCommentsPage - 1) * commentsPerPage,
-                            currentCommentsPage * commentsPerPage
-                          )
-                          .map((comment) => (
-                            <tr key={comment.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {comment.id}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <Tooltipwrap title={comment.note_url}>
-                                  <a
-                                    href={comment.note_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[rgba(248,213,126,1)] hover:underline break-all"
-                                  >
-                                    {comment.note_url}
-                                  </a>
-                                </Tooltipwrap>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {comment.keyword}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
-                                <Tooltipwrap title={comment.content}>
-                                  {comment.content || "无内容"}
-                                </Tooltipwrap>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {comment.author}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {comment.likes}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {comment.collect_time ? formatDate(comment.collect_time) : "未采集"}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(comment.comment_time)}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
+                  <div className="overflow-x-auto w-full">
+                    <Table
+                      rowKey={(record) => record.id}
+                      columns={commentColumns}
+                      dataSource={comments}
+                      scroll={{ y: "35vh" }}
+                      pagination={{
+                        current: currentCommentsPage,
+                        pageSize: commentsPerPage,
+                        total: comments.length,
+                        showSizeChanger: false,
+                      }}
+                      onChange={(pagination) => {
+                        setCurrentCommentsPage(pagination.current || 1);
+                      }}
+                    />
                   </div>
-                  {/* Pagination for comments */}
-                  {comments.length > 0 && (
-                    <div className="flex justify-center mt-4">
-                      <nav className="flex items-center">
+                  {totalCommentsPages > 1 && (
+                    <div className="flex items-center mt-4">
+                      <Tooltipwrap title="每个大页有1000条评论，跳转到指定大页">
+                        <input
+                          type="number"
+                          value={jumpToCommentsPage}
+                          onChange={(e) => setJumpToCommentsPage(e.target.value)}
+                          placeholder={`共${totalCommentsPages}大页`}
+                          min="1"
+                          max={totalCommentsPages.toString()}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded mr-2"
+                        />
                         <button
-                          onClick={() => paginateComments(1)}
-                          disabled={currentCommentsPage === 1}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
+                          onClick={handleJumpToCommentsPage}
+                          disabled={loading || !jumpToCommentsPage}
+                          className="px-3 py-1 rounded bg-[rgba(248,213,126,1)] text-white hover:bg-[rgba(248,213,126,0.8)] disabled:opacity-50"
                         >
-                          首页
+                          跳转
                         </button>
-                        <button
-                          onClick={() => paginateComments(currentCommentsPage - 1)}
-                          disabled={currentCommentsPage === 1}
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          上一页
-                        </button>
-
-                        {[...Array(Math.min(5, Math.ceil(comments.length / commentsPerPage)))].map(
-                          (_, i) => {
-                            let pageNum: number = 0; // Initialize with default value
-                            const totalPages = Math.ceil(comments.length / commentsPerPage);
-
-                            // Logic to show page numbers centered around current page
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentCommentsPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentCommentsPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentCommentsPage - 2 + i;
-                            }
-
-                            if (pageNum > 0 && pageNum <= totalPages) {
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => paginateComments(pageNum)}
-                                  className={`px-3 py-1 mx-1 rounded ${
-                                    currentCommentsPage === pageNum
-                                      ? "bg-[rgba(248,213,126,1)] text-white"
-                                      : "border border-gray-300"
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            }
-                            return null;
-                          }
-                        )}
-
-                        <button
-                          onClick={() => paginateComments(currentCommentsPage + 1)}
-                          disabled={
-                            currentCommentsPage === Math.ceil(comments.length / commentsPerPage)
-                          }
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          下一页
-                        </button>
-                        <button
-                          onClick={() =>
-                            paginateComments(Math.ceil(comments.length / commentsPerPage))
-                          }
-                          disabled={
-                            currentCommentsPage === Math.ceil(comments.length / commentsPerPage)
-                          }
-                          className="px-3 py-1 mx-1 rounded border border-gray-300 disabled:opacity-50"
-                        >
-                          末页
-                        </button>
-
-                        {/* Jump to page input and button */}
-                        {totalCommentsPages > 1 && (
-                          <div className="flex items-center ml-4 mt-2 sm:mt-0">
-                            <Tooltipwrap title="每个大页有1000条评论，跳转到指定大页">
-                              <input
-                                type="number"
-                                value={jumpToCommentsPage}
-                                onChange={(e) => setJumpToCommentsPage(e.target.value)}
-                                placeholder={`共${totalCommentsPages}大页`}
-                                min="1"
-                                max={totalCommentsPages.toString()}
-                                className="w-24 px-2 py-1 border border-gray-300 rounded mr-2"
-                              />
-                              <button
-                                onClick={handleJumpToCommentsPage}
-                                disabled={loading || !jumpToCommentsPage}
-                                className="px-3 py-1 rounded bg-[rgba(248,213,126,1)] text-white hover:bg-[rgba(248,213,126,0.8)] disabled:opacity-50"
-                              >
-                                跳转
-                              </button>
-                            </Tooltipwrap>
-                          </div>
-                        )}
-                      </nav>
+                      </Tooltipwrap>
                     </div>
                   )}
                 </div>

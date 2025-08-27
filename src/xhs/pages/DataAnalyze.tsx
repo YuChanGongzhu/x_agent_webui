@@ -1769,7 +1769,7 @@ const DataAnalyze: React.FC = () => {
                                       : "bg-red-100 text-red-800"
                                   }`}
                                 >
-                                  {item.is_reply == "1" ? "已回复" : "未回复"}
+                                  {item.is_reply == "1" ? item.reply : "未回复"}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
