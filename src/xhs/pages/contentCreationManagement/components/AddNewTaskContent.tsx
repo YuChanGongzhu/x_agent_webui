@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Form, Input, Select, Upload, Button, Image, Checkbox } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
@@ -46,6 +46,8 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
   const [previewImage, setPreviewImage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [aiBeautifying, setAiBeautifying] = useState(false);
+  const [isTypingAnimation, setIsTypingAnimation] = useState(false);
+  const typingTimerRef = useRef<number | null>(null);
   const [selectedUserType, setSelectedUserType] = useState<string>(noteData.note_user_type || "");
   // xiaohongshu 联动选择器（来自 constants.INDUSTRY）
   const industryCategories = Object.keys(CONSTANTS.INDUSTRY || {}) as string[];
@@ -300,6 +302,43 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
       </div>
     </button>
   );
+
+  const startTypingAnimation = (fullText: string) => {
+    if (!fullText || typeof fullText !== "string") return;
+    const maxLen = CONSTANTS.MAX_CONTENT_LENGTH;
+    const target = fullText.slice(0, maxLen);
+    if (typingTimerRef.current !== null) {
+      window.clearInterval(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    setIsTypingAnimation(true);
+    form.setFieldsValue({ content: "" });
+    onDataChange({ note_content: "" });
+    let index = 0;
+    typingTimerRef.current = window.setInterval(() => {
+      index += 1;
+      const partial = target.slice(0, index);
+      form.setFieldsValue({ content: partial });
+      onDataChange({ note_content: partial });
+      if (index >= target.length) {
+        if (typingTimerRef.current !== null) {
+          window.clearInterval(typingTimerRef.current);
+          typingTimerRef.current = null;
+        }
+        setIsTypingAnimation(false);
+        message.success("AI润色完成！");
+      }
+    }, 16);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current !== null) {
+        window.clearInterval(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const layout = {
     labelCol: { span: 5 },
@@ -715,6 +754,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                         maxLength={CONSTANTS.MAX_CONTENT_LENGTH}
                         placeholder="直接输入正文或笔记要求"
                         autoSize={{ minRows: 6, maxRows: 10 }}
+                        disabled={aiBeautifying || isTypingAnimation}
                       />
                     </Form.Item>
                     <div
@@ -752,6 +792,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                         type="link"
                         size="small"
                         style={{ paddingRight: 0, color: "#7c3aed" }}
+                        disabled={aiBeautifying || isTypingAnimation}
                         onClick={async () => {
                           if (!noteData.note_content) {
                             message.warning("请先输入笔记内容");
@@ -763,9 +804,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                               text: noteData.note_content || "",
                             });
                             if (result.polished_text !== null) {
-                              form.setFieldsValue({ content: result.polished_text });
-                              onDataChange({ note_content: result.polished_text });
-                              message.success("AI润色完成！");
+                              startTypingAnimation(result.polished_text);
                             } else {
                               message.error("AI润色失败，请稍后重试");
                             }
@@ -777,7 +816,7 @@ const AddNewTaskContent: React.FC<AddNewTaskContentProps> = ({
                           }
                         }}
                       >
-                        ✨AI生成
+                        {aiBeautifying ? "✨AI润色中..." : "✨AI生成"}
                       </Button>
                     </div>
                   </div>

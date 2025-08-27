@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button, Input, Tag } from "antd";
 import { xhsAIChatApi } from "../../../api/mysql";
+const { TextArea } = Input;
 const panelStyles = {
   container: {
     width: "100%",
@@ -199,7 +200,7 @@ const Chat: React.FC = () => {
     console.log("ai发送消息后", messages);
   };
   //回车键发送
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       if (isAiTyping) return;
       console.log("按了回车键");
@@ -312,7 +313,7 @@ const Chat: React.FC = () => {
           })}
         </div>
         <div style={panelStyles.footer_input}>
-          <Input
+          <TextArea
             placeholder={
               ui_input_prompt_type === "default"
                 ? "说点什么吧…"
@@ -320,6 +321,7 @@ const Chat: React.FC = () => {
                 ? "请输入脚本内容"
                 : "请输入内容"
             }
+            autoSize={{ minRows: 1, maxRows: 6 }}
             allowClear
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
