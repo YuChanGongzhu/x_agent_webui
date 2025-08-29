@@ -814,10 +814,10 @@ const DataCollect: React.FC = () => {
     },
     {
       title: "采集时间",
-      dataIndex: "collected_at",
-      key: "collected_at",
+      dataIndex: "collect_time",
+      key: "collect_time",
       sorter: (a, b) =>
-        new Date(a.collected_at || 0).getTime() - new Date(b.collected_at || 0).getTime(),
+        new Date(a.collect_time || 0).getTime() - new Date(b.collect_time || 0).getTime(),
       render: (value: string | undefined) => formatDate(value || ""),
       width: 180,
     },
@@ -883,6 +883,7 @@ const DataCollect: React.FC = () => {
         }));
 
         setNotes(transformedNotes);
+
         setSortNotes(transformedNotes);
         setCurrentNotesPage(pageNumber);
 
@@ -1415,6 +1416,7 @@ const DataCollect: React.FC = () => {
             </div>
             {notes.length > 0 ? (
               <>
+                {console.log("notes", notes)}
                 <div className="text-sm text-gray-500 mb-2">
                   原始笔记数量: {originalNotesLength}
                 </div>

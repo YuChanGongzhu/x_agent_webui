@@ -32,7 +32,9 @@ import {
   Upload,
   message,
   Tag,
+  DatePicker,
 } from "antd";
+import dayjs from "dayjs";
 import {
   CheckOutlined,
   PlusOutlined,
@@ -87,6 +89,9 @@ const DataAnalyze: React.FC = () => {
   const [minLikes, setMinLikes] = useState(0);
   const [minLength, setMinLength] = useState(1);
   const [filterKeywords, setFilterKeywords] = useState("");
+  // State for date filtering
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -408,7 +413,7 @@ const DataAnalyze: React.FC = () => {
   };
 
   // Fetch comments from API
-  const fetchComments = async (keyword: string) => {
+  const fetchComments = async (keyword: string, start_date?: string, end_date?: string) => {
     try {
       setCollectionWaiting(true);
       setLoading(true);
@@ -420,7 +425,9 @@ const DataAnalyze: React.FC = () => {
         keyword,
         !isAdmin && email ? email : undefined,
         page,
-        page_size
+        page_size,
+        start_date,
+        end_date
       );
       console.log(
         `Comments for ${!isAdmin && email ? `email: ${email}` : "admin"} and keyword: ${keyword}`
@@ -442,7 +449,9 @@ const DataAnalyze: React.FC = () => {
             keyword,
             !isAdmin && email ? email : undefined,
             i,
-            page_size
+            page_size,
+            start_date,
+            end_date
           );
           if (pageResponse.data) {
             const { records } = pageResponse.data;
@@ -1212,6 +1221,49 @@ const DataAnalyze: React.FC = () => {
                     筛选关键词（用逗号分隔）
                   </label>
                 </BaseInput>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    采集时间筛选
+                    <TooltipIcon
+                      tooltipProps={{ title: "选择时间范围后点击筛选按钮重新获取数据" }}
+                    />
+                  </label>
+                  <DatePicker.RangePicker
+                    size="large"
+                    className="w-full"
+                    onChange={(datejs, dateString) => {
+                      if (datejs && datejs[0] && datejs[1]) {
+                        // 开始时间设置为当天的 00:00:00
+                        const startTime = datejs[0].startOf("day").format("YYYY-MM-DD HH:mm:ss");
+                        // 结束时间设置为当天的 23:59:59
+                        const endTime = datejs[1].endOf("day").format("YYYY-MM-DD HH:mm:ss");
+
+                        console.log("处理后的时间范围:", { startTime, endTime });
+                        setStartTime(startTime);
+                        setEndTime(endTime);
+                      } else {
+                        // 如果没有选择日期，清空时间
+                        setStartTime("");
+                        setEndTime("");
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    size="large"
+                    type="primary"
+                    className="w-full"
+                    onClick={() => {
+                      fetchComments(selectedKeyword, startTime, endTime);
+                    }}
+                    loading={loading}
+                  >
+                    {loading ? "筛选中..." : "按时间筛选"}
+                  </Button>
+                </div>
               </div>
               <div className="text-sm text-gray-500 mb-4">
                 已过滤出 {filteredComments.length} 条评论

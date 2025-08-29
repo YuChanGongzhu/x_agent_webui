@@ -402,7 +402,9 @@ export const getXhsCommentsByKeywordApi = async (
   keyword: string,
   email?: string,
   page?: number,
-  page_size?: number
+  page_size?: number,
+  start_time?: string,
+  end_time?: string
 ): Promise<XhsCommentsResponse> => {
   try {
     if (!keyword) {
@@ -423,7 +425,12 @@ export const getXhsCommentsByKeywordApi = async (
     if (page_size) {
       queryParams.append("page_size", page_size.toString());
     }
-
+    if (start_time) {
+      queryParams.append("start_time", start_time);
+    }
+    if (end_time) {
+      queryParams.append("end_time", end_time);
+    }
     const baseUrl = getCommentsUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 

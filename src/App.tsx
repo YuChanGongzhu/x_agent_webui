@@ -24,6 +24,12 @@ import BasePermission from "./components/BaseComponents/BasePermission";
 import DashTaskVeiw from "./xhs/pages/DashTaskView";
 import zhCN from "antd/es/locale/zh_CN"; // 中文
 import enUS from "antd/es/locale/en_US";
+import dayjs from "dayjs";
+import "dayjs/locale/zh-cn"; // 导入dayjs中文语言包
+
+// 设置dayjs全局中文语言
+dayjs.locale("zh-cn");
+
 // 自定义排序文本
 const customLocale = {
   ...zhCN,
