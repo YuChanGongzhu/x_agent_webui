@@ -598,7 +598,9 @@ export const getXhsNotesByKeywordApi = async (
   keyword: string,
   email?: string,
   page?: number,
-  page_size?: number
+  page_size?: number,
+  start_time?: string,
+  end_time?: string
 ): Promise<XhsNotesResponse> => {
   try {
     if (!keyword) {
@@ -619,7 +621,12 @@ export const getXhsNotesByKeywordApi = async (
     if (page_size) {
       queryParams.append("page_size", page_size.toString());
     }
-
+    if (start_time) {
+      queryParams.append("start_time", start_time);
+    }
+    if (end_time) {
+      queryParams.append("end_time", end_time);
+    }
     const baseUrl = getNoteUrl || "";
     const url = `${baseUrl}?${queryParams.toString()}`;
 

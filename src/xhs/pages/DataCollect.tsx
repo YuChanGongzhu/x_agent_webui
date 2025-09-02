@@ -14,7 +14,7 @@ import notifi from "../../utils/notification";
 import BaseSelect from "../../components/BaseComponents/BaseSelect";
 import BaseInput from "../../components/BaseComponents/BaseInput";
 import TooltipIcon from "../../components/BaseComponents/TooltipIcon";
-import { Tabs, Button, Input, Table } from "antd";
+import { Tabs, Button, Input, Table, DatePicker } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 const { TabPane } = Tabs;
@@ -130,7 +130,9 @@ const DataCollect: React.FC = () => {
   const { isAdmin, email } = useUser();
   // 获取共享的关键词上下文
   const { latestKeyword, setLatestKeyword } = useKeyword();
-
+  //时间筛选
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   // 获取可用的邮箱列表
   useEffect(() => {
     const fetchAvailableEmails = async () => {
@@ -434,13 +436,17 @@ const DataCollect: React.FC = () => {
     }
   }, [selectedKeyword]);
 
-  const fetchNotes = async (keyword: string) => {
+  const fetchNotes = async (keyword: string, startTime?: string, endTime?: string) => {
     try {
       setLoading(true);
 
       const response = await getXhsNotesByKeywordApi(
         keyword,
-        !isAdmin && email ? email : undefined
+        !isAdmin && email ? email : undefined,
+        undefined,
+        undefined,
+        startTime,
+        endTime
       );
 
       if (response && response.code === 0 && response.data && response.data.records) {
@@ -559,7 +565,8 @@ const DataCollect: React.FC = () => {
       title: "ID",
       dataIndex: "id",
       key: "id",
-      width: 100,
+      width: 60,
+      fixed: "left",
     },
     {
       title: "笔记链接",
@@ -754,6 +761,7 @@ const DataCollect: React.FC = () => {
       dataIndex: "id",
       key: "id",
       width: 100,
+      fixed: "left",
     },
     {
       title: "采集类型",
@@ -1320,18 +1328,46 @@ const DataCollect: React.FC = () => {
                 刷新关键词
               </button>
             </div>
-            <BaseSelect
-              size="large"
-              className="w-full"
-              selectClassName="w-1/2"
-              value={selectedKeyword}
-              showSearch
-              options={keywords.map((kw) => ({ label: kw, value: kw }))}
-              onChange={(value) => {
-                setSelectedKeyword(value);
-                setLatestKeyword(value);
-              }}
-            ></BaseSelect>
+            <div className="flex items-center gap-4">
+              <BaseSelect
+                size="large"
+                className="w-full"
+                selectClassName="w-1/2"
+                value={selectedKeyword}
+                showSearch
+                options={keywords.map((kw) => ({ label: kw, value: kw }))}
+                onChange={(value) => {
+                  setSelectedKeyword(value);
+                  setLatestKeyword(value);
+                }}
+              ></BaseSelect>
+              <div className="w-1/2 flex items-center gap-4">
+                <DatePicker.RangePicker
+                  size="large"
+                  className="w-full"
+                  onChange={(datejs) => {
+                    if (datejs && datejs[0] && datejs[1]) {
+                      const startTime = datejs[0].startOf("day").format("YYYY-MM-DD HH:mm:ss");
+                      const endTime = datejs[1].endOf("day").format("YYYY-MM-DD HH:mm:ss");
+                      setStartTime(startTime);
+                      setEndTime(endTime);
+                    } else {
+                      fetchNotes(selectedKeyword);
+                      setStartTime("");
+                      setEndTime("");
+                    }
+                  }}
+                />
+                <Button
+                  size="large"
+                  onClick={() => {
+                    fetchNotes(selectedKeyword, startTime, endTime);
+                  }}
+                >
+                  时间筛选
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Display Collected Notes */}
@@ -1416,7 +1452,6 @@ const DataCollect: React.FC = () => {
             </div>
             {notes.length > 0 ? (
               <>
-                {console.log("notes", notes)}
                 <div className="text-sm text-gray-500 mb-2">
                   原始笔记数量: {originalNotesLength}
                 </div>
@@ -1427,7 +1462,7 @@ const DataCollect: React.FC = () => {
                       columns={noteColumns}
                       dataSource={notes}
                       rowSelection={noteRowSelection}
-                      scroll={{ y: "35vh" }}
+                      scroll={{ y: "35vh", x: "max-content" }}
                       pagination={{
                         current: currentNotesPage,
                         pageSize: notesPerPage,
@@ -1583,7 +1618,7 @@ const DataCollect: React.FC = () => {
                       rowKey={(record) => record.id}
                       columns={commentColumns}
                       dataSource={comments}
-                      scroll={{ y: "35vh" }}
+                      scroll={{ y: "35vh", x: "max-content" }}
                       pagination={{
                         current: currentCommentsPage,
                         pageSize: commentsPerPage,
