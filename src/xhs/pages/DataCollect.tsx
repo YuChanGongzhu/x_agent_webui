@@ -119,7 +119,7 @@ const DataCollect: React.FC = () => {
   const [totalNotesPages, setTotalNotesPages] = useState(0);
   const [jumpToCommentsPage, setJumpToCommentsPage] = useState<string>("");
   const [totalCommentsPages, setTotalCommentsPages] = useState(0);
-
+  const [keywordList, setKeywordList] = useState<string[] | null>([]);
   // State for loading and errors
   const [loading, setLoading] = useState(false);
 
@@ -262,9 +262,10 @@ const DataCollect: React.FC = () => {
       setLoading(true);
       const timestamp = new Date().toISOString().replace(/[-:.]/g, "_");
       const dag_run_id = `xhs_notes_${timestamp}`;
-
       const conf = {
-        keyword,
+        ...(keywordList?.length === 1
+          ? { keyword: String(keywordList[0]) }
+          : { keywords: keywordList }),
         max_notes: maxNotes,
         email: targetEmail,
         note_type: noteType,
@@ -664,9 +665,30 @@ const DataCollect: React.FC = () => {
   const taskColumns: ColumnsType<(typeof taskRows)[number]> = [
     {
       title: "关键词",
-      dataIndex: "_keyword",
+      dataIndex: "keyword",
       key: "keyword",
       width: 180,
+      render: (value: string, record: any) => {
+        // 如果 keyword 有值，直接显示
+        if (value) {
+          return value;
+        }
+
+        // 尝试从任务配置中解析关键词
+        try {
+          const conf = JSON.parse(record.conf || "{}");
+          // keyword 和 keywords 不会同时出现，优先检查 keywords（数组）
+          if (conf.keywords && Array.isArray(conf.keywords) && conf.keywords.length > 0) {
+            return conf.keywords.join(", ");
+          }
+          // 如果没有 keywords，检查 keyword（字符串）
+          if (conf.keyword) {
+            return conf.keyword;
+          }
+        } catch (e) {
+          console.error("解析任务配置失败:", e);
+        }
+      },
     },
     {
       title: "收集数量",
@@ -1004,6 +1026,13 @@ const DataCollect: React.FC = () => {
       });
     }
   };
+  //处理创建笔记任务关键字
+  const handleCreateNotesTaskKeyword = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setKeyword(e.target.value);
+    setKeywordList(value.replace(/\s+/g, "").match(/[^,]+/g));
+  };
+
   return (
     <div>
       {/* 目标邮箱选择 - 全局可用 */}
@@ -1088,12 +1117,17 @@ const DataCollect: React.FC = () => {
                   size="large"
                   className="w-full"
                   value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
+                  onChange={handleCreateNotesTaskKeyword}
                   placeholder="输入关键字"
                 >
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    关键字{" "}
-                    <TooltipIcon tooltipProps={{ title: "设置关键词后，AI将根据关键词采集笔记" }} />
+                    关键字
+                    <TooltipIcon
+                      tooltipProps={{
+                        title:
+                          "设置关键词后，AI将根据关键词采集笔记，可支持多个关键字，多个关键字之间用逗号隔开",
+                      }}
+                    />
                   </label>
                 </BaseInput>
                 <BaseInput
